@@ -1,0 +1,96 @@
+export const CLIENT = {
+  name: "Advantix Systems LLC",
+  uei: "Z9L8H2M7K4P1",
+  cage: "8K2P7",
+  ein: "47-3920184",
+  naicsPrimary: "541512",
+  solicitation: "47QSMD20R0001",
+  schedule: "GSA Schedule MAS / IT",
+  refresh: "Refresh 18",
+  poc: "Jordan Daniels",
+  employees: 84,
+  socioeconomic: "SDVOSB",
+  fasId: "Pending Link",
+  samExpires: "2025-04-12",
+  readiness: 88.4,
+};
+
+export type ModuleStatus = "complete" | "in_progress" | "blocked" | "not_started";
+
+export const MODULES = [
+  { slug: "/intake", label: "Client Intake", status: "complete" as ModuleStatus, group: "Intake" },
+  { slug: "/readiness", label: "Readiness Assessment", status: "complete" as ModuleStatus, group: "Intake" },
+  { slug: "/registration", label: "SAM/GSA Tracker", status: "in_progress" as ModuleStatus, group: "Intake" },
+  { slug: "/sin", label: "SIN Recommendation", status: "complete" as ModuleStatus, group: "Engine" },
+  { slug: "/documents", label: "Document Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/pricing", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/compliance", label: "Compliance Matrix", status: "in_progress" as ModuleStatus, group: "Final" },
+  { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
+  { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
+];
+
+export const REGISTRATION_ITEMS = [
+  { label: "SAM.gov Active Registration", status: "ok", note: "Expires 2025-04-12" },
+  { label: "UEI Issued", status: "ok", note: "Z9L8H2M7K4P1" },
+  { label: "CAGE Code", status: "ok", note: "8K2P7" },
+  { label: "FAS ID Linked", status: "gap", note: "Required for eOffer portal" },
+  { label: "eOffer Digital Cert", status: "gap", note: "Authorized negotiator missing" },
+  { label: "Pathways to Success", status: "ok", note: "Completed 2024-11-02" },
+  { label: "Readiness Assessment", status: "ok", note: "Score 88.4" },
+];
+
+export const SIN_MATCHES = [
+  { code: "54151S", title: "IT Professional Services", confidence: 98, required: ["Past Performance", "LCAT Matrix", "EPA Narrative"] },
+  { code: "54151HEC", title: "Health IT Services", confidence: 74, required: ["FedRAMP attestation", "Project summaries"] },
+  { code: "541611", title: "Management & Financial Consulting", confidence: 62, required: ["Commercial Sales Practices"] },
+  { code: "518210C", title: "Cloud Computing Services", confidence: 41, required: ["FedRAMP Mod", "SLA narrative"] },
+];
+
+export const COMPLIANCE_MATRIX = [
+  { ref: "SCP-FSS-001", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "valid" },
+  { ref: "I-FSS-600", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
+  { ref: "CP-114-A", req: "Agent Authorization Letter", source: "—", status: "missing" },
+  { ref: "FAR 52.222-46", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
+  { ref: "FAR 52.237-10", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
+  { ref: "GSAR 552.216-70", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
+  { ref: "FAR 31.201-2", req: "Accounting Controls Narrative", source: "Acct_Controls.docx", status: "valid" },
+  { ref: "I-FSS-639", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
+  { ref: "SCP-FSS-004", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
+  { ref: "I-FSS-969", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
+];
+
+export const DOCUMENT_QUEUE = [
+  { name: "Corporate Experience Narrative", kind: "corporate-experience", status: "draft" },
+  { name: "Capability Statement", kind: "capability-statement", status: "draft" },
+  { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
+  { name: "Accounting Controls Narrative", kind: "accounting-controls", status: "draft" },
+  { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "final" },
+  { name: "Professional Compensation Plan", kind: "compensation-plan", status: "review" },
+  { name: "Project Summary — VA EHR Modernization", kind: "project-summary", status: "draft" },
+  { name: "Key Personnel — Sr. Systems Architect", kind: "key-personnel", status: "draft" },
+];
+
+export const LABOR_CATEGORIES = [
+  { code: "LCAT-01", title: "Senior Systems Architect", education: "Bachelors", years: 10, commercial: 215.0, gsa: 185.0 },
+  { code: "LCAT-02", title: "Project Manager (PMP)", education: "Masters", years: 12, commercial: 225.0, gsa: 194.2 },
+  { code: "LCAT-03", title: "Cybersecurity Specialist III", education: "Bachelors", years: 7, commercial: 188.5, gsa: 162.5 },
+  { code: "LCAT-04", title: "Senior Data Engineer", education: "Bachelors", years: 8, commercial: 198.0, gsa: 170.4 },
+  { code: "LCAT-05", title: "Technical Writer", education: "Bachelors", years: 4, commercial: 112.0, gsa: 95.75 },
+  { code: "LCAT-06", title: "Junior Analyst", education: "Bachelors", years: 2, commercial: 92.0, gsa: 78.2 },
+];
+
+export const REVIEW_GATES = [
+  { stage: "Intake QA", owner: "Engagement Lead", status: "approved" },
+  { stage: "SIN Mapping Review", owner: "Capture Manager", status: "approved" },
+  { stage: "Pricing Review", owner: "Pricing Analyst", status: "in_review" },
+  { stage: "Compliance Matrix Sign-off", owner: "Compliance Officer", status: "pending" },
+  { stage: "Authorized Negotiator Certify", owner: "Authorized Negotiator", status: "pending" },
+];
+
+export const EXPORT_BUNDLE = [
+  { folder: "01_Administrative", files: ["SF1449.pdf", "Agent_Authorization.pdf", "Signed_Reps_Certs.pdf"] },
+  { folder: "02_Technical", files: ["Corporate_Experience.docx", "Capability_Statement.docx", "Key_Personnel.docx"] },
+  { folder: "03_Past_Performance", files: ["Project_Summaries.docx", "CPARS_Refs.pdf"] },
+  { folder: "04_Pricing", files: ["CPL_Pricing_Final.xlsx", "CSP-1.xlsx", "EPA_Narrative.docx"] },
+  { folder: "05_Compliance", files: ["Compliance_Matrix.xlsx", "Accounting_Controls.docx", "UOT_Policy.docx"] },
+];
