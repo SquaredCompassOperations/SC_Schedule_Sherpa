@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
-import { DOCUMENT_QUEUE, CLIENT } from "@/lib/mock-data";
+import { DOCUMENT_QUEUE, CLIENT, DOC_CRITERIA } from "@/lib/mock-data";
 import { generateNarrative } from "@/lib/narrative.functions";
 
 export const Route = createFileRoute("/documents")({
@@ -88,6 +88,40 @@ function DocsPage() {
             </div>
           </Panel>
 
+          {DOC_CRITERIA[active.kind] ? (
+            <Panel
+              title="Required Criteria Checklist"
+              trailing={
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {DOC_CRITERIA[active.kind].source}
+                </span>
+              }
+            >
+              <ul className="space-y-1.5">
+                {DOC_CRITERIA[active.kind].items.map((item, i) => {
+                  const hit = text.length > 0 && matchesItem(text, item);
+                  return (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <span
+                        className={`mt-0.5 size-3.5 rounded-sm border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                          hit
+                            ? "bg-success/15 border-success/40 text-success"
+                            : "bg-muted border-border text-muted-foreground"
+                        }`}
+                      >
+                        {hit ? "✓" : i + 1}
+                      </span>
+                      <span className={hit ? "text-foreground" : "text-muted-foreground"}>{item}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-3 text-[10px] font-mono text-muted-foreground">
+                Heuristic match against current draft text. Final coverage requires human review.
+              </div>
+            </Panel>
+          ) : null}
+
           <Panel title="Source Fields (from Master Intake)">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-[11px] font-mono">
               <Field k="UEI" v={CLIENT.uei} />
@@ -98,6 +132,7 @@ function DocsPage() {
               <Field k="Socioeconomic" v={CLIENT.socioeconomic} />
             </div>
           </Panel>
+
         </div>
       </div>
     </>
@@ -115,4 +150,16 @@ function Field({ k, v }: { k: string; v: string }) {
 
 function contextString() {
   return `Company: ${CLIENT.name} | UEI: ${CLIENT.uei} | CAGE: ${CLIENT.cage} | EIN: ${CLIENT.ein} | NAICS: ${CLIENT.naicsPrimary} | Employees: ${CLIENT.employees} | Socioeconomic: ${CLIENT.socioeconomic} | POC: ${CLIENT.poc} | Solicitation: ${CLIENT.solicitation}`;
+}
+
+function matchesItem(text: string, item: string): boolean {
+  const stop = new Set(["the","and","of","to","a","an","or","for","with","in","on","by","is","are","be","that","this","as","at","from","under","any","its"]);
+  const words = item
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !stop.has(w));
+  const haystack = text.toLowerCase();
+  const hits = words.filter((w) => haystack.includes(w)).length;
+  return words.length > 0 && hits / words.length >= 0.4;
 }

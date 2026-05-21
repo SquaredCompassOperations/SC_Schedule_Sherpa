@@ -60,7 +60,9 @@ export const COMPLIANCE_MATRIX = [
 ];
 
 export const DOCUMENT_QUEUE = [
+  { name: "Quality Control Narrative", kind: "quality-control", status: "draft" },
   { name: "Corporate Experience Narrative", kind: "corporate-experience", status: "draft" },
+  { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Capability Statement", kind: "capability-statement", status: "draft" },
   { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
   { name: "Accounting Controls Narrative", kind: "accounting-controls", status: "draft" },
@@ -69,6 +71,49 @@ export const DOCUMENT_QUEUE = [
   { name: "Project Summary — VA EHR Modernization", kind: "project-summary", status: "draft" },
   { name: "Key Personnel — Sr. Systems Architect", kind: "key-personnel", status: "draft" },
 ];
+
+export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
+  "corporate-experience": {
+    source: "GSA MAS Solicitation — Corporate Experience",
+    items: [
+      "Minimum two (2) years of corporate experience in the products/services under this Schedule",
+      "Organization's employee count, field experience, and resources to fulfill requirements",
+      "Brief history of activities developing relevant expertise and capabilities",
+      "Information demonstrating organizational and accounting controls",
+      "Description of in-house resources or ability to acquire personnel/products proposed",
+      "How the Offeror intends to market proposed products/services to Federal clients",
+      "Discussion of intended use of subcontractors",
+    ],
+  },
+  "quality-control": {
+    source: "GSA MAS Solicitation — Quality Control",
+    items: [
+      "Internal review procedures that facilitate high-quality standards",
+      "Individuals responsible for ensuring quality control (named roles)",
+      "Subcontractor use and quality control measures applied to subcontractors",
+      "How potential problem areas and solutions are handled",
+      "Procedures for ensuring quality when meeting urgent requirements",
+      "Managing QC across multiple simultaneous projects for multiple agencies",
+    ],
+  },
+  "relevant-project": {
+    source: "GSA MAS Solicitation — Relevant Project Experience",
+    items: [
+      "Detailed description of SIN-relevant work performed and results achieved",
+      "Methodology, tools, and processes utilized",
+      "Compliance with applicable laws, regulations, EOs, OMB Circulars, standards",
+      "Project schedule — milestones, tasks, deliverables, and any delays explained",
+      "Similarity in scope and complexity to work solicited under proposed SIN",
+      "Specific experience or special qualifications required by the SIN",
+      "Customer details — name, contract #, POC, phone, email",
+      "Performance period (months/years) and total project dollar value",
+      "Dollar value received for SIN-relevant work",
+      "Brief project summary (background, purpose)",
+      "Startup Springboard substitution: identify predecessor entity or key personnel (if used)",
+    ],
+  },
+};
+
 
 export const LABOR_CATEGORIES = [
   { code: "LCAT-01", title: "Senior Systems Architect", education: "Bachelors", years: 10, commercial: 215.0, gsa: 185.0 },
