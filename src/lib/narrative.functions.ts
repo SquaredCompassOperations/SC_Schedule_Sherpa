@@ -46,7 +46,7 @@ export const generateNarrative = createServerFn({ method: "POST" })
     const { text } = await generateText({
       model,
       system:
-        "You are a senior GSA Federal Supply Schedule proposal writer. Output polished, ready-to-paste prose. No markdown headings, no bullet points unless explicitly asked. Maximum 350 words.",
+        "You are a senior GSA Federal Supply Schedule proposal writer. Output polished, ready-to-paste federal prose. Use short labeled paragraphs (no markdown headings, no bullets) so each required element is clearly addressed in order. Maximum 650 words.",
       prompt: `${base}\n\nMaster intake context (use these fields where natural):\n${data.context ?? "Company: Advantix Systems LLC | UEI: Z9L8H2M7K4P1 | CAGE: 8K2P7 | NAICS: 541512 | SINs: 54151S | POC: Jordan Daniels"}`,
     });
     return { text };
