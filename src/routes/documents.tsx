@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
-import { DOCUMENT_QUEUE, CLIENT } from "@/lib/mock-data";
+import { DOCUMENT_QUEUE, CLIENT, DOC_CRITERIA } from "@/lib/mock-data";
 import { generateNarrative } from "@/lib/narrative.functions";
 
 export const Route = createFileRoute("/documents")({
