@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader, Panel } from "@/components/ui-primitives";
+import { FileUploader } from "@/components/file-uploader";
 import { CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/intake")({
@@ -89,6 +90,22 @@ function IntakePage() {
               </button>
             </div>
           </Panel>
+
+          <div className="mt-6">
+            <Panel
+              title="Supporting Documents"
+              trailing={
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  Word · PDF · Excel · CSV · PPT · RTF · Images · Email · ZIP · XML/JSON
+                </span>
+              }
+            >
+              <FileUploader />
+              <div className="mt-3 text-[10px] font-mono text-muted-foreground">
+                Uploads feed the master record and become source artifacts for the compliance matrix and eOffer package.
+              </div>
+            </Panel>
+          </div>
         </div>
       </div>
     </>
