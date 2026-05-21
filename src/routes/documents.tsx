@@ -88,6 +88,40 @@ function DocsPage() {
             </div>
           </Panel>
 
+          {DOC_CRITERIA[active.kind] ? (
+            <Panel
+              title="Required Criteria Checklist"
+              trailing={
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {DOC_CRITERIA[active.kind].source}
+                </span>
+              }
+            >
+              <ul className="space-y-1.5">
+                {DOC_CRITERIA[active.kind].items.map((item, i) => {
+                  const hit = text.length > 0 && matchesItem(text, item);
+                  return (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <span
+                        className={`mt-0.5 size-3.5 rounded-sm border flex items-center justify-center text-[9px] font-bold shrink-0 ${
+                          hit
+                            ? "bg-success/15 border-success/40 text-success"
+                            : "bg-muted border-border text-muted-foreground"
+                        }`}
+                      >
+                        {hit ? "✓" : i + 1}
+                      </span>
+                      <span className={hit ? "text-foreground" : "text-muted-foreground"}>{item}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-3 text-[10px] font-mono text-muted-foreground">
+                Heuristic match against current draft text. Final coverage requires human review.
+              </div>
+            </Panel>
+          ) : null}
+
           <Panel title="Source Fields (from Master Intake)">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-[11px] font-mono">
               <Field k="UEI" v={CLIENT.uei} />
@@ -98,6 +132,7 @@ function DocsPage() {
               <Field k="Socioeconomic" v={CLIENT.socioeconomic} />
             </div>
           </Panel>
+
         </div>
       </div>
     </>
