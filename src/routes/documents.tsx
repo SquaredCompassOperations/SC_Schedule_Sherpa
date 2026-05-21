@@ -151,3 +151,15 @@ function Field({ k, v }: { k: string; v: string }) {
 function contextString() {
   return `Company: ${CLIENT.name} | UEI: ${CLIENT.uei} | CAGE: ${CLIENT.cage} | EIN: ${CLIENT.ein} | NAICS: ${CLIENT.naicsPrimary} | Employees: ${CLIENT.employees} | Socioeconomic: ${CLIENT.socioeconomic} | POC: ${CLIENT.poc} | Solicitation: ${CLIENT.solicitation}`;
 }
+
+function matchesItem(text: string, item: string): boolean {
+  const stop = new Set(["the","and","of","to","a","an","or","for","with","in","on","by","is","are","be","that","this","as","at","from","under","any","its"]);
+  const words = item
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3 && !stop.has(w));
+  const haystack = text.toLowerCase();
+  const hits = words.filter((w) => haystack.includes(w)).length;
+  return words.length > 0 && hits / words.length >= 0.4;
+}
