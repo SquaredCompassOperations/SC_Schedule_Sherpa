@@ -10,6 +10,8 @@ const FIELDS = [
   "ein",
   "naicsPrimary",
   "employees",
+  "samStatus",
+  "samExpires",
 ] as const;
 
 export type ExtractedIdentity = Partial<Record<(typeof FIELDS)[number], string>>;
@@ -37,7 +39,7 @@ export const extractBusinessIdentity = createServerFn({ method: "POST" })
     const { text } = await generateText({
       model,
       system:
-        'You extract structured federal contractor business-identity data from documents. Return ONLY a single JSON object — no prose, no markdown fences. Keys: legalName, uei (12-char SAM.gov UEI), cage (5-char CAGE code), ein (XX-XXXXXXX), naicsPrimary (6-digit), employees (integer string). Omit any field you cannot find with reasonable confidence. Do not invent values.',
+        'You extract structured federal contractor business-identity data from documents (including SAM.gov entity registration printouts/PDFs). Return ONLY a single JSON object — no prose, no markdown fences. Keys: legalName, uei (12-char SAM.gov UEI), cage (5-char CAGE code), ein (XX-XXXXXXX), naicsPrimary (6-digit), employees (integer string), samStatus (e.g. "Active", "Expired", "Submitted", "Inactive" — from a SAM.gov registration status field), samExpires (ISO date YYYY-MM-DD from the SAM.gov registration expiration date). Omit any field you cannot find with reasonable confidence. Do not invent values.',
       messages: [
         {
           role: "user",
