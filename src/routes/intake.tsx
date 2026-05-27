@@ -68,10 +68,6 @@ const FIELD_SETS: FieldDef[][] = [
     { key: "mfcDiscount", label: "Most Favored Customer Discount" },
     { key: "gsaDiscount", label: "Proposed GSA Discount" },
   ],
-  [
-    { key: "negCert", label: "Authorized Negotiator Certification" },
-    { key: "confirmation", label: "Confirmation", type: "textarea" },
-  ],
 ];
 
 function IntakePage() {
