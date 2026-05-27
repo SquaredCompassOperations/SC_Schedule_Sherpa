@@ -252,7 +252,7 @@ function ExportPage() {
 
           <Panel
             title="eOffer Field-Ready Text"
-            actions={
+            trailing={
               <button
                 onClick={copyEOffer}
                 className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 border border-border rounded-sm hover:bg-muted"
