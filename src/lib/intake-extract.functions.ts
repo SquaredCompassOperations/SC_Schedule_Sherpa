@@ -10,6 +10,8 @@ const FIELDS = [
   "ein",
   "naicsPrimary",
   "employees",
+  "samStatus",
+  "samExpires",
 ] as const;
 
 export type ExtractedIdentity = Partial<Record<(typeof FIELDS)[number], string>>;
