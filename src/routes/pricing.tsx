@@ -101,9 +101,12 @@ function PricingPage() {
             labor categories on contract anniversary. Methodology references the BLS Employment Cost
             Index, Private Industry Workers, Professional and Business Services…
           </p>
-          <button className="mt-3 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted">
-            Regenerate via Document Generator
-          </button>
+          <Link
+            to="/documents"
+            className="inline-block mt-3 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted"
+          >
+            Open in Document Generator →
+          </Link>
         </Panel>
       </div>
     </>
