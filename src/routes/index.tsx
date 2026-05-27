@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
+import { ReadinessRollup } from "@/components/readiness-rollup";
 import {
   CLIENT,
   COMPLIANCE_MATRIX,
   DOCUMENT_QUEUE,
   LABOR_CATEGORIES,
-  MODULES,
   REGISTRATION_ITEMS,
   SIN_MATCHES,
 } from "@/lib/mock-data";
