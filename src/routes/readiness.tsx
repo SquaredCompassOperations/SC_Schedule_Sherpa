@@ -34,6 +34,10 @@ function ReadinessPage() {
         }
       />
 
+      <div className="mb-6">
+        <ReadinessRollup />
+      </div>
+
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8">
           <Panel title="Category Scores" className="p-0">
