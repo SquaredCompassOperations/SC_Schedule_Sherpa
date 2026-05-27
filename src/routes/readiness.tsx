@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel } from "@/components/ui-primitives";
+import { ReadinessRollup } from "@/components/readiness-rollup";
 import { CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/readiness")({
