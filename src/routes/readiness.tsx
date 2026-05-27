@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader, Panel } from "@/components/ui-primitives";
+import { ReadinessRollup } from "@/components/readiness-rollup";
 import { CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/readiness")({
@@ -32,6 +33,10 @@ function ReadinessPage() {
           </div>
         }
       />
+
+      <div className="mb-6">
+        <ReadinessRollup />
+      </div>
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-8">

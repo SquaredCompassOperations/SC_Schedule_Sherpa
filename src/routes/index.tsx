@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
+import { ReadinessRollup } from "@/components/readiness-rollup";
 import {
   CLIENT,
   COMPLIANCE_MATRIX,
   DOCUMENT_QUEUE,
   LABOR_CATEGORIES,
-  MODULES,
   REGISTRATION_ITEMS,
   SIN_MATCHES,
 } from "@/lib/mock-data";
@@ -156,16 +156,7 @@ function WorkspacePage() {
             </div>
           </Panel>
 
-          <Panel title="Modules">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-              {MODULES.map((m) => (
-                <Link key={m.slug} to={m.slug} className="flex items-center justify-between border border-border rounded-sm px-3 py-2 hover:bg-muted/50 transition-colors">
-                  <span className="text-xs font-medium">{m.label}</span>
-                  <StatusPill status={m.status} />
-                </Link>
-              ))}
-            </div>
-          </Panel>
+          <ReadinessRollup />
         </div>
       </div>
 
