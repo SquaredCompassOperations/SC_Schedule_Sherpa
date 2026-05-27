@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { LABOR_CATEGORIES } from "@/lib/mock-data";
