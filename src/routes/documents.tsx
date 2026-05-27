@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } from "docx";
@@ -12,15 +12,61 @@ export const Route = createFileRoute("/documents")({
   component: DocsPage,
 });
 
+type DocState = {
+  text: string;
+  status: "draft" | "review" | "final";
+  savedAt: number | null;
+  dirty: boolean;
+};
+
+const STATUS_ORDER: DocState["status"][] = ["draft", "review", "final"];
+
 function DocsPage() {
-  const [active, setActive] = useState(DOCUMENT_QUEUE[0]);
-  const [text, setText] = useState("");
   const fn = useServerFn(generateNarrative);
+
+  // In-memory store keyed by document name. Seeded from the static queue.
+  const [store, setStore] = useState<Record<string, DocState>>(() =>
+    Object.fromEntries(
+      DOCUMENT_QUEUE.map((d) => [
+        d.name,
+        { text: "", status: d.status as DocState["status"], savedAt: null, dirty: false },
+      ]),
+    ),
+  );
+  const [activeName, setActiveName] = useState(DOCUMENT_QUEUE[0].name);
+
+  const active = useMemo(
+    () => DOCUMENT_QUEUE.find((d) => d.name === activeName) ?? DOCUMENT_QUEUE[0],
+    [activeName],
+  );
+  const current = store[active.name];
+
+  const update = (name: string, patch: Partial<DocState>) =>
+    setStore((s) => ({ ...s, [name]: { ...s[name], ...patch } }));
 
   const mutation = useMutation({
     mutationFn: async (kind: string) => fn({ data: { kind, context: contextString() } }),
-    onSuccess: (res) => setText(res.text),
+    onSuccess: (res) => update(active.name, { text: res.text, dirty: true }),
   });
+
+  const save = () =>
+    update(active.name, { savedAt: Date.now(), dirty: false });
+
+  const advanceStatus = () => {
+    const i = STATUS_ORDER.indexOf(current.status);
+    const next = STATUS_ORDER[Math.min(i + 1, STATUS_ORDER.length - 1)];
+    update(active.name, { status: next, savedAt: Date.now(), dirty: false });
+  };
+
+  const counts = useMemo(() => {
+    let draft = 0, review = 0, final = 0;
+    Object.values(store).forEach((s) => {
+      if (s.status === "draft") draft++;
+      else if (s.status === "review") review++;
+      else final++;
+    });
+    return { draft, review, final };
+  }, [store]);
 
   return (
     <>
@@ -28,28 +74,42 @@ function DocsPage() {
         eyebrow="AI-Assisted Drafting"
         title="Document Generator"
         description="Generates narratives, summaries, and policy text from the master intake record. Every draft requires human review before approval."
+        actions={
+          <div className="flex gap-4 text-right">
+            <Stat label="Draft" value={counts.draft} tone="primary" />
+            <Stat label="Review" value={counts.review} tone="warning" />
+            <Stat label="Final" value={counts.final} tone="success" />
+          </div>
+        }
       />
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-4">
           <Panel title="Document Queue" className="p-0">
             <ul className="divide-y divide-border">
-              {DOCUMENT_QUEUE.map((d) => (
-                <li key={d.name}>
-                  <button
-                    onClick={() => {
-                      setActive(d);
-                      setText("");
-                    }}
-                    className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex justify-between items-center gap-3 ${
-                      active.name === d.name ? "bg-primary/5 border-l-2 border-primary" : ""
-                    }`}
-                  >
-                    <span className="text-xs font-medium truncate">{d.name}</span>
-                    <StatusPill status={d.status} />
-                  </button>
-                </li>
-              ))}
+              {DOCUMENT_QUEUE.map((d) => {
+                const s = store[d.name];
+                return (
+                  <li key={d.name}>
+                    <button
+                      onClick={() => setActiveName(d.name)}
+                      className={`w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors flex justify-between items-center gap-3 ${
+                        active.name === d.name ? "bg-primary/5 border-l-2 border-primary" : ""
+                      }`}
+                    >
+                      <span className="text-xs font-medium truncate flex items-center gap-2">
+                        {s.text ? (
+                          <span className="size-1.5 rounded-full bg-primary shrink-0" title="Has content" />
+                        ) : (
+                          <span className="size-1.5 rounded-full border border-border shrink-0" />
+                        )}
+                        {d.name}
+                      </span>
+                      <StatusPill status={s.status} />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </Panel>
         </div>
@@ -58,17 +118,33 @@ function DocsPage() {
           <Panel
             title={active.name}
             trailing={
-              <div className="flex gap-2">
-              <button
+              <div className="flex gap-2 items-center">
+                <SaveIndicator state={current} />
+                <button
                   onClick={() => mutation.mutate(active.kind)}
                   disabled={mutation.isPending}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {mutation.isPending ? "Generating…" : text ? "Regenerate" : "Generate Draft"}
+                  {mutation.isPending ? "Generating…" : current.text ? "Regenerate" : "Generate Draft"}
                 </button>
                 <button
-                  onClick={() => exportDocx(active.name, text)}
-                  disabled={!text}
+                  onClick={save}
+                  disabled={!current.dirty}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={advanceStatus}
+                  disabled={!current.text || current.status === "final"}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+                  title={current.status === "draft" ? "Mark ready for Review" : current.status === "review" ? "Mark Final" : "Already Final"}
+                >
+                  {current.status === "draft" ? "Mark for Review" : current.status === "review" ? "Approve Final" : "Final"}
+                </button>
+                <button
+                  onClick={() => exportDocx(active.name, current.text)}
+                  disabled={!current.text}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   Export .docx
@@ -82,14 +158,18 @@ function DocsPage() {
               </div>
             ) : null}
             <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={mutation.isPending ? "Drafting narrative with master intake context…" : "Click Generate Draft to produce AI-assisted narrative text using the master intake record. Edit freely before approval."}
+              value={current.text}
+              onChange={(e) => update(active.name, { text: e.target.value, dirty: true })}
+              placeholder={
+                mutation.isPending
+                  ? "Drafting narrative with master intake context…"
+                  : "Click Generate Draft to produce AI-assisted narrative text using the master intake record. Edit freely before approval."
+              }
               className="w-full h-80 p-4 text-sm border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary font-sans leading-relaxed"
             />
             <div className="mt-3 flex items-center justify-between text-[10px] font-mono text-muted-foreground">
               <span>Drafted using fields: UEI, CAGE, NAICS, SINs, POC, employee count</span>
-              <span>{text.length.toLocaleString()} chars</span>
+              <span>{current.text.length.toLocaleString()} chars</span>
             </div>
           </Panel>
 
@@ -104,7 +184,7 @@ function DocsPage() {
             >
               <ul className="space-y-1.5">
                 {DOC_CRITERIA[active.kind].items.map((item, i) => {
-                  const hit = text.length > 0 && matchesItem(text, item);
+                  const hit = current.text.length > 0 && matchesItem(current.text, item);
                   return (
                     <li key={i} className="flex items-start gap-2 text-xs">
                       <span
@@ -137,11 +217,47 @@ function DocsPage() {
               <Field k="Socioeconomic" v={CLIENT.socioeconomic} />
             </div>
           </Panel>
-
         </div>
       </div>
     </>
   );
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone: "primary" | "warning" | "success" }) {
+  const cls =
+    tone === "success" ? "text-success" : tone === "warning" ? "text-warning" : "text-primary";
+  return (
+    <div>
+      <div className="text-[10px] font-mono text-muted-foreground uppercase">{label}</div>
+      <div className={`text-2xl font-mono font-bold leading-none ${cls}`}>{value}</div>
+    </div>
+  );
+}
+
+function SaveIndicator({ state }: { state: DocState }) {
+  if (state.dirty) {
+    return (
+      <span className="text-[10px] font-mono uppercase tracking-widest text-warning">
+        Unsaved
+      </span>
+    );
+  }
+  if (state.savedAt) {
+    return (
+      <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        Saved {timeAgo(state.savedAt)}
+      </span>
+    );
+  }
+  return null;
+}
+
+function timeAgo(ts: number) {
+  const s = Math.max(1, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m}m ago`;
+  return `${Math.round(m / 60)}h ago`;
 }
 
 function Field({ k, v }: { k: string; v: string }) {
@@ -170,11 +286,7 @@ function exportDocx(title: string, content: string) {
       {
         properties: {},
         children: [
-          new Paragraph({
-            text: title,
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.LEFT,
-          }),
+          new Paragraph({ text: title, heading: HeadingLevel.HEADING_1, alignment: AlignmentType.LEFT }),
           new Paragraph({
             children: [
               new TextRun({
