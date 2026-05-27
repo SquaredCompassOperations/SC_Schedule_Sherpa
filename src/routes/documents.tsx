@@ -6,33 +6,18 @@ import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } fro
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { DOCUMENT_QUEUE, CLIENT, DOC_CRITERIA } from "@/lib/mock-data";
 import { generateNarrative } from "@/lib/narrative.functions";
+import { useDocStore, patchDoc, type DocState } from "@/lib/doc-store";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({ meta: [{ title: "Document Generator — ScheduleBuilder" }] }),
   component: DocsPage,
 });
 
-type DocState = {
-  text: string;
-  status: "draft" | "review" | "final";
-  savedAt: number | null;
-  dirty: boolean;
-};
-
 const STATUS_ORDER: DocState["status"][] = ["draft", "review", "final"];
 
 function DocsPage() {
   const fn = useServerFn(generateNarrative);
-
-  // In-memory store keyed by document name. Seeded from the static queue.
-  const [store, setStore] = useState<Record<string, DocState>>(() =>
-    Object.fromEntries(
-      DOCUMENT_QUEUE.map((d) => [
-        d.name,
-        { text: "", status: d.status as DocState["status"], savedAt: null, dirty: false },
-      ]),
-    ),
-  );
+  const store = useDocStore();
   const [activeName, setActiveName] = useState(DOCUMENT_QUEUE[0].name);
 
   const active = useMemo(
@@ -41,22 +26,21 @@ function DocsPage() {
   );
   const current = store[active.name];
 
-  const update = (name: string, patch: Partial<DocState>) =>
-    setStore((s) => ({ ...s, [name]: { ...s[name], ...patch } }));
+  const update = (name: string, patch: Partial<DocState>) => patchDoc(name, patch);
 
   const mutation = useMutation({
     mutationFn: async (kind: string) => fn({ data: { kind, context: contextString() } }),
     onSuccess: (res) => update(active.name, { text: res.text, dirty: true }),
   });
 
-  const save = () =>
-    update(active.name, { savedAt: Date.now(), dirty: false });
+  const save = () => update(active.name, { savedAt: Date.now(), dirty: false });
 
   const advanceStatus = () => {
     const i = STATUS_ORDER.indexOf(current.status);
     const next = STATUS_ORDER[Math.min(i + 1, STATUS_ORDER.length - 1)];
     update(active.name, { status: next, savedAt: Date.now(), dirty: false });
   };
+
 
   const counts = useMemo(() => {
     let draft = 0, review = 0, final = 0;
