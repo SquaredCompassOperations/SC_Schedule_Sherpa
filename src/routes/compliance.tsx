@@ -17,11 +17,11 @@ function CompliancePage() {
   const missing = rows.filter((r) => r.status === "missing").length;
 
   const cycleStatus = (ref: string) => {
-    const order: ModuleStatus[] = ["missing", "review", "valid"];
+    const order: ComplianceStatus[] = ["missing", "review", "valid"];
     setRows((prev) =>
       prev.map((r) => {
         if (r.ref !== ref) return r;
-        const idx = order.indexOf(r.status as ModuleStatus);
+        const idx = order.indexOf(r.status as ComplianceStatus);
         const next = order[(idx + 1) % order.length];
         return { ...r, status: next };
       }),
