@@ -19,7 +19,6 @@ const STEPS = [
   "Financials & Policies",
   "Past Performance",
   "Pricing Inputs",
-  "Final Confirmation",
 ];
 
 type FieldDef = { key: string; label: string; type?: "text" | "textarea"; hint?: string };
