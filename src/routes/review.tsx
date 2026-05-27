@@ -242,7 +242,7 @@ function ReviewPage() {
                               <li key={name} className="px-3 py-2 flex items-center gap-3 text-xs">
                                 <div className="flex-1 min-w-0">
                                   <div className="font-bold text-foreground truncate">
-                                    {d?.title ?? name}
+                                    {d?.name ?? name}
                                   </div>
                                   <div className="text-[10px] font-mono text-muted-foreground">{name}</div>
                                 </div>
