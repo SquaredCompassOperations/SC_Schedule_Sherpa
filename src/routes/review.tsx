@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { REVIEW_GATES } from "@/lib/mock-data";
 
