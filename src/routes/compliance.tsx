@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { COMPLIANCE_MATRIX } from "@/lib/mock-data";
+import type { ModuleStatus } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/compliance")({
   head: () => ({ meta: [{ title: "Compliance Matrix — ScheduleBuilder" }] }),
