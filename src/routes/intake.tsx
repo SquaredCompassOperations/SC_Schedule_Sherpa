@@ -19,7 +19,6 @@ const STEPS = [
   "Financials & Policies",
   "Past Performance",
   "Pricing Inputs",
-  "Final Confirmation",
 ];
 
 type FieldDef = { key: string; label: string; type?: "text" | "textarea"; hint?: string };
@@ -68,10 +67,6 @@ const FIELD_SETS: FieldDef[][] = [
     { key: "cplSource", label: "Commercial Price List Source" },
     { key: "mfcDiscount", label: "Most Favored Customer Discount" },
     { key: "gsaDiscount", label: "Proposed GSA Discount" },
-  ],
-  [
-    { key: "negCert", label: "Authorized Negotiator Certification" },
-    { key: "confirmation", label: "Confirmation", type: "textarea" },
   ],
 ];
 
