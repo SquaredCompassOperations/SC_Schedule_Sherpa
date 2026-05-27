@@ -59,14 +59,18 @@ function DocsPage() {
             title={active.name}
             trailing={
               <div className="flex gap-2">
-                <button
+              <button
                   onClick={() => mutation.mutate(active.kind)}
                   disabled={mutation.isPending}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
                 >
                   {mutation.isPending ? "Generating…" : text ? "Regenerate" : "Generate Draft"}
                 </button>
-                <button className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted">
+                <button
+                  onClick={() => exportDocx(active.name, text)}
+                  disabled={!text}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+                >
                   Export .docx
                 </button>
               </div>
