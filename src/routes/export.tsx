@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import JSZip from "jszip";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
-import { COMPLIANCE_MATRIX, EXPORT_BUNDLE } from "@/lib/mock-data";
+import { COMPLIANCE_MATRIX, EXPORT_BUNDLE, CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/export")({
   head: () => ({ meta: [{ title: "Export eOffer Package — ScheduleBuilder" }] }),
@@ -10,6 +12,39 @@ export const Route = createFileRoute("/export")({
 function ExportPage() {
   const missing = COMPLIANCE_MATRIX.filter((r) => r.status === "missing");
   const ready = missing.length === 0;
+  const [downloading, setDownloading] = useState(false);
+
+  const generateZip = async () => {
+    setDownloading(true);
+    const zip = new JSZip();
+
+    for (const b of EXPORT_BUNDLE) {
+      const folder = zip.folder(b.folder);
+      if (!folder) continue;
+      for (const f of b.files) {
+        const content = fileContent(f);
+        folder.file(f, content);
+      }
+    }
+
+    const manifest = `eOffer Package Manifest
+Offeror: ${CLIENT.name}
+UEI: ${CLIENT.uei}
+CAGE: ${CLIENT.cage}
+Solicitation: ${CLIENT.solicitation}
+Generated: ${new Date().toISOString()}
+`;
+    zip.file("00_Manifest.txt", manifest);
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `eOffer_Package_${CLIENT.cage}_${new Date().toISOString().slice(0, 10)}.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setDownloading(false);
+  };
 
   return (
     <>
@@ -19,10 +54,11 @@ function ExportPage() {
         description="Builds the final folder structure, document package, pricing files, and signed forms tracker. Submission is performed manually by the Authorized Negotiator."
         actions={
           <button
-            disabled={!ready}
+            onClick={generateZip}
+            disabled={!ready || downloading}
             className="text-xs font-bold uppercase tracking-widest px-5 py-3 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {ready ? "Generate eOffer Zip" : `Resolve ${missing.length} Blocker${missing.length === 1 ? "" : "s"}`}
+            {downloading ? "Building Zip…" : ready ? "Generate eOffer Zip" : `Resolve ${missing.length} Blocker${missing.length === 1 ? "" : "s"}`}
           </button>
         }
       />
@@ -68,13 +104,13 @@ function ExportPage() {
 
           <Panel title="eOffer Field-Ready Text">
             <div className="space-y-2 text-[11px] font-mono">
-              <Row k="Offeror Name" v="Advantix Systems LLC" />
-              <Row k="UEI" v="Z9L8H2M7K4P1" />
-              <Row k="CAGE Code" v="8K2P7" />
-              <Row k="Solicitation" v="47QSMD20R0001" />
-              <Row k="Schedule" v="MAS Consolidated · IT Large Category" />
+              <Row k="Offeror Name" v={CLIENT.name} />
+              <Row k="UEI" v={CLIENT.uei} />
+              <Row k="CAGE Code" v={CLIENT.cage} />
+              <Row k="Solicitation" v={CLIENT.solicitation} />
+              <Row k="Schedule" v={CLIENT.schedule} />
               <Row k="Proposed SINs" v="54151S" />
-              <Row k="Authorized Negotiator" v="Jordan Daniels (VP Contracts)" />
+              <Row k="Authorized Negotiator" v={CLIENT.poc} />
             </div>
           </Panel>
         </div>
@@ -110,6 +146,13 @@ function ExportPage() {
       </div>
     </>
   );
+}
+
+function fileContent(filename: string): string {
+  const stub = `[PLACEHOLDER] This is a generated placeholder for ${filename}.\nReplace with the final document before eOffer submission.\n`;
+  if (filename.endsWith(".xlsx")) return stub + "(Binary .xlsx content would be embedded here)";
+  if (filename.endsWith(".pdf")) return stub + "(Binary .pdf content would be embedded here)";
+  return stub;
 }
 
 function Row({ k, v }: { k: string; v: string }) {

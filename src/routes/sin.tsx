@@ -10,8 +10,24 @@ export const Route = createFileRoute("/sin")({
 
 function SinPage() {
   const [selected, setSelected] = useState<string[]>(["54151S"]);
+  const [matches, setMatches] = useState(SIN_MATCHES);
+  const [running, setRunning] = useState(false);
+
   const toggle = (code: string) =>
     setSelected((s) => (s.includes(code) ? s.filter((c) => c !== code) : [...s, code]));
+
+  const rerun = () => {
+    setRunning(true);
+    setTimeout(() => {
+      setMatches((prev) =>
+        prev.map((m) => ({
+          ...m,
+          confidence: Math.min(99, Math.max(20, m.confidence + (Math.random() * 10 - 5))),
+        })),
+      );
+      setRunning(false);
+    }, 1200);
+  };
 
   return (
     <>
@@ -33,14 +49,18 @@ function SinPage() {
           className="w-full px-3 py-2 text-sm border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary h-20"
         />
         <div className="flex justify-end mt-3">
-          <button className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90">
-            Re-run Matching
+          <button
+            onClick={rerun}
+            disabled={running}
+            className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
+          >
+            {running ? "Analyzing…" : "Re-run Matching"}
           </button>
         </div>
       </Panel>
 
       <div className="space-y-3">
-        {SIN_MATCHES.map((s) => {
+        {matches.map((s) => {
           const active = selected.includes(s.code);
           return (
             <div
@@ -61,7 +81,7 @@ function SinPage() {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-xl font-mono font-bold text-foreground">{s.confidence}%</div>
+                  <div className="text-xl font-mono font-bold text-foreground">{Math.round(s.confidence)}%</div>
                   <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Match</div>
                   <div className="mt-2 w-24 h-1.5 bg-muted rounded-full overflow-hidden">
                     <div
