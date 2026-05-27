@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import JSZip from "jszip";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
-import { COMPLIANCE_MATRIX, EXPORT_BUNDLE } from "@/lib/mock-data";
+import { COMPLIANCE_MATRIX, EXPORT_BUNDLE, CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/export")({
   head: () => ({ meta: [{ title: "Export eOffer Package — ScheduleBuilder" }] }),
