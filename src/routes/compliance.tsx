@@ -10,9 +10,22 @@ export const Route = createFileRoute("/compliance")({
 });
 
 function CompliancePage() {
-  const valid = COMPLIANCE_MATRIX.filter((r) => r.status === "valid").length;
-  const review = COMPLIANCE_MATRIX.filter((r) => r.status === "review").length;
-  const missing = COMPLIANCE_MATRIX.filter((r) => r.status === "missing").length;
+  const [rows, setRows] = useState(COMPLIANCE_MATRIX.map((r) => ({ ...r })));
+  const valid = rows.filter((r) => r.status === "valid").length;
+  const review = rows.filter((r) => r.status === "review").length;
+  const missing = rows.filter((r) => r.status === "missing").length;
+
+  const cycleStatus = (ref: string) => {
+    const order: ModuleStatus[] = ["missing", "review", "valid"];
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.ref !== ref) return r;
+        const idx = order.indexOf(r.status as ModuleStatus);
+        const next = order[(idx + 1) % order.length];
+        return { ...r, status: next };
+      }),
+    );
+  };
 
   return (
     <>
@@ -41,16 +54,28 @@ function CompliancePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {COMPLIANCE_MATRIX.map((r) => (
+              {rows.map((r) => (
                 <tr key={r.ref}>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">{r.ref}</td>
                   <td className="px-4 py-3 text-foreground">{r.req}</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-primary">{r.source}</td>
                   <td className="px-4 py-3 text-right"><StatusPill status={r.status} /></td>
                   <td className="px-4 py-3 text-right">
-                    <button className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">
-                      {r.status === "missing" ? "Upload" : "Open"}
-                    </button>
+                    {r.status === "missing" ? (
+                      <Link
+                        to="/documents"
+                        className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
+                      >
+                        Generate →
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => cycleStatus(r.ref)}
+                        className="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline"
+                      >
+                        Update
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
