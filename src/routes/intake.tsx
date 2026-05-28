@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { FileUploader } from "@/components/file-uploader";
 import { extractBusinessIdentity } from "@/lib/intake-extract.functions";
+import { fetchDriveFile, listDriveFiles, type GDriveFile } from "@/lib/gdrive.functions";
+
 
 export const Route = createFileRoute("/intake")({
   head: () => ({ meta: [{ title: "Client Intake — ScheduleBuilder" }] }),
@@ -219,7 +221,9 @@ function IdentityExtractor({
   onExtracted: (fields: Record<string, string>) => void;
 }) {
   const extract = useServerFn(extractBusinessIdentity);
+  const fetchDrive = useServerFn(fetchDriveFile);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
     | { kind: "idle" }
     | { kind: "working"; name: string }
@@ -227,29 +231,14 @@ function IdentityExtractor({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const handle = async (file: File) => {
-    if (file.size > EXTRACT_MAX_BYTES) {
-      setStatus({ kind: "error", message: "File exceeds 12 MB limit for extraction." });
-      return;
-    }
-    setStatus({ kind: "working", name: file.name });
+  const runExtraction = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }) => {
+    setStatus({ kind: "working", name: payload.filename });
     try {
-      const buf = await file.arrayBuffer();
-      // base64 encode in chunks to avoid call-stack overflows on large files
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      const CHUNK = 0x8000;
-      for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-      }
-      const dataBase64 = btoa(binary);
-      const res = await extract({
-        data: {
-          filename: file.name,
-          mediaType: file.type || "application/octet-stream",
-          dataBase64,
-        },
-      });
+      const res = await extract({ data: payload });
       const count = Object.keys(res.fields).length;
       if (count === 0) {
         setStatus({
@@ -259,7 +248,7 @@ function IdentityExtractor({
         return;
       }
       onExtracted(res.fields);
-      setStatus({ kind: "done", name: file.name, count });
+      setStatus({ kind: "done", name: payload.filename, count });
     } catch (err) {
       setStatus({
         kind: "error",
@@ -267,6 +256,40 @@ function IdentityExtractor({
       });
     }
   };
+
+  const handle = async (file: File) => {
+    if (file.size > EXTRACT_MAX_BYTES) {
+      setStatus({ kind: "error", message: "File exceeds 12 MB limit for extraction." });
+      return;
+    }
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    await runExtraction({
+      filename: file.name,
+      mediaType: file.type || "application/octet-stream",
+      dataBase64: btoa(binary),
+    });
+  };
+
+  const handleDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    setStatus({ kind: "working", name: file.name });
+    try {
+      const payload = await fetchDrive({ data: { fileId: file.id } });
+      await runExtraction(payload);
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Drive import failed.",
+      });
+    }
+  };
+
 
   return (
     <div className="mb-6 border border-dashed border-primary/40 bg-primary/5 rounded-sm p-4">
@@ -283,13 +306,22 @@ function IdentityExtractor({
             PDF · DOC/DOCX · TXT · RTF · PNG · JPG · TIF · max 12 MB
           </div>
         </div>
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={status.kind === "working"}
-          className="shrink-0 text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
-        >
-          {status.kind === "working" ? "Extracting…" : "Upload & Extract"}
-        </button>
+        <div className="shrink-0 flex gap-2">
+          <button
+            onClick={() => setShowDrive(true)}
+            disabled={status.kind === "working"}
+            className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 border border-border bg-background rounded-sm hover:bg-muted disabled:opacity-50"
+          >
+            ⛁ From Drive
+          </button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={status.kind === "working"}
+            className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
+          >
+            {status.kind === "working" ? "Extracting…" : "Upload & Extract"}
+          </button>
+        </div>
         <input
           ref={inputRef}
           type="file"
@@ -302,6 +334,7 @@ function IdentityExtractor({
           }}
         />
       </div>
+
 
       {status.kind === "working" ? (
         <div className="mt-3 text-[11px] font-mono text-muted-foreground">
@@ -318,6 +351,110 @@ function IdentityExtractor({
           {status.message}
         </div>
       ) : null}
+      {showDrive ? (
+        <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
     </div>
   );
 }
+
+function DrivePicker({
+  onPick,
+  onClose,
+}: {
+  onPick: (file: GDriveFile) => void;
+  onClose: () => void;
+}) {
+  const listFiles = useServerFn(listDriveFiles);
+  const [query, setQuery] = useState("");
+  const [files, setFiles] = useState<GDriveFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setErr(null);
+    const t = setTimeout(async () => {
+      try {
+        const res = await listFiles({ data: { query: query || undefined } });
+        if (!cancelled) setFiles(res.files);
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : "Failed to load Drive");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query, listFiles]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-background border border-border rounded-sm w-full max-w-2xl max-h-[80vh] flex flex-col shadow-xl"
+      >
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div className="text-xs font-bold uppercase tracking-widest">
+            Import from Google Drive
+          </div>
+          <button
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground text-sm"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="px-4 py-3 border-b border-border">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search files by name…"
+            className="w-full px-3 py-2 text-sm border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+          />
+        </div>
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="p-6 text-[11px] font-mono text-muted-foreground text-center">
+              Loading…
+            </div>
+          ) : err ? (
+            <div className="p-6 text-[11px] font-mono text-destructive text-center">{err}</div>
+          ) : files.length === 0 ? (
+            <div className="p-6 text-[11px] font-mono text-muted-foreground text-center">
+              No files found.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {files.map((f) => (
+                <li key={f.id}>
+                  <button
+                    onClick={() => onPick(f)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-muted/50 flex items-center gap-3"
+                  >
+                    {f.iconLink ? (
+                      <img src={f.iconLink} alt="" className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <span className="w-4 h-4 shrink-0" />
+                    )}
+                    <span className="text-xs font-mono truncate flex-1">{f.name}</span>
+                    <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                      {f.modifiedTime?.slice(0, 10) ?? ""}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
