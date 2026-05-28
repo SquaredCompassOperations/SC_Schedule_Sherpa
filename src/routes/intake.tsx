@@ -346,6 +346,11 @@ function IdentityExtractor({
           ✓ Extracted {status.count} field{status.count === 1 ? "" : "s"} from {status.name}
         </div>
       ) : null}
+      {status.kind === "error" ? (
+        <div className="mt-3 text-[11px] font-mono text-destructive">
+          {status.message}
+        </div>
+      ) : null}
       {showDrive ? (
         <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
       ) : null}
