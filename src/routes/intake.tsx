@@ -221,7 +221,9 @@ function IdentityExtractor({
   onExtracted: (fields: Record<string, string>) => void;
 }) {
   const extract = useServerFn(extractBusinessIdentity);
+  const fetchDrive = useServerFn(fetchDriveFile);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
     | { kind: "idle" }
     | { kind: "working"; name: string }
@@ -229,29 +231,14 @@ function IdentityExtractor({
     | { kind: "error"; message: string }
   >({ kind: "idle" });
 
-  const handle = async (file: File) => {
-    if (file.size > EXTRACT_MAX_BYTES) {
-      setStatus({ kind: "error", message: "File exceeds 12 MB limit for extraction." });
-      return;
-    }
-    setStatus({ kind: "working", name: file.name });
+  const runExtraction = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }) => {
+    setStatus({ kind: "working", name: payload.filename });
     try {
-      const buf = await file.arrayBuffer();
-      // base64 encode in chunks to avoid call-stack overflows on large files
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      const CHUNK = 0x8000;
-      for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-      }
-      const dataBase64 = btoa(binary);
-      const res = await extract({
-        data: {
-          filename: file.name,
-          mediaType: file.type || "application/octet-stream",
-          dataBase64,
-        },
-      });
+      const res = await extract({ data: payload });
       const count = Object.keys(res.fields).length;
       if (count === 0) {
         setStatus({
@@ -261,7 +248,7 @@ function IdentityExtractor({
         return;
       }
       onExtracted(res.fields);
-      setStatus({ kind: "done", name: file.name, count });
+      setStatus({ kind: "done", name: payload.filename, count });
     } catch (err) {
       setStatus({
         kind: "error",
@@ -269,6 +256,40 @@ function IdentityExtractor({
       });
     }
   };
+
+  const handle = async (file: File) => {
+    if (file.size > EXTRACT_MAX_BYTES) {
+      setStatus({ kind: "error", message: "File exceeds 12 MB limit for extraction." });
+      return;
+    }
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+    }
+    await runExtraction({
+      filename: file.name,
+      mediaType: file.type || "application/octet-stream",
+      dataBase64: btoa(binary),
+    });
+  };
+
+  const handleDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    setStatus({ kind: "working", name: file.name });
+    try {
+      const payload = await fetchDrive({ data: { fileId: file.id } });
+      await runExtraction(payload);
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Drive import failed.",
+      });
+    }
+  };
+
 
   return (
     <div className="mb-6 border border-dashed border-primary/40 bg-primary/5 rounded-sm p-4">
