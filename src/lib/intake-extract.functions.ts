@@ -4,14 +4,33 @@ import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "./ai-gateway";
 
 const FIELDS = [
-  "legalName",
+  // Company details
   "uei",
-  "cage",
+  "orgType",
+  "parentUei",
+  "legalName",
+  "dba",
   "ein",
-  "naicsPrimary",
-  "employees",
+  "businessTypes",
   "samStatus",
   "samExpires",
+  "website",
+  "naicsPrimary",
+  "entityStartDate",
+  // Company address
+  "addrStreet1",
+  "addrStreet2",
+  "addrCity",
+  "addrState",
+  "addrZip",
+  "addrCountry",
+  // Mailing address
+  "mailStreet1",
+  "mailStreet2",
+  "mailCity",
+  "mailState",
+  "mailZip",
+  "mailCountry",
 ] as const;
 
 export type ExtractedIdentity = Partial<Record<(typeof FIELDS)[number], string>>;
@@ -22,7 +41,6 @@ export const extractBusinessIdentity = createServerFn({ method: "POST" })
       .object({
         filename: z.string().min(1).max(255),
         mediaType: z.string().min(1).max(128),
-        // base64-encoded file contents
         dataBase64: z.string().min(1).max(20_000_000),
       })
       .parse(input),
@@ -33,13 +51,12 @@ export const extractBusinessIdentity = createServerFn({ method: "POST" })
 
     const gateway = createLovableAiGatewayProvider(key);
     const model = gateway("google/gemini-2.5-flash");
-
     const bytes = Buffer.from(data.dataBase64, "base64");
 
     const { text } = await generateText({
       model,
       system:
-        'You extract structured federal contractor business-identity data from documents (including SAM.gov entity registration printouts/PDFs). Return ONLY a single JSON object — no prose, no markdown fences. Keys: legalName, uei (12-char SAM.gov UEI), cage (5-char CAGE code), ein (XX-XXXXXXX), naicsPrimary (6-digit), employees (integer string), samStatus (e.g. "Active", "Expired", "Submitted", "Inactive" — from a SAM.gov registration status field), samExpires (ISO date YYYY-MM-DD from the SAM.gov registration expiration date). Omit any field you cannot find with reasonable confidence. Do not invent values.',
+        'You extract structured federal contractor business-identity data from SAM.gov entity registration profiles (PDF printouts, exports, screenshots) and similar documents. Return ONLY a single JSON object — no prose, no markdown fences. Keys: uei (12-char SAM.gov UEI), orgType (e.g. "Limited Liability Company", "Corporate Entity (Tax Exempt)"), parentUei (Common Parent UEI if present, else omit), legalName (Legal Business Name), dba (Doing Business As), ein (XX-XXXXXXX), businessTypes (comma-separated list of "Business Types" registered in SAM), samStatus ("Active" | "Expired" | "Submitted" | "Inactive"), samExpires (Registration Expiration Date, ISO YYYY-MM-DD), website, naicsPrimary (6-digit Primary NAICS), entityStartDate (ISO YYYY-MM-DD). Also extract the Physical Address (addrStreet1, addrStreet2, addrCity, addrState, addrZip, addrCountry) and the Mailing Address (mailStreet1, mailStreet2, mailCity, mailState, mailZip, mailCountry). Omit any field you cannot find with reasonable confidence. Never invent values.',
       messages: [
         {
           role: "user",
@@ -48,19 +65,14 @@ export const extractBusinessIdentity = createServerFn({ method: "POST" })
               type: "text",
               text: `Extract the business identity fields from "${data.filename}". Output strict JSON only.`,
             },
-            {
-              type: "file",
-              data: bytes,
-              mediaType: data.mediaType,
-            },
+            { type: "file", data: bytes, mediaType: data.mediaType },
           ],
         },
       ],
     });
 
-    // Strip code fences if model added any, then parse JSON.
     const cleaned = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    let parsed: ExtractedIdentity = {};
+    const parsed: ExtractedIdentity = {};
     try {
       const obj = JSON.parse(cleaned);
       if (obj && typeof obj === "object") {
@@ -72,7 +84,7 @@ export const extractBusinessIdentity = createServerFn({ method: "POST" })
         }
       }
     } catch {
-      // Return empty extraction on parse failure rather than crashing.
+      // Empty result on parse failure.
     }
 
     return { fields: parsed, raw: text };
