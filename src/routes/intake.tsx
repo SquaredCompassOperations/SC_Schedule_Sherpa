@@ -418,12 +418,11 @@ const DOC_ACCEPT =
 const DOC_ORDER: DocKey[] = [
   "compensationPlan",
   "uotPolicy",
-  "qualityControl",
+  "corporatePriceList",
   "pnlYear1",
   "pnlYear2",
   "balanceYear1",
   "balanceYear2",
-  "pastPerformance",
 ];
 
 function CorporateDocumentsStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
