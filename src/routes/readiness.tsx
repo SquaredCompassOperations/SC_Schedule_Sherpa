@@ -144,7 +144,7 @@ function ReadinessPage() {
     const policies: { key: keyof typeof DOC_LABELS; have: boolean }[] = [
       { key: "compensationPlan", have: !!intake.documents.compensationPlan },
       { key: "uotPolicy", have: !!intake.documents.uotPolicy },
-      { key: "qualityControl", have: !!intake.documents.qualityControl },
+      { key: "corporatePriceList", have: !!intake.documents.corporatePriceList },
     ];
     const haveCount = policies.filter((p) => p.have).length;
     const missingPol = policies.filter((p) => !p.have).map((p) => DOC_LABELS[p.key]);
@@ -153,7 +153,7 @@ function ReadinessPage() {
       status: haveCount === 3 ? "complete" : haveCount > 0 ? "partial" : "missing",
       detail:
         haveCount === 3
-          ? "Compensation Plan, UOT Policy, and Quality Control documentation all uploaded."
+          ? "Compensation Plan, UOT Policy, and Corporate Price List(s) all uploaded."
           : `Missing: ${missingPol.join("; ")}`,
       effort: haveCount === 3 ? "0 hr" : `${(3 - haveCount) * 1}–${(3 - haveCount) * 2} hr`,
       weight: 30,
