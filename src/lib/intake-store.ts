@@ -62,6 +62,18 @@ export type SbaCert = {
   expiration?: string;
 };
 
+export type PastPerformanceCategory =
+  | "Capability Statement"
+  | "Case Study"
+  | "Reference"
+  | "Project Experience"
+  | "CPARS";
+
+export type PastPerformanceEntry = DocEntry & {
+  id: string;
+  category: PastPerformanceCategory;
+};
+
 export type IntakeState = {
   corporate: CorporateInfo;
   companyAddress: Address;
@@ -69,6 +81,7 @@ export type IntakeState = {
   mailingAddress: Address;
   negotiators: Negotiator[];
   documents: Partial<Record<DocKey, DocEntry>>;
+  pastPerformance: PastPerformanceEntry[];
   sbaCerts: SbaCert[];
   sbaScannedAt: number | null;
 };
