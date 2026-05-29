@@ -436,6 +436,107 @@ function CorporateDocumentsStep({ intake }: { intake: ReturnType<typeof useIntak
       {DOC_ORDER.map((k) => (
         <DocRow key={k} docKey={k} entry={intake.documents[k]} />
       ))}
+      <PastPerformanceSection entries={intake.pastPerformance} />
+    </div>
+  );
+}
+
+function PastPerformanceSection({
+  entries,
+}: {
+  entries: ReturnType<typeof useIntake>["pastPerformance"];
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [category, setCategory] = useState<PastPerformanceCategory>(
+    PAST_PERFORMANCE_CATEGORIES[0],
+  );
+
+  const handle = (files: FileList | null) => {
+    if (!files) return;
+    for (const f of Array.from(files)) {
+      addPastPerformance({
+        filename: f.name,
+        size: f.size,
+        uploadedAt: Date.now(),
+        category,
+      });
+    }
+  };
+
+  return (
+    <div className="mt-4 p-3 border border-border rounded-sm bg-card space-y-3">
+      <div className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={entries.length > 0}
+          readOnly
+          className="shrink-0"
+          aria-label="Past Performance Information"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm text-foreground">Past Performance Information</div>
+          <div className="text-[10px] font-mono text-muted-foreground">
+            Capability Statement(s), Case Studies, References, Project Experience, CPARS.
+            Multiple files allowed.
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value as PastPerformanceCategory)}
+          className="text-[11px] font-mono px-2 py-1.5 border border-border rounded-sm bg-background"
+        >
+          {PAST_PERFORMANCE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
+        >
+          Upload File(s)
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={DOC_ACCEPT}
+          className="hidden"
+          onChange={(e) => {
+            handle(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </div>
+
+      {entries.length > 0 ? (
+        <div className="border border-border rounded-sm divide-y divide-border bg-background">
+          {entries.map((e) => (
+            <div key={e.id} className="flex items-center gap-3 px-3 py-2 text-xs">
+              <span className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground w-32 shrink-0">
+                {e.category}
+              </span>
+              <span className="flex-1 truncate font-mono">{e.filename}</span>
+              <span className="text-[10px] font-mono text-muted-foreground w-16 text-right">
+                {(e.size / 1024).toFixed(0)} KB
+              </span>
+              <button
+                onClick={() => removePastPerformance(e.id)}
+                className="text-[10px] font-mono text-muted-foreground hover:text-destructive"
+                aria-label="Remove"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-[10px] font-mono text-muted-foreground">No files uploaded.</div>
+      )}
     </div>
   );
 }
