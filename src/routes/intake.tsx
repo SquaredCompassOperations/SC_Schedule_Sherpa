@@ -8,11 +8,14 @@ import { detectPnlLoss } from "@/lib/financials-check.functions";
 import { lookupSbaCertifications } from "@/lib/sba-lookup.functions";
 import {
   DOC_LABELS,
+  PAST_PERFORMANCE_CATEGORIES,
   addNegotiator,
+  addPastPerformance,
   patchCompanyAddress,
   patchCorporate,
   patchMailingAddress,
   removeNegotiator,
+  removePastPerformance,
   setDocument,
   setMailingSame,
   setNegotiator,
@@ -23,6 +26,7 @@ import {
   type DocEntry,
   type DocKey,
   type Negotiator,
+  type PastPerformanceCategory,
 } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/intake")({
