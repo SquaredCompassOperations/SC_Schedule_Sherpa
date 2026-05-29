@@ -83,14 +83,20 @@ function ReadinessPage() {
     });
 
     // 3. Past performance uploaded
-    const pp = intake.documents.pastPerformance;
+    const pp = intake.pastPerformance;
+    const ppCount = pp.length;
     cats.push({
       name: "Past Performance",
-      status: pp ? "complete" : "missing",
-      detail: pp ? `Uploaded: ${pp.filename}` : "No past performance documentation uploaded.",
-      effort: pp ? "0 hr" : "1–3 hr",
+      status: ppCount === 0 ? "missing" : ppCount < 2 ? "partial" : "complete",
+      detail:
+        ppCount === 0
+          ? "No past performance documentation uploaded."
+          : `${ppCount} file${ppCount === 1 ? "" : "s"} uploaded (${
+              Array.from(new Set(pp.map((p) => p.category))).join(", ")
+            }).`,
+      effort: ppCount >= 2 ? "0 hr" : "1–3 hr",
       weight: 15,
-      action: pp ? undefined : { label: "Open Step 2", href: "/intake" },
+      action: ppCount < 2 ? { label: "Open Step 2", href: "/intake" } : undefined,
     });
 
     // 4. Financial documents
