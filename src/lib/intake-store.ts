@@ -222,10 +222,28 @@ export const REQUIRED_CORPORATE_KEYS: (keyof CorporateInfo)[] = [
 export const DOC_LABELS: Record<DocKey, string> = {
   compensationPlan: "Professional/Employee Compensation Plan",
   uotPolicy: "Uncompensated Overtime Policy",
-  qualityControl: "Quality Control documentation",
+  corporatePriceList: "Corporate Price List(s)",
   pnlYear1: "P&L Statement — Year 1",
   pnlYear2: "P&L Statement — Year 2",
   balanceYear1: "Balance Sheet — Year 1",
   balanceYear2: "Balance Sheet — Year 2",
-  pastPerformance: "Past Performance (Capability Statement / Case Studies / References)",
 };
+
+export const PAST_PERFORMANCE_CATEGORIES: PastPerformanceCategory[] = [
+  "Capability Statement",
+  "Case Study",
+  "Reference",
+  "Project Experience",
+  "CPARS",
+];
+
+export function addPastPerformance(entry: Omit<PastPerformanceEntry, "id">) {
+  const id = `pp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  state = { ...state, pastPerformance: [...state.pastPerformance, { ...entry, id }] };
+  emit();
+}
+
+export function removePastPerformance(id: string) {
+  state = { ...state, pastPerformance: state.pastPerformance.filter((e) => e.id !== id) };
+  emit();
+}
