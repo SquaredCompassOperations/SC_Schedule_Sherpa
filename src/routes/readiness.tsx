@@ -1,110 +1,253 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { PageHeader, Panel } from "@/components/ui-primitives";
-import { ReadinessRollup } from "@/components/readiness-rollup";
-import { CLIENT } from "@/lib/mock-data";
+import {
+  REQUIRED_CORPORATE_KEYS,
+  DOC_LABELS,
+  useIntake,
+  type IntakeState,
+  type Negotiator,
+} from "@/lib/intake-store";
 
 export const Route = createFileRoute("/readiness")({
   head: () => ({ meta: [{ title: "Readiness Assessment — ScheduleBuilder" }] }),
   component: ReadinessPage,
 });
 
-const CATEGORIES = [
-  { name: "Financial Capacity", score: 92, weight: 20, notes: "Positive net income FY22–FY24. 2× commercial sales threshold met." },
-  { name: "Commercial Sales History", score: 95, weight: 20, notes: "$4.8M largest contract documented; 24+ months commercial sales." },
-  { name: "Past Performance", score: 88, weight: 15, notes: "3 relevant CPARS references on file." },
-  { name: "Corporate Capability", score: 90, weight: 15, notes: "Capability statement, key personnel, project summaries draft-ready." },
-  { name: "Compliance Posture", score: 78, weight: 15, notes: "EPA narrative pending review; CSP-1 in draft." },
-  { name: "Pricing Discipline", score: 82, weight: 10, notes: "MFC discount documented; GSA target ≥ MFC." },
-  { name: "Registration Completeness", score: 70, weight: 5, notes: "FAS ID & eOffer digital cert pending." },
-];
+type Status = "complete" | "partial" | "missing";
+
+type Category = {
+  name: string;
+  status: Status;
+  detail: string;
+  effort: string;
+  weight: number;
+  action?: { label: string; href: string };
+};
+
+function negotiatorComplete(n: Negotiator) {
+  const hasPhone = !!(n.phoneUs.trim() || n.phoneIntl.trim());
+  return !!(n.name.trim() && n.title.trim() && n.email.trim() && hasPhone);
+}
+
+function corporateCompleteness(intake: IntakeState): { score: number; missing: string[] } {
+  const missing: string[] = [];
+  for (const k of REQUIRED_CORPORATE_KEYS) {
+    if (!intake.corporate[k]?.trim()) missing.push(k);
+  }
+  const required = REQUIRED_CORPORATE_KEYS.length;
+  const filled = required - missing.length;
+  // Address: must have street1, city, state, zip
+  const addr = intake.companyAddress;
+  const addrOk = !!(addr.street1 && addr.city && addr.state && addr.zip);
+  const score = Math.round(((filled + (addrOk ? 1 : 0)) / (required + 1)) * 100);
+  if (!addrOk) missing.push("companyAddress");
+  return { score, missing };
+}
 
 function ReadinessPage() {
-  const total = CATEGORIES.reduce((acc, c) => acc + c.score * (c.weight / 100), 0);
+  const intake = useIntake();
+
+  const categories = useMemo<Category[]>(() => {
+    const cats: Category[] = [];
+
+    // 1. Corporate information completeness
+    const corp = corporateCompleteness(intake);
+    cats.push({
+      name: "Corporate Information",
+      status: corp.score >= 100 ? "complete" : corp.score >= 60 ? "partial" : "missing",
+      detail:
+        corp.score >= 100
+          ? "All required SAM fields and the company address are present."
+          : `Missing: ${corp.missing.join(", ") || "address"}`,
+      effort: corp.score >= 100 ? "0 hr" : corp.score >= 60 ? "≤ 1 hr" : "1–2 hr",
+      weight: 20,
+      action: corp.score < 100 ? { label: "Open Step 1", href: "/intake" } : undefined,
+    });
+
+    // 2. Authorized negotiators
+    const completeNegs = intake.negotiators.filter(negotiatorComplete);
+    const primaryOk = intake.negotiators[0] && negotiatorComplete(intake.negotiators[0]);
+    cats.push({
+      name: "Authorized Negotiators",
+      status: primaryOk && completeNegs.length >= 1 ? "complete" : "missing",
+      detail:
+        completeNegs.length === 0
+          ? "No negotiators with required fields completed."
+          : `${completeNegs.length} of ${intake.negotiators.length} negotiator(s) complete${
+              primaryOk ? "" : " (Primary incomplete)"
+            }.`,
+      effort: primaryOk ? "0 hr" : "≤ 30 min",
+      weight: 10,
+      action: !primaryOk ? { label: "Open Step 3", href: "/intake" } : undefined,
+    });
+
+    // 3. Past performance uploaded
+    const pp = intake.documents.pastPerformance;
+    cats.push({
+      name: "Past Performance",
+      status: pp ? "complete" : "missing",
+      detail: pp ? `Uploaded: ${pp.filename}` : "No past performance documentation uploaded.",
+      effort: pp ? "0 hr" : "1–3 hr",
+      weight: 15,
+      action: pp ? undefined : { label: "Open Step 2", href: "/intake" },
+    });
+
+    // 4. Financial documents
+    const pnl1 = intake.documents.pnlYear1;
+    const pnl2 = intake.documents.pnlYear2;
+    const bal1 = intake.documents.balanceYear1;
+    const bal2 = intake.documents.balanceYear2;
+    const pnlCount = [pnl1, pnl2].filter(Boolean).length;
+    const balCount = [bal1, bal2].filter(Boolean).length;
+    const hasLoss = [pnl1, pnl2].some((d) => d?.loss === true);
+    const finStatus: Status =
+      pnlCount === 2 && balCount === 2 ? "complete" : pnlCount + balCount > 0 ? "partial" : "missing";
+
+    let finDetail = `${pnlCount}/2 P&L · ${balCount}/2 Balance Sheets uploaded.`;
+    if (hasLoss) {
+      finDetail += " Net loss detected on at least one P&L — explanation required from Primary Negotiator.";
+    }
+
+    const primaryEmail = intake.negotiators[0]?.email;
+    const lossMailto =
+      hasLoss && primaryEmail
+        ? `mailto:${encodeURIComponent(primaryEmail)}?subject=${encodeURIComponent(
+            "Explanation Requested: Net Loss on Submitted P&L",
+          )}&body=${encodeURIComponent(
+            `Hi ${intake.negotiators[0]?.name || "there"},\n\nWhile preparing your GSA MAS submission, our readiness review detected a net loss on one of the submitted P&L statements (${
+              intake.corporate.legalName || "your organization"
+            }). GSA evaluators will expect a brief written explanation of the contributing factors and any corrective actions taken.\n\nPlease reply with a short narrative we can include in the financial responsibility section of the offer.\n\nThanks,\nScheduleBuilder`,
+          )}`
+        : undefined;
+
+    cats.push({
+      name: "Financial Documents",
+      status: finStatus,
+      detail: finDetail,
+      effort: finStatus === "complete" ? (hasLoss ? "≤ 1 hr" : "0 hr") : "1–2 hr",
+      weight: 25,
+      action: lossMailto
+        ? { label: "Email Primary Negotiator", href: lossMailto }
+        : finStatus !== "complete"
+          ? { label: "Open Step 2", href: "/intake" }
+          : undefined,
+    });
+
+    // 5. Corporate policy documents
+    const policies: { key: keyof typeof DOC_LABELS; have: boolean }[] = [
+      { key: "compensationPlan", have: !!intake.documents.compensationPlan },
+      { key: "uotPolicy", have: !!intake.documents.uotPolicy },
+      { key: "qualityControl", have: !!intake.documents.qualityControl },
+    ];
+    const haveCount = policies.filter((p) => p.have).length;
+    const missingPol = policies.filter((p) => !p.have).map((p) => DOC_LABELS[p.key]);
+    cats.push({
+      name: "Corporate Policy Documents",
+      status: haveCount === 3 ? "complete" : haveCount > 0 ? "partial" : "missing",
+      detail:
+        haveCount === 3
+          ? "Compensation Plan, UOT Policy, and Quality Control documentation all uploaded."
+          : `Missing: ${missingPol.join("; ")}`,
+      effort: haveCount === 3 ? "0 hr" : `${(3 - haveCount) * 1}–${(3 - haveCount) * 2} hr`,
+      weight: 30,
+      action: haveCount < 3 ? { label: "Open Step 2", href: "/intake" } : undefined,
+    });
+
+    return cats;
+  }, [intake]);
+
+  const composite = useMemo(() => {
+    const total = categories.reduce((acc, c) => {
+      const s = c.status === "complete" ? 100 : c.status === "partial" ? 50 : 0;
+      return acc + s * (c.weight / 100);
+    }, 0);
+    return Math.round(total);
+  }, [categories]);
+
   return (
     <>
       <PageHeader
-        eyebrow="Pathways to Success • MAS Readiness"
-        title="Readiness Assessment Dashboard"
-        description="GSA Pathways to Success checkpoints and weighted readiness scoring. Run before locking SINs."
+        eyebrow="Module 2 • Intake & Readiness"
+        title="Readiness Assessment"
+        description="Live readiness score and remaining level of effort derived from the Client Intake. Run before locking SINs."
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Composite</div>
-            <div className="text-4xl font-mono font-extrabold text-primary leading-none">{total.toFixed(1)}</div>
+            <div className="text-4xl font-mono font-extrabold text-primary leading-none">
+              {composite}
+            </div>
           </div>
         }
       />
 
-      <div className="mb-6">
-        <ReadinessRollup />
-      </div>
-
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-8">
-          <Panel title="Category Scores" className="p-0">
-            <div className="divide-y divide-border">
-              {CATEGORIES.map((c) => (
-                <div key={c.name} className="p-4">
-                  <div className="flex justify-between items-baseline mb-2">
-                    <div>
-                      <div className="text-sm font-bold text-foreground">{c.name}</div>
-                      <div className="text-[11px] text-muted-foreground">{c.notes}</div>
-                    </div>
-                    <div className="text-right shrink-0 pl-4">
-                      <div className="text-2xl font-mono font-bold text-foreground">{c.score}</div>
-                      <div className="text-[10px] font-mono text-muted-foreground">Weight {c.weight}%</div>
-                    </div>
+      <Panel title="Readiness Categories" className="p-0">
+        <div className="divide-y divide-border">
+          {categories.map((c) => (
+            <div key={c.name} className="p-4">
+              <div className="flex justify-between items-baseline mb-2 gap-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm font-bold text-foreground">{c.name}</div>
+                    <StatusBadge status={c.status} />
                   </div>
-                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${c.score >= 85 ? "bg-success" : c.score >= 70 ? "bg-warning" : "bg-destructive"}`}
-                      style={{ width: `${c.score}%` }}
-                    />
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{c.detail}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="text-[10px] font-mono text-muted-foreground uppercase">
+                    Effort remaining
+                  </div>
+                  <div className="text-sm font-mono font-bold text-foreground">{c.effort}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    Weight {c.weight}%
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${
+                    c.status === "complete"
+                      ? "bg-success"
+                      : c.status === "partial"
+                        ? "bg-warning"
+                        : "bg-destructive"
+                  }`}
+                  style={{
+                    width:
+                      c.status === "complete" ? "100%" : c.status === "partial" ? "50%" : "8%",
+                  }}
+                />
+              </div>
+              {c.action ? (
+                <div className="mt-3">
+                  <a
+                    href={c.action.href}
+                    className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 inline-block border border-border bg-background rounded-sm hover:bg-muted"
+                  >
+                    {c.action.label} →
+                  </a>
+                </div>
+              ) : null}
             </div>
-          </Panel>
+          ))}
         </div>
-
-        <div className="col-span-12 lg:col-span-4 space-y-6">
-          <Panel title="Pathways to Success">
-            <ul className="space-y-3 text-xs">
-              {[
-                "Complete Pathways to Success training",
-                "Complete MAS Readiness Assessment",
-                "Review current MAS solicitation",
-                "Complete SAM.gov / FAS ID registration",
-                "Gather required corporate documents",
-                "Prepare and submit offer via eOffer",
-              ].map((step, i) => (
-                <li key={step} className="flex items-start gap-2">
-                  <span className={`size-4 rounded-full flex items-center justify-center text-[9px] font-mono shrink-0 mt-0.5 ${i < 4 ? "bg-success text-success-foreground" : "border border-border"}`}>
-                    {i < 4 ? "✓" : i + 1}
-                  </span>
-                  <span className={i < 4 ? "text-foreground" : "text-muted-foreground"}>{step}</span>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel title="Output Artifacts">
-            <ul className="space-y-2 text-xs">
-              <li className="flex justify-between"><span>Readiness Report</span><span className="font-mono text-primary">Ready</span></li>
-              <li className="flex justify-between"><span>Registration Gap List</span><span className="font-mono text-warning">2 items</span></li>
-              <li className="flex justify-between"><span>Offer Checklist</span><span className="font-mono text-primary">Ready</span></li>
-              <li className="flex justify-between"><span>Client Task Tracker</span><span className="font-mono text-muted-foreground">8 open</span></li>
-            </ul>
-          </Panel>
-
-          <Panel>
-            <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
-              Client
-            </div>
-            <div className="text-sm font-bold">{CLIENT.name}</div>
-            <div className="text-[11px] font-mono text-muted-foreground mt-1">{CLIENT.solicitation}</div>
-          </Panel>
-        </div>
-      </div>
+      </Panel>
     </>
+  );
+}
+
+function StatusBadge({ status }: { status: Status }) {
+  const cls =
+    status === "complete"
+      ? "bg-success/10 text-success border-success/30"
+      : status === "partial"
+        ? "bg-warning/10 text-warning border-warning/30"
+        : "bg-destructive/10 text-destructive border-destructive/30";
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded-sm text-[9px] font-mono font-bold uppercase border ${cls}`}
+    >
+      {status}
+    </span>
   );
 }
