@@ -18,13 +18,13 @@ export const CLIENT = {
 export type ModuleStatus = "complete" | "in_progress" | "blocked" | "not_started";
 
 export const MODULES = [
-  { slug: "/intake", label: "Client Intake", status: "complete" as ModuleStatus, group: "Intake" },
-  { slug: "/readiness", label: "Readiness Assessment", status: "complete" as ModuleStatus, group: "Intake" },
-  { slug: "/registration", label: "SAM/GSA Tracker", status: "in_progress" as ModuleStatus, group: "Intake" },
-  { slug: "/sin", label: "SIN Recommendation", status: "complete" as ModuleStatus, group: "Engine" },
+  { slug: "/intake", label: "Client Intake", status: "in_progress" as ModuleStatus, group: "Intake" },
+  { slug: "/readiness", label: "Readiness Assessment", status: "in_progress" as ModuleStatus, group: "Intake" },
+  { slug: "/sin", label: "SIN Recommendation", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/documents", label: "Document Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/pricing", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/compliance", label: "Compliance Matrix", status: "in_progress" as ModuleStatus, group: "Final" },
+  { slug: "/compliance", label: "Compliance Matrix", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/registration", label: "SAM/GSA Tracker", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
   { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
 ];
