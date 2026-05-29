@@ -127,6 +127,7 @@ let state: IntakeState = {
   mailingAddress: emptyAddress(),
   negotiators: [emptyNegotiator()],
   documents: {},
+  pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
 };
