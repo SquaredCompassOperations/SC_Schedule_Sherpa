@@ -42,12 +42,11 @@ export type Negotiator = {
 export type DocKey =
   | "compensationPlan"
   | "uotPolicy"
-  | "qualityControl"
+  | "corporatePriceList"
   | "pnlYear1"
   | "pnlYear2"
   | "balanceYear1"
-  | "balanceYear2"
-  | "pastPerformance";
+  | "balanceYear2";
 
 export type DocEntry = {
   filename: string;
@@ -63,6 +62,18 @@ export type SbaCert = {
   expiration?: string;
 };
 
+export type PastPerformanceCategory =
+  | "Capability Statement"
+  | "Case Study"
+  | "Reference"
+  | "Project Experience"
+  | "CPARS";
+
+export type PastPerformanceEntry = DocEntry & {
+  id: string;
+  category: PastPerformanceCategory;
+};
+
 export type IntakeState = {
   corporate: CorporateInfo;
   companyAddress: Address;
@@ -70,6 +81,7 @@ export type IntakeState = {
   mailingAddress: Address;
   negotiators: Negotiator[];
   documents: Partial<Record<DocKey, DocEntry>>;
+  pastPerformance: PastPerformanceEntry[];
   sbaCerts: SbaCert[];
   sbaScannedAt: number | null;
 };
@@ -115,6 +127,7 @@ let state: IntakeState = {
   mailingAddress: emptyAddress(),
   negotiators: [emptyNegotiator()],
   documents: {},
+  pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
 };
@@ -209,10 +222,28 @@ export const REQUIRED_CORPORATE_KEYS: (keyof CorporateInfo)[] = [
 export const DOC_LABELS: Record<DocKey, string> = {
   compensationPlan: "Professional/Employee Compensation Plan",
   uotPolicy: "Uncompensated Overtime Policy",
-  qualityControl: "Quality Control documentation",
+  corporatePriceList: "Corporate Price List(s)",
   pnlYear1: "P&L Statement — Year 1",
   pnlYear2: "P&L Statement — Year 2",
   balanceYear1: "Balance Sheet — Year 1",
   balanceYear2: "Balance Sheet — Year 2",
-  pastPerformance: "Past Performance (Capability Statement / Case Studies / References)",
 };
+
+export const PAST_PERFORMANCE_CATEGORIES: PastPerformanceCategory[] = [
+  "Capability Statement",
+  "Case Study",
+  "Reference",
+  "Project Experience",
+  "CPARS",
+];
+
+export function addPastPerformance(entry: Omit<PastPerformanceEntry, "id">) {
+  const id = `pp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  state = { ...state, pastPerformance: [...state.pastPerformance, { ...entry, id }] };
+  emit();
+}
+
+export function removePastPerformance(id: string) {
+  state = { ...state, pastPerformance: state.pastPerformance.filter((e) => e.id !== id) };
+  emit();
+}

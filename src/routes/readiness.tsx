@@ -83,14 +83,20 @@ function ReadinessPage() {
     });
 
     // 3. Past performance uploaded
-    const pp = intake.documents.pastPerformance;
+    const pp = intake.pastPerformance;
+    const ppCount = pp.length;
     cats.push({
       name: "Past Performance",
-      status: pp ? "complete" : "missing",
-      detail: pp ? `Uploaded: ${pp.filename}` : "No past performance documentation uploaded.",
-      effort: pp ? "0 hr" : "1–3 hr",
+      status: ppCount === 0 ? "missing" : ppCount < 2 ? "partial" : "complete",
+      detail:
+        ppCount === 0
+          ? "No past performance documentation uploaded."
+          : `${ppCount} file${ppCount === 1 ? "" : "s"} uploaded (${
+              Array.from(new Set(pp.map((p) => p.category))).join(", ")
+            }).`,
+      effort: ppCount >= 2 ? "0 hr" : "1–3 hr",
       weight: 15,
-      action: pp ? undefined : { label: "Open Step 2", href: "/intake" },
+      action: ppCount < 2 ? { label: "Open Step 2", href: "/intake" } : undefined,
     });
 
     // 4. Financial documents
@@ -138,7 +144,7 @@ function ReadinessPage() {
     const policies: { key: keyof typeof DOC_LABELS; have: boolean }[] = [
       { key: "compensationPlan", have: !!intake.documents.compensationPlan },
       { key: "uotPolicy", have: !!intake.documents.uotPolicy },
-      { key: "qualityControl", have: !!intake.documents.qualityControl },
+      { key: "corporatePriceList", have: !!intake.documents.corporatePriceList },
     ];
     const haveCount = policies.filter((p) => p.have).length;
     const missingPol = policies.filter((p) => !p.have).map((p) => DOC_LABELS[p.key]);
@@ -147,7 +153,7 @@ function ReadinessPage() {
       status: haveCount === 3 ? "complete" : haveCount > 0 ? "partial" : "missing",
       detail:
         haveCount === 3
-          ? "Compensation Plan, UOT Policy, and Quality Control documentation all uploaded."
+          ? "Compensation Plan, UOT Policy, and Corporate Price List(s) all uploaded."
           : `Missing: ${missingPol.join("; ")}`,
       effort: haveCount === 3 ? "0 hr" : `${(3 - haveCount) * 1}–${(3 - haveCount) * 2} hr`,
       weight: 30,
