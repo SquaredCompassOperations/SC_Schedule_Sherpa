@@ -42,12 +42,11 @@ export type Negotiator = {
 export type DocKey =
   | "compensationPlan"
   | "uotPolicy"
-  | "qualityControl"
+  | "corporatePriceList"
   | "pnlYear1"
   | "pnlYear2"
   | "balanceYear1"
-  | "balanceYear2"
-  | "pastPerformance";
+  | "balanceYear2";
 
 export type DocEntry = {
   filename: string;
