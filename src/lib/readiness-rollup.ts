@@ -6,7 +6,7 @@ import {
   COMPLIANCE_MATRIX,
   DOCUMENT_QUEUE,
   LABOR_CATEGORIES,
-  REGISTRATION_ITEMS,
+  
   SIN_MATCHES,
 } from "./mock-data";
 import { useDocStore, type DocStatus } from "./doc-store";
