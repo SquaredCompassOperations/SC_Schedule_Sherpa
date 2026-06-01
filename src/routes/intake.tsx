@@ -457,6 +457,7 @@ function PastPerformanceSection({
   const [category, setCategory] = useState<PastPerformanceCategory>(
     PAST_PERFORMANCE_CATEGORIES[0],
   );
+  const [showDrive, setShowDrive] = useState(false);
 
   const handle = (files: FileList | null) => {
     if (!files) return;
@@ -468,6 +469,16 @@ function PastPerformanceSection({
         category,
       });
     }
+  };
+
+  const handleDrivePick = (file: GDriveFile) => {
+    setShowDrive(false);
+    addPastPerformance({
+      filename: file.name,
+      size: Number(file.size ?? 0),
+      uploadedAt: Date.now(),
+      category,
+    });
   };
 
   return (
@@ -507,6 +518,12 @@ function PastPerformanceSection({
         >
           Upload File(s)
         </button>
+        <button
+          onClick={() => setShowDrive(true)}
+          className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
+        >
+          ⛁ From Drive
+        </button>
         <input
           ref={inputRef}
           type="file"
@@ -544,6 +561,10 @@ function PastPerformanceSection({
       ) : (
         <div className="text-[10px] font-mono text-muted-foreground">No files uploaded.</div>
       )}
+
+      {showDrive ? (
+        <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
     </div>
   );
 }
@@ -551,18 +572,32 @@ function PastPerformanceSection({
 function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const checkLoss = useServerFn(detectPnlLoss);
+  const fetchDrive = useServerFn(fetchDriveFile);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showDrive, setShowDrive] = useState(false);
   const isPnl = docKey === "pnlYear1" || docKey === "pnlYear2";
 
+  const analyzeLoss = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }): Promise<boolean | null> => {
+    try {
+      const res = await checkLoss({ data: payload });
+      return res.loss;
+    } catch {
+      return null;
+    }
+  };
+
   const handle = async (file: File) => {
-    const entry: DocEntry = {
+    const next: DocEntry = {
       filename: file.name,
       size: file.size,
       uploadedAt: Date.now(),
     };
 
     if (isPnl && file.size <= EXTRACT_MAX_BYTES) {
-      // Async loss detection — don't block the upload toggle.
       setAnalyzing(true);
       try {
         const buf = await file.arrayBuffer();
@@ -572,22 +607,42 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
         for (let i = 0; i < bytes.length; i += CHUNK) {
           binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
         }
-        const res = await checkLoss({
-          data: {
-            filename: file.name,
-            mediaType: file.type || "application/octet-stream",
-            dataBase64: btoa(binary),
-          },
+        next.loss = await analyzeLoss({
+          filename: file.name,
+          mediaType: file.type || "application/octet-stream",
+          dataBase64: btoa(binary),
         });
-        entry.loss = res.loss;
-      } catch {
-        entry.loss = null;
       } finally {
         setAnalyzing(false);
       }
     }
 
-    setDocument(docKey, entry);
+    setDocument(docKey, next);
+  };
+
+  const handleDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    const size = Number(file.size ?? 0);
+    const next: DocEntry = {
+      filename: file.name,
+      size,
+      uploadedAt: Date.now(),
+    };
+
+    if (isPnl) {
+      setAnalyzing(true);
+      try {
+        const payload = await fetchDrive({ data: { fileId: file.id } });
+        next.filename = payload.filename;
+        next.loss = await analyzeLoss(payload);
+      } catch {
+        next.loss = null;
+      } finally {
+        setAnalyzing(false);
+      }
+    }
+
+    setDocument(docKey, next);
   };
 
   return (
@@ -625,6 +680,12 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
         </button>
       ) : null}
       <button
+        onClick={() => setShowDrive(true)}
+        className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
+      >
+        ⛁ Drive
+      </button>
+      <button
         onClick={() => inputRef.current?.click()}
         className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
       >
@@ -641,6 +702,9 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
           e.target.value = "";
         }}
       />
+      {showDrive ? (
+        <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
     </div>
   );
 }
@@ -753,6 +817,8 @@ function NegotiatorCard({
 function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
   const lookup = useServerFn(lookupSbaCertifications);
   const extractImg = useServerFn(extractSbaCertsFromImage);
+  const fetchDrive = useServerFn(fetchDriveFile);
+  const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
     { kind: "idle" } | { kind: "working"; via: "scan" | "image" } | { kind: "error"; message: string }
   >({ kind: "idle" });
@@ -798,22 +864,14 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
     }
   };
 
-  const onImage = async (file: File | null) => {
-    if (!file) return;
+  const runExtract = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }) => {
     setStatus({ kind: "working", via: "image" });
     try {
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-      const dataBase64 = btoa(binary);
-      const res = await extractImg({
-        data: {
-          filename: file.name,
-          mediaType: file.type || "image/png",
-          dataBase64,
-        },
-      });
+      const res = await extractImg({ data: payload });
       setSbaCerts(res.certs);
       if (res.error) setStatus({ kind: "error", message: res.error });
       else if (res.certs.length === 0)
@@ -826,6 +884,34 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       });
     }
   };
+
+  const onImage = async (file: File | null) => {
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    await runExtract({
+      filename: file.name,
+      mediaType: file.type || "image/png",
+      dataBase64: btoa(binary),
+    });
+  };
+
+  const onDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    setStatus({ kind: "working", via: "image" });
+    try {
+      const payload = await fetchDrive({ data: { fileId: file.id } });
+      await runExtract(payload);
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Drive import failed.",
+      });
+    }
+  };
+
 
 
   return (
@@ -875,20 +961,35 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
             If the lookup fails or misses certifications, upload a screenshot of the SBA Small
             Business Search profile (with the badges visible) and we&apos;ll extract them.
           </div>
-          <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+                disabled={status.kind === "working"}
+              />
+              {status.kind === "working" && status.via === "image"
+                ? "Extracting…"
+                : "Upload screenshot"}
+            </label>
+            <button
+              onClick={() => setShowDrive(true)}
               disabled={status.kind === "working"}
-            />
-            {status.kind === "working" && status.via === "image"
-              ? "Extracting…"
-              : "Upload screenshot"}
-          </label>
+              className="text-xs font-bold uppercase tracking-widest px-3 py-2 border border-border bg-background rounded-sm hover:bg-muted disabled:opacity-50"
+            >
+              ⛁ From Drive
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDrive ? (
+        <DrivePicker onPick={onDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
+
+
 
 
       <div>
