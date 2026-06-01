@@ -6,6 +6,7 @@ import { createLovableAiGatewayProvider } from "./ai-gateway";
 const FIELDS = [
   // Company details
   "uei",
+  "cageCode",
   "orgType",
   "parentUei",
   "legalName",
