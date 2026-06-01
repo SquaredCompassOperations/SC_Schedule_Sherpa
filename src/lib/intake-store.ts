@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 
 export type CorporateInfo = {
   uei: string;
+  cageCode: string;
   orgType: string;
   parentUei: string;
   legalName: string;
