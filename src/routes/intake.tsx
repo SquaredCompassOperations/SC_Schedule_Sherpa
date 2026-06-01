@@ -457,6 +457,7 @@ function PastPerformanceSection({
   const [category, setCategory] = useState<PastPerformanceCategory>(
     PAST_PERFORMANCE_CATEGORIES[0],
   );
+  const [showDrive, setShowDrive] = useState(false);
 
   const handle = (files: FileList | null) => {
     if (!files) return;
@@ -468,6 +469,16 @@ function PastPerformanceSection({
         category,
       });
     }
+  };
+
+  const handleDrivePick = (file: GDriveFile) => {
+    setShowDrive(false);
+    addPastPerformance({
+      filename: file.name,
+      size: Number(file.size ?? 0),
+      uploadedAt: Date.now(),
+      category,
+    });
   };
 
   return (
@@ -507,6 +518,12 @@ function PastPerformanceSection({
         >
           Upload File(s)
         </button>
+        <button
+          onClick={() => setShowDrive(true)}
+          className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
+        >
+          ⛁ From Drive
+        </button>
         <input
           ref={inputRef}
           type="file"
@@ -544,6 +561,10 @@ function PastPerformanceSection({
       ) : (
         <div className="text-[10px] font-mono text-muted-foreground">No files uploaded.</div>
       )}
+
+      {showDrive ? (
+        <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
     </div>
   );
 }
