@@ -20,6 +20,8 @@ const STATUS_ORDER: DocState["status"][] = ["draft", "review", "final"];
 function DocsPage() {
   const fn = useServerFn(generateNarrative);
   const store = useDocStore();
+  const intake = useIntake();
+  const automation = useAutomation();
   const [activeName, setActiveName] = useState(DOCUMENT_QUEUE[0].name);
 
   const active = useMemo(
