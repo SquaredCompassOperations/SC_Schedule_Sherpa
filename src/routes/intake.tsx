@@ -840,13 +840,36 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
             disabled={status.kind === "working" || !intake.corporate.uei}
             className="shrink-0 text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
           >
-            {status.kind === "working" ? "Scanning…" : "Scan SBA"}
+            {status.kind === "working" && status.via === "scan" ? "Scanning…" : "Scan SBA"}
           </button>
         </div>
         {status.kind === "error" ? (
           <div className="mt-3 text-[11px] font-mono text-destructive">{status.message}</div>
         ) : null}
+
+        <div className="mt-4 pt-4 border-t border-primary/20">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+            Fallback — upload SBA profile screenshot
+          </div>
+          <div className="text-[11px] text-muted-foreground mb-2">
+            If the scan fails or misses certifications, upload a screenshot of the SBA Small
+            Business Search result row (with the green badges visible) and we&apos;ll extract them.
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+              disabled={status.kind === "working"}
+            />
+            {status.kind === "working" && status.via === "image"
+              ? "Extracting…"
+              : "Upload screenshot"}
+          </label>
+        </div>
       </div>
+
 
       <div>
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
