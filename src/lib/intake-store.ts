@@ -1,7 +1,12 @@
 // Shared intake state. Lives outside React so Intake and Readiness pages stay
 // in sync without router-level providers. Same useSyncExternalStore pattern as
-// doc-store.ts. In-memory only — survives navigation, resets on reload.
+// doc-store.ts. Persisted to localStorage so data survives reloads/tab close
+// until the user explicitly clears it.
 import { useSyncExternalStore } from "react";
+import { loadPersisted, savePersisted } from "./persist";
+
+const PERSIST_KEY = "intake-state";
+
 
 export type CorporateInfo = {
   uei: string;
@@ -107,7 +112,7 @@ const emptyNegotiator = (): Negotiator => ({
   authorizedToSign: false,
 });
 
-let state: IntakeState = {
+const defaultState = (): IntakeState => ({
   corporate: {
     uei: "",
     cageCode: "",
@@ -132,14 +137,20 @@ let state: IntakeState = {
   pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
-};
+});
+
+let state: IntakeState = loadPersisted<IntakeState>(PERSIST_KEY, defaultState());
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-const emit = () => listeners.forEach((l) => l());
+const emit = () => {
+  savePersisted(PERSIST_KEY, state);
+  listeners.forEach((l) => l());
+};
+
 
 export function getIntake(): IntakeState {
   return state;
@@ -249,3 +260,11 @@ export function removePastPerformance(id: string) {
   state = { ...state, pastPerformance: state.pastPerformance.filter((e) => e.id !== id) };
   emit();
 }
+
+// Clear all intake data (corporate info, addresses, negotiators, docs, SBA,
+// past performance) and wipe the persisted copy. Use for "Start Over".
+export function resetIntake() {
+  state = defaultState();
+  emit();
+}
+

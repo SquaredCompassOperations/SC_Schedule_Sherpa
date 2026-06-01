@@ -1,7 +1,11 @@
-// Shared in-memory document store. Lives outside React so both /documents and
+// Shared document store. Lives outside React so both /documents and
 // /compliance can subscribe and stay in sync without a router-level provider.
+// Persisted to localStorage so drafts survive reloads/tab close.
 import { useSyncExternalStore } from "react";
 import { DOCUMENT_QUEUE } from "./mock-data";
+import { loadPersisted, savePersisted } from "./persist";
+
+const PERSIST_KEY = "doc-store";
 
 export type DocStatus = "draft" | "review" | "final";
 export type DocState = {
@@ -13,25 +17,37 @@ export type DocState = {
 
 type Store = Record<string, DocState>;
 
-let store: Store = Object.fromEntries(
-  DOCUMENT_QUEUE.map((d) => [
-    d.name,
-    { text: "", status: d.status as DocStatus, savedAt: null, dirty: false },
-  ]),
-);
+const defaultStore = (): Store =>
+  Object.fromEntries(
+    DOCUMENT_QUEUE.map((d) => [
+      d.name,
+      { text: "", status: d.status as DocStatus, savedAt: null, dirty: false },
+    ]),
+  );
+
+let store: Store = { ...defaultStore(), ...loadPersisted<Store>(PERSIST_KEY, {}) };
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-const emit = () => listeners.forEach((l) => l());
+const emit = () => {
+  savePersisted(PERSIST_KEY, store);
+  listeners.forEach((l) => l());
+};
 
 export function patchDoc(name: string, patch: Partial<DocState>) {
   if (!store[name]) return;
   store = { ...store, [name]: { ...store[name], ...patch } };
   emit();
 }
+
+export function resetDocStore() {
+  store = defaultStore();
+  emit();
+}
+
 
 export function getDocStore(): Store {
   return store;
