@@ -109,11 +109,14 @@ function IntakePage() {
                 Step {step + 1} of {STEPS.length}
               </div>
               <button
-                onClick={() => setStep(Math.min(STEPS.length - 1, step + 1))}
-                disabled={step === STEPS.length - 1}
-                className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-30"
+                onClick={() =>
+                  isLast
+                    ? navigate({ to: "/readiness" })
+                    : setStep(Math.min(STEPS.length - 1, step + 1))
+                }
+                className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
               >
-                Save & Continue →
+                {isLast ? "Finish & Go to Readiness →" : "Save & Continue →"}
               </button>
             </div>
           </Panel>
