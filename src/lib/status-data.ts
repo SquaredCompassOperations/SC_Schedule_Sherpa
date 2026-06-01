@@ -46,7 +46,7 @@ export function useStatus() {
   const docs = useDocStore();
 
   // Stage derivation
-  const intakeComplete = !!(intake.businessLegalName && intake.uei);
+  const intakeComplete = !!(intake.corporate.legalName && intake.corporate.uei);
   const engineActive =
     automation.selectedSins.length > 0 || automation.selectedLcats.length > 0;
   const docsActive = Object.values(docs).some((d) => d?.status === "review" || d?.status === "final");
