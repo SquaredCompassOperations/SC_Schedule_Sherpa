@@ -33,7 +33,7 @@ function DocsPage() {
   const update = (name: string, patch: Partial<DocState>) => patchDoc(name, patch);
 
   const mutation = useMutation({
-    mutationFn: async (kind: string) => fn({ data: { kind, context: contextString() } }),
+    mutationFn: async (kind: string) => fn({ data: { kind, context: buildContext(intake, automation) } }),
     onSuccess: (res) => update(active.name, { text: res.text, dirty: true }),
   });
 
