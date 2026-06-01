@@ -1,7 +1,12 @@
 // Shared intake state. Lives outside React so Intake and Readiness pages stay
 // in sync without router-level providers. Same useSyncExternalStore pattern as
-// doc-store.ts. In-memory only — survives navigation, resets on reload.
+// doc-store.ts. Persisted to localStorage so data survives reloads/tab close
+// until the user explicitly clears it.
 import { useSyncExternalStore } from "react";
+import { loadPersisted, savePersisted } from "./persist";
+
+const PERSIST_KEY = "intake-state";
+
 
 export type CorporateInfo = {
   uei: string;
