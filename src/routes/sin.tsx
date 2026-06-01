@@ -22,8 +22,16 @@ type Candidate = {
 
 function SinPage() {
   const crawl = useServerFn(crawlClientForSins);
-  const [url, setUrl] = useState("");
-  const [selected, setSelected] = useState<string[]>(["54151S"]);
+  const intake = useIntake();
+  const automation = useAutomation();
+  const [url, setUrl] = useState(intake.corporate.website || "");
+  useEffect(() => {
+    if (intake.corporate.website && !url) setUrl(intake.corporate.website);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intake.corporate.website]);
+  const [selected, setSelected] = useState<string[]>(
+    automation.selectedSins.length > 0 ? automation.selectedSins.map((s) => s.code) : ["54151S"],
+  );
   const [matches, setMatches] = useState(
     SIN_MATCHES.map((m) => ({
       code: m.code,
