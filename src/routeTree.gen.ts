@@ -15,12 +15,10 @@ import { Route as ReviewRouteImport } from './routes/review'
 import { Route as RegistrationRouteImport } from './routes/registration'
 import { Route as ReadinessRouteImport } from './routes/readiness'
 import { Route as PricingWorkbookRouteImport } from './routes/pricing-workbook'
-import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as MarketValidationRouteImport } from './routes/market-validation'
 import { Route as IntakeRouteImport } from './routes/intake'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DocumentsRouteImport } from './routes/documents'
-import { Route as ComplianceRouteImport } from './routes/compliance'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SinRoute = SinRouteImport.update({
@@ -53,11 +51,6 @@ const PricingWorkbookRoute = PricingWorkbookRouteImport.update({
   path: '/pricing-workbook',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MarketValidationRoute = MarketValidationRouteImport.update({
   id: '/market-validation',
   path: '/market-validation',
@@ -78,11 +71,6 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ComplianceRoute = ComplianceRouteImport.update({
-  id: '/compliance',
-  path: '/compliance',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -91,12 +79,10 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
   '/market-validation': typeof MarketValidationRoute
-  '/pricing': typeof PricingRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
@@ -106,12 +92,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
   '/market-validation': typeof MarketValidationRoute
-  '/pricing': typeof PricingRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
@@ -122,12 +106,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
   '/market-validation': typeof MarketValidationRoute
-  '/pricing': typeof PricingRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
@@ -139,12 +121,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
     | '/market-validation'
-    | '/pricing'
     | '/pricing-workbook'
     | '/readiness'
     | '/registration'
@@ -154,12 +134,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
     | '/market-validation'
-    | '/pricing'
     | '/pricing-workbook'
     | '/readiness'
     | '/registration'
@@ -169,12 +147,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
     | '/market-validation'
-    | '/pricing'
     | '/pricing-workbook'
     | '/readiness'
     | '/registration'
@@ -185,12 +161,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ComplianceRoute: typeof ComplianceRoute
   DocumentsRoute: typeof DocumentsRoute
   ExportRoute: typeof ExportRoute
   IntakeRoute: typeof IntakeRoute
   MarketValidationRoute: typeof MarketValidationRoute
-  PricingRoute: typeof PricingRoute
   PricingWorkbookRoute: typeof PricingWorkbookRoute
   ReadinessRoute: typeof ReadinessRoute
   RegistrationRoute: typeof RegistrationRoute
@@ -243,13 +217,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PricingWorkbookRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/market-validation': {
       id: '/market-validation'
       path: '/market-validation'
@@ -278,13 +245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compliance': {
-      id: '/compliance'
-      path: '/compliance'
-      fullPath: '/compliance'
-      preLoaderRoute: typeof ComplianceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -297,12 +257,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ComplianceRoute: ComplianceRoute,
   DocumentsRoute: DocumentsRoute,
   ExportRoute: ExportRoute,
   IntakeRoute: IntakeRoute,
   MarketValidationRoute: MarketValidationRoute,
-  PricingRoute: PricingRoute,
   PricingWorkbookRoute: PricingWorkbookRoute,
   ReadinessRoute: ReadinessRoute,
   RegistrationRoute: RegistrationRoute,
