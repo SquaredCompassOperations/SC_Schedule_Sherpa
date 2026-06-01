@@ -52,17 +52,18 @@ export const SIN_MATCHES = [
 ];
 
 export const COMPLIANCE_MATRIX = [
-  { ref: "SCP-FSS-001", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "valid" },
-  { ref: "I-FSS-600", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
-  { ref: "CP-114-A", req: "Agent Authorization Letter", source: "—", status: "missing" },
-  { ref: "FAR 52.222-46", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
-  { ref: "FAR 52.237-10", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
-  { ref: "GSAR 552.216-70", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
-  { ref: "FAR 31.201-2", req: "Accounting Controls Narrative", source: "Acct_Controls.docx", status: "valid" },
-  { ref: "I-FSS-639", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
-  { ref: "SCP-FSS-004", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
-  { ref: "I-FSS-969", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
+  { ref: "SCP-FSS-001", cat: "technical", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "missing" },
+  { ref: "I-FSS-600", cat: "pricing", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
+  { ref: "CP-114-A", cat: "administrative", req: "Agent Authorization Letter", source: "—", status: "missing" },
+  { ref: "FAR 52.222-46", cat: "compliance", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
+  { ref: "FAR 52.237-10", cat: "compliance", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
+  { ref: "GSAR 552.216-70", cat: "pricing", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
+  { ref: "FAR 31.201-2", cat: "compliance", req: "Accounting Controls Narrative", source: "Acct_Controls.docx", status: "missing" },
+  { ref: "I-FSS-639", cat: "pricing", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
+  { ref: "SCP-FSS-004", cat: "administrative", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
+  { ref: "I-FSS-969", cat: "pricing", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
 ];
+
 
 export const DOCUMENT_QUEUE = [
   { name: "Quality Control Narrative", kind: "quality-control", status: "draft" },
