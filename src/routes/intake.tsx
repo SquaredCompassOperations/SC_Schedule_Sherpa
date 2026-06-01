@@ -572,18 +572,32 @@ function PastPerformanceSection({
 function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const checkLoss = useServerFn(detectPnlLoss);
+  const fetchDrive = useServerFn(fetchDriveFile);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showDrive, setShowDrive] = useState(false);
   const isPnl = docKey === "pnlYear1" || docKey === "pnlYear2";
 
+  const analyzeLoss = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }): Promise<boolean | null> => {
+    try {
+      const res = await checkLoss({ data: payload });
+      return res.loss;
+    } catch {
+      return null;
+    }
+  };
+
   const handle = async (file: File) => {
-    const entry: DocEntry = {
+    const next: DocEntry = {
       filename: file.name,
       size: file.size,
       uploadedAt: Date.now(),
     };
 
     if (isPnl && file.size <= EXTRACT_MAX_BYTES) {
-      // Async loss detection — don't block the upload toggle.
       setAnalyzing(true);
       try {
         const buf = await file.arrayBuffer();
@@ -593,22 +607,42 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
         for (let i = 0; i < bytes.length; i += CHUNK) {
           binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
         }
-        const res = await checkLoss({
-          data: {
-            filename: file.name,
-            mediaType: file.type || "application/octet-stream",
-            dataBase64: btoa(binary),
-          },
+        next.loss = await analyzeLoss({
+          filename: file.name,
+          mediaType: file.type || "application/octet-stream",
+          dataBase64: btoa(binary),
         });
-        entry.loss = res.loss;
-      } catch {
-        entry.loss = null;
       } finally {
         setAnalyzing(false);
       }
     }
 
-    setDocument(docKey, entry);
+    setDocument(docKey, next);
+  };
+
+  const handleDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    const size = Number(file.size ?? 0);
+    const next: DocEntry = {
+      filename: file.name,
+      size,
+      uploadedAt: Date.now(),
+    };
+
+    if (isPnl) {
+      setAnalyzing(true);
+      try {
+        const payload = await fetchDrive({ data: { fileId: file.id } });
+        next.filename = payload.filename;
+        next.loss = await analyzeLoss(payload);
+      } catch {
+        next.loss = null;
+      } finally {
+        setAnalyzing(false);
+      }
+    }
+
+    setDocument(docKey, next);
   };
 
   return (
@@ -646,6 +680,12 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
         </button>
       ) : null}
       <button
+        onClick={() => setShowDrive(true)}
+        className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
+      >
+        ⛁ Drive
+      </button>
+      <button
         onClick={() => inputRef.current?.click()}
         className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border bg-background rounded-sm hover:bg-muted"
       >
@@ -662,6 +702,9 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
           e.target.value = "";
         }}
       />
+      {showDrive ? (
+        <DrivePicker onPick={handleDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
     </div>
   );
 }
