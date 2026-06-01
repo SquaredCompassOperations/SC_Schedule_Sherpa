@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 
 export type CorporateInfo = {
   uei: string;
+  cageCode: string;
   orgType: string;
   parentUei: string;
   legalName: string;
@@ -109,6 +110,7 @@ const emptyNegotiator = (): Negotiator => ({
 let state: IntakeState = {
   corporate: {
     uei: "",
+    cageCode: "",
     orgType: "",
     parentUei: "",
     legalName: "",

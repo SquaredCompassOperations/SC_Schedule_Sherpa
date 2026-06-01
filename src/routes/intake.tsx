@@ -127,6 +127,7 @@ function IntakePage() {
 
 const CORP_FIELDS: { key: keyof CorporateInfo; label: string; hint?: string }[] = [
   { key: "uei", label: "UEI Number", hint: "12-character SAM.gov UEI" },
+  { key: "cageCode", label: "CAGE Code", hint: "5-char CAGE/NCAGE from SAM.gov" },
   { key: "orgType", label: "Type of Organization" },
   { key: "parentUei", label: "Common Parent UEI Number" },
   { key: "legalName", label: "Company Name" },
@@ -249,6 +250,7 @@ function SamProfileExtractor() {
     const mail: Partial<Address> = {};
     const map: Record<string, [Record<string, unknown>, string]> = {
       uei: [corp, "uei"],
+      cageCode: [corp, "cageCode"],
       orgType: [corp, "orgType"],
       parentUei: [corp, "parentUei"],
       legalName: [corp, "legalName"],
@@ -755,20 +757,30 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       setStatus({ kind: "error", message: "Enter the UEI in Step 1 first." });
       return;
     }
+    if (!intake.corporate.cageCode) {
+      setStatus({
+        kind: "error",
+        message:
+          "CAGE code is required. Add it in Step 1 (next to UEI), or upload a screenshot below.",
+      });
+      return;
+    }
     setStatus({ kind: "working", via: "scan" });
     try {
-      const res = await lookup({ data: { uei: intake.corporate.uei } });
+      const res = await lookup({
+        data: { uei: intake.corporate.uei, cageCode: intake.corporate.cageCode },
+      });
       setSbaCerts(res.certs);
       if (res.error) {
         setStatus({
           kind: "error",
-          message: `${res.error}. Try uploading a screenshot of the SBA profile row instead.`,
+          message: `${res.error} You can also upload a screenshot of the SBA profile row below.`,
         });
       } else if (res.certs.length === 0) {
         setStatus({
           kind: "error",
           message:
-            "Scan returned no certifications. If the SBA profile shows some, upload a screenshot below.",
+            "SBA profile returned no active certifications for this UEI/CAGE.",
         });
       } else {
         setStatus({ kind: "idle" });
@@ -820,7 +832,7 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
               SBA Small Business Search
             </div>
             <div className="text-[11px] text-muted-foreground mt-1">
-              Scans{" "}
+              Calls the{" "}
               <a
                 href="https://search.certifications.sba.gov/"
                 target="_blank"
@@ -829,18 +841,21 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
               >
                 search.certifications.sba.gov
               </a>{" "}
-              using the UEI from Step 1 and parses active SBA certifications.
+              profile API using the UEI + CAGE from Step 1 and parses active SBA certifications.
             </div>
             <div className="text-[10px] font-mono text-muted-foreground mt-1">
-              UEI: {intake.corporate.uei || "(not set)"}
+              UEI: {intake.corporate.uei || "(not set)"} · CAGE:{" "}
+              {intake.corporate.cageCode || "(not set)"}
             </div>
           </div>
           <button
             onClick={run}
-            disabled={status.kind === "working" || !intake.corporate.uei}
+            disabled={
+              status.kind === "working" || !intake.corporate.uei || !intake.corporate.cageCode
+            }
             className="shrink-0 text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
           >
-            {status.kind === "working" && status.via === "scan" ? "Scanning…" : "Scan SBA"}
+            {status.kind === "working" && status.via === "scan" ? "Looking up…" : "Look up SBA"}
           </button>
         </div>
         {status.kind === "error" ? (
@@ -852,8 +867,8 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
             Fallback — upload SBA profile screenshot
           </div>
           <div className="text-[11px] text-muted-foreground mb-2">
-            If the scan fails or misses certifications, upload a screenshot of the SBA Small
-            Business Search result row (with the green badges visible) and we&apos;ll extract them.
+            If the lookup fails or misses certifications, upload a screenshot of the SBA Small
+            Business Search profile (with the badges visible) and we&apos;ll extract them.
           </div>
           <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
             <input
