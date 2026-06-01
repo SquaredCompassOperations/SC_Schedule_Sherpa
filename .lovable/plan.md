@@ -1,82 +1,90 @@
-## Goal
+## Automation Engine — Build Plan
 
-Restructure the platform into the three top-level sections from the spec, and rebuild the **Intake & Readiness** section to match Module 1 (Client Intake) and Module 2 (Readiness Assessment) exactly. Other sections (Automation Engine, Finalization) become placeholders we'll fill in subsequent turns.
+Per your answers: remove Compliance Matrix, full PDF parsing for Module 4, bundle templates with version check for Module 5, one-time JSON cache for SCA Directory.
 
-## 1. Top-level navigation
+### Sidebar restructure
+Update `app-sidebar.tsx` + `mock-data.ts` to list under **Automation Engine**:
+1. SIN Recommendation → `/sin`
+2. SCA Matrix → `/sca` (new)
+3. Documentation Generator → `/documents`
+4. Market Validation → `/market-validation` (new)
+5. Pricing Workbook → `/pricing-workbook` (new)
 
-Collapse the current sidebar into three sections:
+Remove `/compliance` route + file. Keep `/pricing` for now or fold into pricing-workbook (TBD — I'll fold it).
 
-- **Intake & Readiness** → Client Intake, Readiness Assessment
-- **Automation Engine** → (placeholder children — SIN Engine, Document Generator, Pricing, Compliance Matrix from existing routes, regrouped; no behavior changes yet)
-- **Finalization** → (placeholder — Review, eOffer Export from existing routes, regrouped)
+### Shared automation store
+New `src/lib/automation-store.ts` (mirrors `intake-store.ts`, localStorage-persisted) holding:
+- selected SINs (from Module 1)
+- selected SCA LCATs (from Module 2)
+- market validation rows (Module 4)
+- pricing workbook selections (Module 5)
 
-Update `src/components/app-sidebar.tsx` to render three collapsible groups with these children. Keep existing routes mounted so nothing 404s; we'll refine each in later turns.
+So each module reads upstream output without re-running.
 
-## 2. Client Intake (Module 1) — rebuild
+### Module 1 — SIN Recommendation (refactor)
+- Auto-load `businessWebsite` from intake-store; manual override input remains
+- On "Save selected SINs", persist to automation-store
+- No change to `sin-crawler.functions.ts` logic
 
-Replace the current 8-step intake with **4 steps**, exactly as specified:
+### Module 2 — SCA Matrix (new)
+**One-time ingest script** (`scripts/build-sca-occupations.ts`) — I'll run it once, commit `src/lib/sca-occupations.json` (~400 entries: code, title, definition).
+**Server fn** `sca-suggest.functions.ts`: takes SINs + intake website summary → Gemini picks applicable LCATs from the cached JSON, returns matches with confidence + rationale.
+**Route** `/sca`: button "Suggest LCATs from SINs" → table with checkboxes → "Save selected" persists to automation-store. Manual add/remove.
 
-**Step 1 — Corporate Information** (driven by SAM.gov profile upload)
-- Company Details: UEI, Type of Organization, Common Parent UEI, Company Name, DBA, EIN, Business Type(s) registered in SAM, SAM Expiration Date, Business Website, Primary NAICS, Years in Business (derived from Entity Start Date)
-- Company Address: Street1, Street2, City, State, Zip, Country
-- Mailing Address: Street1, Street2, City, State, Zip, Country (with "same as company address" toggle)
-- "Upload SAM.gov profile" extractor at the top auto-fills these fields (extends current `extractBusinessIdentity` schema to cover the new fields). Drive picker stays.
+### Module 3 — Documentation Generator (upgrade)
+Extend `narrative.functions.ts` to accept richer context: intake corporate fields + uploaded past-performance text + selected SCAs. Add new prompt key `"startup-springboard"`. Wire `/documents` route to pull intake/automation state into the context arg.
 
-**Step 2 — Corporate Documents**
-- Checkbox list with file upload per item:
-  - Professional/Employee Compensation Plan
-  - Uncompensated Overtime Policy
-  - Quality Control documentation
-  - P&L Statements: Year 1, Year 2
-  - Balance Sheets: Year 1, Year 2
-  - Past Performance (Capability Statements, Case Studies, References, Project Experience)
-- Each row: checkbox (auto-checks when file uploaded), label, upload button, filename display.
+### Module 4 — Market Validation (new)
+**Server fn** `market-validation.functions.ts`:
+1. Firecrawl search GSA eLibrary for SIN
+2. Take top 5 contractors with price-list links
+3. For each: fetch price list PDF → extract tables → Gemini-vision normalizes to `{SIN, LCAT, UoI, Net Price w/ IFF}`
+4. Return rows + source URLs
+**Route** `/market-validation`: trigger button, progress states, results table, CSV export.
 
-**Step 3 — Authorized Negotiators**
-- Up to 4 negotiators, first = Primary (badge).
-- Per negotiator: Name, Title, US Phone (XXX-XXX-XXXX) **or** International Phone, Email, US Fax or International Fax, Role (Authorized to Sign checkbox).
-- Validation: phone OR international phone required.
+### Module 5 — Pricing Workbook (new)
+**Bundle templates** in `/public/templates/`:
+- `pricing-terms-r31.xlsx`
+- `fcp-product-r31.xlsx`
+- `fcp-services-plus-r31.xlsx`
+**Version check fn** `gsa-template-version.functions.ts`: HEAD/GET the GSA URLs, parse refresh number from filename, compare to bundled `templates-manifest.json`, warn if newer.
+**Install** `exceljs` for template-preserving fills.
+**Server fn** `pricing-workbook.functions.ts`: takes intake data + selected SINs + LCATs + commercial price list (uploaded) → loads template → fills rows → returns base64 xlsx for download.
+**Route** `/pricing-workbook`: Product vs Services Plus selector (auto-inferred), upload commercial price list, "Generate" → downloads filled xlsx. Surface version-check warning.
 
-**Step 4 — Socioeconomic Status**
-- Button "Scan SBA Small Business Search" → calls a new server fn that takes the UEI from Step 1 and fetches `https://search.certifications.sba.gov/` to parse active SBA certifications.
-- Display detected active certifications (8(a), WOSB, SDVOSB, HUBZone, etc.) with source date.
-- Manual override list as fallback.
-
-## 3. Readiness Assessment (Module 2) — rebuild
-
-New route `/readiness` (replaces current one). Computes a live scorecard from intake state:
-
-- Corporate information completeness (% of required fields filled)
-- Authorized negotiators completeness (≥1 with all required fields)
-- Past performance uploaded (yes/no + count)
-- Financial documents:
-  - Both P&L years uploaded? If yes, parse via Gemini to detect a net loss → if loss, surface a "Request explanation from Primary Negotiator" action (drafts an email; mailto link for now, no SMTP).
-  - Both balance sheet years uploaded?
-- Corporate policy documents: Compensation Plan, UOT Policy, QC documentation — each yes/no.
-
-Each category shows status (Complete / Partial / Missing) with a level-of-effort estimate, and a rollup readiness % at the top.
-
-## 4. State plumbing
-
-Intake state currently lives in component-local `useState` in `intake.tsx`. To let Readiness consume it without backend churn, lift it into a small shared store (`src/lib/intake-store.ts`, same `useSyncExternalStore` pattern as `doc-store.ts`). Holds: corporate fields, address, mailing address, uploaded doc map (key → File metadata + checked), negotiators array, socio certifications.
-
-## 5. Out of scope this turn
-
-- Automation Engine and Finalization sections only get re-grouped in the sidebar; their internal pages are untouched.
-- No new Supabase tables — intake state stays in-memory for now (matches current behavior).
-- SBA scraper is best-effort HTML parse; will return empty list gracefully if the page structure changes.
-
-## Files
+### Files
+**Create**
+- `src/lib/automation-store.ts`
+- `src/lib/sca-occupations.json` (built once)
+- `src/lib/sca-suggest.functions.ts`
+- `src/lib/market-validation.functions.ts`
+- `src/lib/pricing-workbook.functions.ts`
+- `src/lib/gsa-template-version.functions.ts`
+- `src/routes/sca.tsx`
+- `src/routes/market-validation.tsx`
+- `src/routes/pricing-workbook.tsx`
+- `public/templates/*.xlsx` + `public/templates/manifest.json`
+- `scripts/build-sca-occupations.ts` (dev-only)
 
 **Edit**
-- `src/components/app-sidebar.tsx` — three-section nav
-- `src/routes/intake.tsx` — full rebuild (4 steps)
-- `src/routes/readiness.tsx` — full rebuild (Module 2 scorecard)
-- `src/lib/intake-extract.functions.ts` — extend extraction schema (org type, parent UEI, DBA, biz types, website, entity start date, addresses)
+- `src/components/app-sidebar.tsx`
+- `src/lib/mock-data.ts`
+- `src/lib/narrative.functions.ts`
+- `src/routes/sin.tsx`
+- `src/routes/documents.tsx`
 
-**Create**
-- `src/lib/intake-store.ts` — shared intake state
-- `src/lib/sba-lookup.functions.ts` — SBA Small Business Search scraper (UEI → certs)
-- `src/lib/financials-check.functions.ts` — Gemini P&L loss detection
+**Delete**
+- `src/routes/compliance.tsx`
+- `src/routes/pricing.tsx` (folded into pricing-workbook)
 
-After you approve, I'll implement.
+### Scope notes / known limits
+- Module 4 price-list PDF parsing is best-effort (~60-80% clean rows expected); UI surfaces "needs review" flags.
+- Module 5 templates are locked GSA xlsx files; `exceljs` preserves structure but very heavy formatting tweaks may not round-trip 100%.
+- Runtime per Module 4/5 run: 1-3 min; progress UI required.
+
+### Out of scope this turn
+- Background job queue (run inline with progress UI for now)
+- Auth/per-user persistence (still localStorage)
+- Auto-resubmit when GSA refreshes templates (warning only)
+
+Approve and I'll implement in one pass.
