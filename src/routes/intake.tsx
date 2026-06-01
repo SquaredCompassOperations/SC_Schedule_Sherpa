@@ -5,7 +5,7 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { extractBusinessIdentity } from "@/lib/intake-extract.functions";
 import { fetchDriveFile, listDriveFiles, type GDriveFile } from "@/lib/gdrive.functions";
 import { detectPnlLoss } from "@/lib/financials-check.functions";
-import { lookupSbaCertifications } from "@/lib/sba-lookup.functions";
+import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
 import {
   DOC_LABELS,
   PAST_PERFORMANCE_CATEGORIES,
@@ -745,8 +745,9 @@ function NegotiatorCard({
 
 function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
   const lookup = useServerFn(lookupSbaCertifications);
+  const extractImg = useServerFn(extractSbaCertsFromImage);
   const [status, setStatus] = useState<
-    { kind: "idle" } | { kind: "working" } | { kind: "error"; message: string }
+    { kind: "idle" } | { kind: "working"; via: "scan" | "image" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
   const run = async () => {
@@ -754,12 +755,21 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       setStatus({ kind: "error", message: "Enter the UEI in Step 1 first." });
       return;
     }
-    setStatus({ kind: "working" });
+    setStatus({ kind: "working", via: "scan" });
     try {
       const res = await lookup({ data: { uei: intake.corporate.uei } });
       setSbaCerts(res.certs);
       if (res.error) {
-        setStatus({ kind: "error", message: res.error });
+        setStatus({
+          kind: "error",
+          message: `${res.error}. Try uploading a screenshot of the SBA profile row instead.`,
+        });
+      } else if (res.certs.length === 0) {
+        setStatus({
+          kind: "error",
+          message:
+            "Scan returned no certifications. If the SBA profile shows some, upload a screenshot below.",
+        });
       } else {
         setStatus({ kind: "idle" });
       }
@@ -770,6 +780,36 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       });
     }
   };
+
+  const onImage = async (file: File | null) => {
+    if (!file) return;
+    setStatus({ kind: "working", via: "image" });
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(binary);
+      const res = await extractImg({
+        data: {
+          filename: file.name,
+          mediaType: file.type || "image/png",
+          dataBase64,
+        },
+      });
+      setSbaCerts(res.certs);
+      if (res.error) setStatus({ kind: "error", message: res.error });
+      else if (res.certs.length === 0)
+        setStatus({ kind: "error", message: "No certifications detected in the image." });
+      else setStatus({ kind: "idle" });
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Image extraction failed.",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-5">
@@ -800,13 +840,36 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
             disabled={status.kind === "working" || !intake.corporate.uei}
             className="shrink-0 text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
           >
-            {status.kind === "working" ? "Scanning…" : "Scan SBA"}
+            {status.kind === "working" && status.via === "scan" ? "Scanning…" : "Scan SBA"}
           </button>
         </div>
         {status.kind === "error" ? (
           <div className="mt-3 text-[11px] font-mono text-destructive">{status.message}</div>
         ) : null}
+
+        <div className="mt-4 pt-4 border-t border-primary/20">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+            Fallback — upload SBA profile screenshot
+          </div>
+          <div className="text-[11px] text-muted-foreground mb-2">
+            If the scan fails or misses certifications, upload a screenshot of the SBA Small
+            Business Search result row (with the green badges visible) and we&apos;ll extract them.
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+              disabled={status.kind === "working"}
+            />
+            {status.kind === "working" && status.via === "image"
+              ? "Extracting…"
+              : "Upload screenshot"}
+          </label>
+        </div>
       </div>
+
 
       <div>
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
