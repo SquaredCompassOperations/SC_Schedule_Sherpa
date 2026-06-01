@@ -961,20 +961,35 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
             If the lookup fails or misses certifications, upload a screenshot of the SBA Small
             Business Search profile (with the badges visible) and we&apos;ll extract them.
           </div>
-          <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              className="hidden"
-              onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest px-3 py-2 bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 cursor-pointer">
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => onImage(e.target.files?.[0] ?? null)}
+                disabled={status.kind === "working"}
+              />
+              {status.kind === "working" && status.via === "image"
+                ? "Extracting…"
+                : "Upload screenshot"}
+            </label>
+            <button
+              onClick={() => setShowDrive(true)}
               disabled={status.kind === "working"}
-            />
-            {status.kind === "working" && status.via === "image"
-              ? "Extracting…"
-              : "Upload screenshot"}
-          </label>
+              className="text-xs font-bold uppercase tracking-widest px-3 py-2 border border-border bg-background rounded-sm hover:bg-muted disabled:opacity-50"
+            >
+              ⛁ From Drive
+            </button>
+          </div>
         </div>
       </div>
+
+      {showDrive ? (
+        <DrivePicker onPick={onDrivePick} onClose={() => setShowDrive(false)} />
+      ) : null}
+
+
 
 
       <div>
