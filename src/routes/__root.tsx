@@ -4,13 +4,17 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 
 function NotFoundComponent() {
   return (
@@ -71,7 +75,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:title", content: "ScheduleBuilder — GSA MAS / VA FSS Offer Automation" },
       { name: "twitter:title", content: "ScheduleBuilder — GSA MAS / VA FSS Offer Automation" },
-      { name: "description", content: "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation." },
       { property: "og:description", content: "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation." },
       { name: "twitter:description", content: "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e599ae73-c485-44fb-bc25-d26bfaca176c/id-preview-f0983f6d--8f44a953-2b65-42f6-a18a-34bf373764b0.lovable.app-1779391990484.png" },
@@ -109,21 +112,67 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+const PUBLIC_ROUTES = ["/login", "/signup"];
+
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { user, role, loading } = useAuth();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
+  const isClientRoute = pathname === "/client" || pathname.startsWith("/client/");
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user && !isPublic) {
+      navigate({ to: "/login", replace: true });
+      return;
+    }
+    if (user && role === "client" && !isClientRoute && !isPublic) {
+      navigate({ to: "/client", replace: true });
+    }
+  }, [loading, user, role, isPublic, isClientRoute, pathname, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xs font-mono text-muted-foreground">
+        Loading…
+      </div>
+    );
+  }
+
+  // Public routes (login/signup) render bare
+  if (isPublic) return <>{children}</>;
+
+  // Client routes render bare (own layout)
+  if (isClientRoute && user) return <>{children}</>;
+
+  // While redirecting client→/client or unauth→/login
+  if (!user || (role === "client" && !isClientRoute)) return null;
+
+  // Team workspace shell
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <TopBar />
+      <div className="flex grow">
+        <AppSidebar />
+        <main className="grow overflow-y-auto animate-fade-in">
+          <div className="p-8 max-w-7xl mx-auto w-full">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-background text-foreground flex flex-col">
-        <TopBar />
-        <div className="flex grow">
-          <AppSidebar />
-          <main className="grow overflow-y-auto animate-fade-in">
-            <div className="p-8 max-w-7xl mx-auto w-full">
-              <Outlet />
-            </div>
-          </main>
-        </div>
-      </div>
+      <AuthProvider>
+        <AuthGate>
+          <Outlet />
+        </AuthGate>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

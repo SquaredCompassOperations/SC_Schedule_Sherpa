@@ -9,20 +9,41 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as SinRouteImport } from './routes/sin'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ScaRouteImport } from './routes/sca'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as ReadinessRouteImport } from './routes/readiness'
 import { Route as PricingWorkbookRouteImport } from './routes/pricing-workbook'
 import { Route as MarketValidationRouteImport } from './routes/market-validation'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IntakeRouteImport } from './routes/intake'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as ClientRouteImport } from './routes/client'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StatusIndexRouteImport } from './routes/status.index'
+import { Route as ClientIndexRouteImport } from './routes/client.index'
+import { Route as StatusOpenItemsRouteImport } from './routes/status.open-items'
+import { Route as StatusMilestonesRouteImport } from './routes/status.milestones'
+import { Route as StatusActivityRouteImport } from './routes/status.activity'
+import { Route as ClientTimelineRouteImport } from './routes/client.timeline'
+import { Route as ClientMessagesRouteImport } from './routes/client.messages'
 
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SinRoute = SinRouteImport.update({
   id: '/sin',
   path: '/sin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ScaRoute = ScaRouteImport.update({
@@ -50,6 +71,11 @@ const MarketValidationRoute = MarketValidationRouteImport.update({
   path: '/market-validation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IntakeRoute = IntakeRouteImport.update({
   id: '/intake',
   path: '/intake',
@@ -65,108 +91,228 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientRoute = ClientRouteImport.update({
+  id: '/client',
+  path: '/client',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusIndexRoute = StatusIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StatusRoute,
+} as any)
+const ClientIndexRoute = ClientIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientRoute,
+} as any)
+const StatusOpenItemsRoute = StatusOpenItemsRouteImport.update({
+  id: '/open-items',
+  path: '/open-items',
+  getParentRoute: () => StatusRoute,
+} as any)
+const StatusMilestonesRoute = StatusMilestonesRouteImport.update({
+  id: '/milestones',
+  path: '/milestones',
+  getParentRoute: () => StatusRoute,
+} as any)
+const StatusActivityRoute = StatusActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => StatusRoute,
+} as any)
+const ClientTimelineRoute = ClientTimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => ClientRoute,
+} as any)
+const ClientMessagesRoute = ClientMessagesRouteImport.update({
+  id: '/messages',
+  path: '/messages',
+  getParentRoute: () => ClientRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/client': typeof ClientRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
+  '/login': typeof LoginRoute
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
+  '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
+  '/status': typeof StatusRouteWithChildren
+  '/client/messages': typeof ClientMessagesRoute
+  '/client/timeline': typeof ClientTimelineRoute
+  '/status/activity': typeof StatusActivityRoute
+  '/status/milestones': typeof StatusMilestonesRoute
+  '/status/open-items': typeof StatusOpenItemsRoute
+  '/client/': typeof ClientIndexRoute
+  '/status/': typeof StatusIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
+  '/login': typeof LoginRoute
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
+  '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
+  '/client/messages': typeof ClientMessagesRoute
+  '/client/timeline': typeof ClientTimelineRoute
+  '/status/activity': typeof StatusActivityRoute
+  '/status/milestones': typeof StatusMilestonesRoute
+  '/status/open-items': typeof StatusOpenItemsRoute
+  '/client': typeof ClientIndexRoute
+  '/status': typeof StatusIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/client': typeof ClientRouteWithChildren
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
+  '/login': typeof LoginRoute
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
+  '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
+  '/status': typeof StatusRouteWithChildren
+  '/client/messages': typeof ClientMessagesRoute
+  '/client/timeline': typeof ClientTimelineRoute
+  '/status/activity': typeof StatusActivityRoute
+  '/status/milestones': typeof StatusMilestonesRoute
+  '/status/open-items': typeof StatusOpenItemsRoute
+  '/client/': typeof ClientIndexRoute
+  '/status/': typeof StatusIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/client'
     | '/documents'
     | '/export'
     | '/intake'
+    | '/login'
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
     | '/review'
     | '/sca'
+    | '/signup'
     | '/sin'
+    | '/status'
+    | '/client/messages'
+    | '/client/timeline'
+    | '/status/activity'
+    | '/status/milestones'
+    | '/status/open-items'
+    | '/client/'
+    | '/status/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/documents'
     | '/export'
     | '/intake'
+    | '/login'
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
     | '/review'
     | '/sca'
+    | '/signup'
     | '/sin'
+    | '/client/messages'
+    | '/client/timeline'
+    | '/status/activity'
+    | '/status/milestones'
+    | '/status/open-items'
+    | '/client'
+    | '/status'
   id:
     | '__root__'
     | '/'
+    | '/client'
     | '/documents'
     | '/export'
     | '/intake'
+    | '/login'
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
     | '/review'
     | '/sca'
+    | '/signup'
     | '/sin'
+    | '/status'
+    | '/client/messages'
+    | '/client/timeline'
+    | '/status/activity'
+    | '/status/milestones'
+    | '/status/open-items'
+    | '/client/'
+    | '/status/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClientRoute: typeof ClientRouteWithChildren
   DocumentsRoute: typeof DocumentsRoute
   ExportRoute: typeof ExportRoute
   IntakeRoute: typeof IntakeRoute
+  LoginRoute: typeof LoginRoute
   MarketValidationRoute: typeof MarketValidationRoute
   PricingWorkbookRoute: typeof PricingWorkbookRoute
   ReadinessRoute: typeof ReadinessRoute
   ReviewRoute: typeof ReviewRoute
   ScaRoute: typeof ScaRoute
+  SignupRoute: typeof SignupRoute
   SinRoute: typeof SinRoute
+  StatusRoute: typeof StatusRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sin': {
       id: '/sin'
       path: '/sin'
       fullPath: '/sin'
       preLoaderRoute: typeof SinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sca': {
@@ -204,6 +350,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketValidationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/intake': {
       id: '/intake'
       path: '/intake'
@@ -225,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/client': {
+      id: '/client'
+      path: '/client'
+      fullPath: '/client'
+      preLoaderRoute: typeof ClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -232,20 +392,105 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status/': {
+      id: '/status/'
+      path: '/'
+      fullPath: '/status/'
+      preLoaderRoute: typeof StatusIndexRouteImport
+      parentRoute: typeof StatusRoute
+    }
+    '/client/': {
+      id: '/client/'
+      path: '/'
+      fullPath: '/client/'
+      preLoaderRoute: typeof ClientIndexRouteImport
+      parentRoute: typeof ClientRoute
+    }
+    '/status/open-items': {
+      id: '/status/open-items'
+      path: '/open-items'
+      fullPath: '/status/open-items'
+      preLoaderRoute: typeof StatusOpenItemsRouteImport
+      parentRoute: typeof StatusRoute
+    }
+    '/status/milestones': {
+      id: '/status/milestones'
+      path: '/milestones'
+      fullPath: '/status/milestones'
+      preLoaderRoute: typeof StatusMilestonesRouteImport
+      parentRoute: typeof StatusRoute
+    }
+    '/status/activity': {
+      id: '/status/activity'
+      path: '/activity'
+      fullPath: '/status/activity'
+      preLoaderRoute: typeof StatusActivityRouteImport
+      parentRoute: typeof StatusRoute
+    }
+    '/client/timeline': {
+      id: '/client/timeline'
+      path: '/timeline'
+      fullPath: '/client/timeline'
+      preLoaderRoute: typeof ClientTimelineRouteImport
+      parentRoute: typeof ClientRoute
+    }
+    '/client/messages': {
+      id: '/client/messages'
+      path: '/messages'
+      fullPath: '/client/messages'
+      preLoaderRoute: typeof ClientMessagesRouteImport
+      parentRoute: typeof ClientRoute
+    }
   }
 }
 
+interface ClientRouteChildren {
+  ClientMessagesRoute: typeof ClientMessagesRoute
+  ClientTimelineRoute: typeof ClientTimelineRoute
+  ClientIndexRoute: typeof ClientIndexRoute
+}
+
+const ClientRouteChildren: ClientRouteChildren = {
+  ClientMessagesRoute: ClientMessagesRoute,
+  ClientTimelineRoute: ClientTimelineRoute,
+  ClientIndexRoute: ClientIndexRoute,
+}
+
+const ClientRouteWithChildren =
+  ClientRoute._addFileChildren(ClientRouteChildren)
+
+interface StatusRouteChildren {
+  StatusActivityRoute: typeof StatusActivityRoute
+  StatusMilestonesRoute: typeof StatusMilestonesRoute
+  StatusOpenItemsRoute: typeof StatusOpenItemsRoute
+  StatusIndexRoute: typeof StatusIndexRoute
+}
+
+const StatusRouteChildren: StatusRouteChildren = {
+  StatusActivityRoute: StatusActivityRoute,
+  StatusMilestonesRoute: StatusMilestonesRoute,
+  StatusOpenItemsRoute: StatusOpenItemsRoute,
+  StatusIndexRoute: StatusIndexRoute,
+}
+
+const StatusRouteWithChildren =
+  StatusRoute._addFileChildren(StatusRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClientRoute: ClientRouteWithChildren,
   DocumentsRoute: DocumentsRoute,
   ExportRoute: ExportRoute,
   IntakeRoute: IntakeRoute,
+  LoginRoute: LoginRoute,
   MarketValidationRoute: MarketValidationRoute,
   PricingWorkbookRoute: PricingWorkbookRoute,
   ReadinessRoute: ReadinessRoute,
   ReviewRoute: ReviewRoute,
   ScaRoute: ScaRoute,
+  SignupRoute: SignupRoute,
   SinRoute: SinRoute,
+  StatusRoute: StatusRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
