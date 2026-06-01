@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { SIN_MATCHES } from "@/lib/mock-data";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
+import { useIntake } from "@/lib/intake-store";
+import { useAutomation, setSelectedSins } from "@/lib/automation-store";
 
 export const Route = createFileRoute("/sin")({
   head: () => ({ meta: [{ title: "SIN Recommendation Engine — ScheduleBuilder" }] }),
@@ -20,8 +22,16 @@ type Candidate = {
 
 function SinPage() {
   const crawl = useServerFn(crawlClientForSins);
-  const [url, setUrl] = useState("");
-  const [selected, setSelected] = useState<string[]>(["54151S"]);
+  const intake = useIntake();
+  const automation = useAutomation();
+  const [url, setUrl] = useState(intake.corporate.website || "");
+  useEffect(() => {
+    if (intake.corporate.website && !url) setUrl(intake.corporate.website);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intake.corporate.website]);
+  const [selected, setSelected] = useState<string[]>(
+    automation.selectedSins.length > 0 ? automation.selectedSins.map((s) => s.code) : ["54151S"],
+  );
   const [matches, setMatches] = useState(
     SIN_MATCHES.map((m) => ({
       code: m.code,

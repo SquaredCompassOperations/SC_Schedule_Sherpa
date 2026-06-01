@@ -10,19 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SinRouteImport } from './routes/sin'
+import { Route as ScaRouteImport } from './routes/sca'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as RegistrationRouteImport } from './routes/registration'
 import { Route as ReadinessRouteImport } from './routes/readiness'
-import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PricingWorkbookRouteImport } from './routes/pricing-workbook'
+import { Route as MarketValidationRouteImport } from './routes/market-validation'
 import { Route as IntakeRouteImport } from './routes/intake'
 import { Route as ExportRouteImport } from './routes/export'
 import { Route as DocumentsRouteImport } from './routes/documents'
-import { Route as ComplianceRouteImport } from './routes/compliance'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SinRoute = SinRouteImport.update({
   id: '/sin',
   path: '/sin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScaRoute = ScaRouteImport.update({
+  id: '/sca',
+  path: '/sca',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReviewRoute = ReviewRouteImport.update({
@@ -40,9 +46,14 @@ const ReadinessRoute = ReadinessRouteImport.update({
   path: '/readiness',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
+const PricingWorkbookRoute = PricingWorkbookRouteImport.update({
+  id: '/pricing-workbook',
+  path: '/pricing-workbook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketValidationRoute = MarketValidationRouteImport.update({
+  id: '/market-validation',
+  path: '/market-validation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IntakeRoute = IntakeRouteImport.update({
@@ -60,11 +71,6 @@ const DocumentsRoute = DocumentsRouteImport.update({
   path: '/documents',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ComplianceRoute = ComplianceRouteImport.update({
-  id: '/compliance',
-  path: '/compliance',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -73,90 +79,97 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
-  '/pricing': typeof PricingRoute
+  '/market-validation': typeof MarketValidationRoute
+  '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
+  '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
-  '/pricing': typeof PricingRoute
+  '/market-validation': typeof MarketValidationRoute
+  '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
+  '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/compliance': typeof ComplianceRoute
   '/documents': typeof DocumentsRoute
   '/export': typeof ExportRoute
   '/intake': typeof IntakeRoute
-  '/pricing': typeof PricingRoute
+  '/market-validation': typeof MarketValidationRoute
+  '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
   '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
+  '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
-    | '/pricing'
+    | '/market-validation'
+    | '/pricing-workbook'
     | '/readiness'
     | '/registration'
     | '/review'
+    | '/sca'
     | '/sin'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
-    | '/pricing'
+    | '/market-validation'
+    | '/pricing-workbook'
     | '/readiness'
     | '/registration'
     | '/review'
+    | '/sca'
     | '/sin'
   id:
     | '__root__'
     | '/'
-    | '/compliance'
     | '/documents'
     | '/export'
     | '/intake'
-    | '/pricing'
+    | '/market-validation'
+    | '/pricing-workbook'
     | '/readiness'
     | '/registration'
     | '/review'
+    | '/sca'
     | '/sin'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ComplianceRoute: typeof ComplianceRoute
   DocumentsRoute: typeof DocumentsRoute
   ExportRoute: typeof ExportRoute
   IntakeRoute: typeof IntakeRoute
-  PricingRoute: typeof PricingRoute
+  MarketValidationRoute: typeof MarketValidationRoute
+  PricingWorkbookRoute: typeof PricingWorkbookRoute
   ReadinessRoute: typeof ReadinessRoute
   RegistrationRoute: typeof RegistrationRoute
   ReviewRoute: typeof ReviewRoute
+  ScaRoute: typeof ScaRoute
   SinRoute: typeof SinRoute
 }
 
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/sin'
       fullPath: '/sin'
       preLoaderRoute: typeof SinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sca': {
+      id: '/sca'
+      path: '/sca'
+      fullPath: '/sca'
+      preLoaderRoute: typeof ScaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/review': {
@@ -190,11 +210,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReadinessRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
+    '/pricing-workbook': {
+      id: '/pricing-workbook'
+      path: '/pricing-workbook'
+      fullPath: '/pricing-workbook'
+      preLoaderRoute: typeof PricingWorkbookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market-validation': {
+      id: '/market-validation'
+      path: '/market-validation'
+      fullPath: '/market-validation'
+      preLoaderRoute: typeof MarketValidationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/intake': {
@@ -218,13 +245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocumentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/compliance': {
-      id: '/compliance'
-      path: '/compliance'
-      fullPath: '/compliance'
-      preLoaderRoute: typeof ComplianceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -237,14 +257,15 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ComplianceRoute: ComplianceRoute,
   DocumentsRoute: DocumentsRoute,
   ExportRoute: ExportRoute,
   IntakeRoute: IntakeRoute,
-  PricingRoute: PricingRoute,
+  MarketValidationRoute: MarketValidationRoute,
+  PricingWorkbookRoute: PricingWorkbookRoute,
   ReadinessRoute: ReadinessRoute,
   RegistrationRoute: RegistrationRoute,
   ReviewRoute: ReviewRoute,
+  ScaRoute: ScaRoute,
   SinRoute: SinRoute,
 }
 export const routeTree = rootRouteImport

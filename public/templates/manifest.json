@@ -1,0 +1,18 @@
+{
+  "refresh": "31",
+  "downloadedAt": "2026-06-01",
+  "templates": {
+    "pricing-terms": {
+      "file": "pricing-terms-r31.xlsx",
+      "sourceUrl": "https://www.gsa.gov/system/files/Pricing%20Terms%20Attachment%20-Refresh%2031_01.xlsx"
+    },
+    "fcp-product": {
+      "file": "fcp-product-r31.xlsx",
+      "sourceUrl": "https://www.gsa.gov/system/files/FCP%20Product%20File%20-%20New%20Offer%20-%20Refresh%2031.xlsx"
+    },
+    "fcp-services-plus": {
+      "file": "fcp-services-plus-r31.xlsx",
+      "sourceUrl": "https://www.gsa.gov/system/files/FCP_Services_Plus_File_Refresh_31_Final.xlsx"
+    }
+  }
+}
