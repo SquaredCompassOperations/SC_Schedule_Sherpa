@@ -112,7 +112,7 @@ const emptyNegotiator = (): Negotiator => ({
   authorizedToSign: false,
 });
 
-let state: IntakeState = {
+const defaultState = (): IntakeState => ({
   corporate: {
     uei: "",
     cageCode: "",
@@ -137,14 +137,20 @@ let state: IntakeState = {
   pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
-};
+});
+
+let state: IntakeState = loadPersisted<IntakeState>(PERSIST_KEY, defaultState());
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-const emit = () => listeners.forEach((l) => l());
+const emit = () => {
+  savePersisted(PERSIST_KEY, state);
+  listeners.forEach((l) => l());
+};
+
 
 export function getIntake(): IntakeState {
   return state;
