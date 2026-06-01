@@ -745,8 +745,9 @@ function NegotiatorCard({
 
 function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
   const lookup = useServerFn(lookupSbaCertifications);
+  const extractImg = useServerFn(extractSbaCertsFromImage);
   const [status, setStatus] = useState<
-    { kind: "idle" } | { kind: "working" } | { kind: "error"; message: string }
+    { kind: "idle" } | { kind: "working"; via: "scan" | "image" } | { kind: "error"; message: string }
   >({ kind: "idle" });
 
   const run = async () => {
@@ -754,12 +755,21 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       setStatus({ kind: "error", message: "Enter the UEI in Step 1 first." });
       return;
     }
-    setStatus({ kind: "working" });
+    setStatus({ kind: "working", via: "scan" });
     try {
       const res = await lookup({ data: { uei: intake.corporate.uei } });
       setSbaCerts(res.certs);
       if (res.error) {
-        setStatus({ kind: "error", message: res.error });
+        setStatus({
+          kind: "error",
+          message: `${res.error}. Try uploading a screenshot of the SBA profile row instead.`,
+        });
+      } else if (res.certs.length === 0) {
+        setStatus({
+          kind: "error",
+          message:
+            "Scan returned no certifications. If the SBA profile shows some, upload a screenshot below.",
+        });
       } else {
         setStatus({ kind: "idle" });
       }
@@ -770,6 +780,36 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       });
     }
   };
+
+  const onImage = async (file: File | null) => {
+    if (!file) return;
+    setStatus({ kind: "working", via: "image" });
+    try {
+      const buf = await file.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const dataBase64 = btoa(binary);
+      const res = await extractImg({
+        data: {
+          filename: file.name,
+          mediaType: file.type || "image/png",
+          dataBase64,
+        },
+      });
+      setSbaCerts(res.certs);
+      if (res.error) setStatus({ kind: "error", message: res.error });
+      else if (res.certs.length === 0)
+        setStatus({ kind: "error", message: "No certifications detected in the image." });
+      else setStatus({ kind: "idle" });
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Image extraction failed.",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-5">
