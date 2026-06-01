@@ -73,9 +73,27 @@ function SinPage() {
         title="SIN Recommendation Engine"
         description="Pull from the client's website to crawl GSA eLibrary and rank applicable Special Item Numbers automatically."
         actions={
-          <div className="text-right">
-            <div className="text-[10px] font-mono text-muted-foreground uppercase">Selected</div>
-            <div className="text-2xl font-mono font-bold text-primary leading-none">{selected.length}</div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const sel = matches
+                  .filter((m) => selected.includes(m.code))
+                  .map((m) => ({ code: m.code, title: m.title, confidence: m.confidence, rationale: m.rationale }));
+                setSelectedSins(sel);
+              }}
+              className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 border border-border rounded-sm hover:bg-muted"
+            >
+              Save Selections
+            </button>
+            <div className="text-right">
+              <div className="text-[10px] font-mono text-muted-foreground uppercase">Selected</div>
+              <div className="text-2xl font-mono font-bold text-primary leading-none">{selected.length}</div>
+            </div>
+            {automation.selectedSins.length > 0 && (
+              <span className="text-[10px] font-mono uppercase tracking-widest text-success">
+                {automation.selectedSins.length} saved
+              </span>
+            )}
           </div>
         }
       />
