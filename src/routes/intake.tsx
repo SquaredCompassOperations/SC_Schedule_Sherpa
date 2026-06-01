@@ -250,6 +250,7 @@ function SamProfileExtractor() {
     const mail: Partial<Address> = {};
     const map: Record<string, [Record<string, unknown>, string]> = {
       uei: [corp, "uei"],
+      cageCode: [corp, "cageCode"],
       orgType: [corp, "orgType"],
       parentUei: [corp, "parentUei"],
       legalName: [corp, "legalName"],
