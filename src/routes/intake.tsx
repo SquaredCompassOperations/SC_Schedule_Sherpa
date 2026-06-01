@@ -5,7 +5,7 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { extractBusinessIdentity } from "@/lib/intake-extract.functions";
 import { fetchDriveFile, listDriveFiles, type GDriveFile } from "@/lib/gdrive.functions";
 import { detectPnlLoss } from "@/lib/financials-check.functions";
-import { lookupSbaCertifications } from "@/lib/sba-lookup.functions";
+import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
 import {
   DOC_LABELS,
   PAST_PERFORMANCE_CATEGORIES,
