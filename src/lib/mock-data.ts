@@ -25,7 +25,7 @@ export const MODULES = [
   { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/market-validation", label: "Market Validation", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/pricing-workbook", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/registration", label: "SAM/GSA Tracker", status: "in_progress" as ModuleStatus, group: "Engine" },
+  
   { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
   { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
 ];

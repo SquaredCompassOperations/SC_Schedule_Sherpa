@@ -47,7 +47,7 @@ function WorkspacePage() {
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          <Panel title="Registration Gaps" trailing={<Link to="/registration" className="text-[10px] text-primary font-bold uppercase tracking-tight">Open Tracker →</Link>}>
+          <Panel title="Registration Gaps">
             <ul className="space-y-3">
               {REGISTRATION_ITEMS.slice(0, 5).map((r) => (
                 <li key={r.label} className="flex items-start gap-3">

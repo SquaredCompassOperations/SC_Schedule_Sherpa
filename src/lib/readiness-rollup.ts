@@ -6,7 +6,7 @@ import {
   COMPLIANCE_MATRIX,
   DOCUMENT_QUEUE,
   LABOR_CATEGORIES,
-  REGISTRATION_ITEMS,
+  
   SIN_MATCHES,
 } from "./mock-data";
 import { useDocStore, type DocStatus } from "./doc-store";
@@ -67,19 +67,8 @@ export function useReadinessRollup(): RollupResult {
     blockers: viableSins.length === 0 ? ["No SINs above 70% confidence"] : [],
   };
 
-  // Registration — % of items with status=ok
-  const okReg = REGISTRATION_ITEMS.filter((r) => r.status === "ok").length;
-  const regScore = Math.round((okReg / REGISTRATION_ITEMS.length) * 100);
-  const regGaps = REGISTRATION_ITEMS.filter((r) => r.status !== "ok");
-  const registration: ModuleReadiness = {
-    slug: "/registration",
-    label: "Registration Tracker",
-    weight: 10,
-    score: regScore,
-    state: stateFor(regScore, false),
-    summary: `${okReg}/${REGISTRATION_ITEMS.length} items verified`,
-    blockers: regGaps.map((r) => r.label),
-  };
+
+
 
   // Documents — live from doc-store
   const docStatuses = DOCUMENT_QUEUE.map(
@@ -135,7 +124,7 @@ export function useReadinessRollup(): RollupResult {
   };
 
   // Review — derived: ready only when all upstream are ≥ 80
-  const upstreamReady = [sin, registration, docs_, pricing, compliance].every(
+  const upstreamReady = [sin, docs_, pricing, compliance].every(
     (m) => m.score >= 80,
   );
   const reviewScore = upstreamReady ? 85 : Math.min(70, Math.round((docScore + compScore) / 2));
@@ -169,7 +158,7 @@ export function useReadinessRollup(): RollupResult {
         ],
   };
 
-  const modules = [intake, sin, registration, docs_, pricing, compliance, review, exportMod];
+  const modules = [intake, sin, docs_, pricing, compliance, review, exportMod];
 
   const totalWeight = modules.reduce((a, m) => a + m.weight, 0);
   const composite =
