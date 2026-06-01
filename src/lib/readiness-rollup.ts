@@ -67,19 +67,8 @@ export function useReadinessRollup(): RollupResult {
     blockers: viableSins.length === 0 ? ["No SINs above 70% confidence"] : [],
   };
 
-  // Registration — % of items with status=ok
-  const okReg = REGISTRATION_ITEMS.filter((r) => r.status === "ok").length;
-  const regScore = Math.round((okReg / REGISTRATION_ITEMS.length) * 100);
-  const regGaps = REGISTRATION_ITEMS.filter((r) => r.status !== "ok");
-  const registration: ModuleReadiness = {
-    slug: "/registration",
-    label: "Registration Tracker",
-    weight: 10,
-    score: regScore,
-    state: stateFor(regScore, false),
-    summary: `${okReg}/${REGISTRATION_ITEMS.length} items verified`,
-    blockers: regGaps.map((r) => r.label),
-  };
+
+
 
   // Documents — live from doc-store
   const docStatuses = DOCUMENT_QUEUE.map(
