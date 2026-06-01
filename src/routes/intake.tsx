@@ -757,20 +757,30 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       setStatus({ kind: "error", message: "Enter the UEI in Step 1 first." });
       return;
     }
+    if (!intake.corporate.cageCode) {
+      setStatus({
+        kind: "error",
+        message:
+          "CAGE code is required. Add it in Step 1 (next to UEI), or upload a screenshot below.",
+      });
+      return;
+    }
     setStatus({ kind: "working", via: "scan" });
     try {
-      const res = await lookup({ data: { uei: intake.corporate.uei } });
+      const res = await lookup({
+        data: { uei: intake.corporate.uei, cageCode: intake.corporate.cageCode },
+      });
       setSbaCerts(res.certs);
       if (res.error) {
         setStatus({
           kind: "error",
-          message: `${res.error}. Try uploading a screenshot of the SBA profile row instead.`,
+          message: `${res.error} You can also upload a screenshot of the SBA profile row below.`,
         });
       } else if (res.certs.length === 0) {
         setStatus({
           kind: "error",
           message:
-            "Scan returned no certifications. If the SBA profile shows some, upload a screenshot below.",
+            "SBA profile returned no active certifications for this UEI/CAGE.",
         });
       } else {
         setStatus({ kind: "idle" });
