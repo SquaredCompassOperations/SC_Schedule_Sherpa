@@ -127,6 +127,7 @@ function IntakePage() {
 
 const CORP_FIELDS: { key: keyof CorporateInfo; label: string; hint?: string }[] = [
   { key: "uei", label: "UEI Number", hint: "12-character SAM.gov UEI" },
+  { key: "cageCode", label: "CAGE Code", hint: "5-char CAGE/NCAGE from SAM.gov" },
   { key: "orgType", label: "Type of Organization" },
   { key: "parentUei", label: "Common Parent UEI Number" },
   { key: "legalName", label: "Company Name" },
