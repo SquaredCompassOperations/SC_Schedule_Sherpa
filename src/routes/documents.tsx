@@ -7,6 +7,8 @@ import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { DOCUMENT_QUEUE, CLIENT, DOC_CRITERIA } from "@/lib/mock-data";
 import { generateNarrative } from "@/lib/narrative.functions";
 import { useDocStore, patchDoc, type DocState } from "@/lib/doc-store";
+import { useIntake } from "@/lib/intake-store";
+import { useAutomation } from "@/lib/automation-store";
 
 export const Route = createFileRoute("/documents")({
   head: () => ({ meta: [{ title: "Document Generator — ScheduleBuilder" }] }),
