@@ -260,3 +260,11 @@ export function removePastPerformance(id: string) {
   state = { ...state, pastPerformance: state.pastPerformance.filter((e) => e.id !== id) };
   emit();
 }
+
+// Clear all intake data (corporate info, addresses, negotiators, docs, SBA,
+// past performance) and wipe the persisted copy. Use for "Start Over".
+export function resetIntake() {
+  state = defaultState();
+  emit();
+}
+
