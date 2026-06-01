@@ -261,6 +261,45 @@ function contextString() {
   return `Company: ${CLIENT.name} | UEI: ${CLIENT.uei} | CAGE: ${CLIENT.cage} | EIN: ${CLIENT.ein} | NAICS: ${CLIENT.naicsPrimary} | Employees: ${CLIENT.employees} | Socioeconomic: ${CLIENT.socioeconomic} | POC: ${CLIENT.poc} | Solicitation: ${CLIENT.solicitation}`;
 }
 
+function buildContext(
+  intake: ReturnType<typeof useIntake>,
+  automation: ReturnType<typeof useAutomation>,
+): string {
+  const c = intake.corporate;
+  const negotiator = intake.negotiators[0];
+  const pocLine = negotiator?.name
+    ? `${negotiator.name}${negotiator.title ? ", " + negotiator.title : ""}${negotiator.email ? " <" + negotiator.email + ">" : ""}`
+    : CLIENT.poc;
+  const sinLine = automation.selectedSins.length
+    ? automation.selectedSins.map((s) => `${s.code} ${s.title}`).join("; ")
+    : "(none selected)";
+  const lcatLine = automation.selectedLcats.length
+    ? automation.selectedLcats.map((l) => `${l.code} ${l.title}`).join("; ")
+    : "(none selected)";
+  const pp = intake.pastPerformance.slice(0, 5).map((p) => `${p.category}: ${p.filename}`).join("; ");
+  const addr = intake.companyAddress;
+  const addrLine = [addr.street1, addr.city, addr.state, addr.zip].filter(Boolean).join(", ");
+  return [
+    `Company: ${c.legalName || CLIENT.name}${c.dba ? " (DBA " + c.dba + ")" : ""}`,
+    `UEI: ${c.uei || CLIENT.uei}`,
+    `CAGE: ${c.cageCode || CLIENT.cage}`,
+    `EIN: ${c.ein || CLIENT.ein}`,
+    `NAICS Primary: ${c.naicsPrimary || CLIENT.naicsPrimary}`,
+    `Website: ${c.website || "—"}`,
+    `Years in Business: ${c.yearsInBusiness || "—"}`,
+    `Org Type: ${c.orgType || "—"}`,
+    `Business Types: ${c.businessTypes || "—"}`,
+    `SAM Status: ${c.samStatus || "—"}${c.samExpires ? " (expires " + c.samExpires + ")" : ""}`,
+    `Address: ${addrLine || "—"}`,
+    `POC: ${pocLine}`,
+    `SBA Certifications: ${intake.sbaCerts.length ? intake.sbaCerts.map((s) => s.program).join(", ") : "None on file"}`,
+    `Selected SINs: ${sinLine}`,
+    `Applicable SCA LCATs: ${lcatLine}`,
+    `Past Performance on file: ${pp || "None uploaded"}`,
+    `Solicitation: ${CLIENT.solicitation}`,
+  ].join(" | ");
+}
+
 function exportDocx(title: string, content: string) {
   if (!content) return;
   const paragraphs = content.split("\n\n").map((p) =>
