@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SinRouteImport } from './routes/sin'
 import { Route as ScaRouteImport } from './routes/sca'
 import { Route as ReviewRouteImport } from './routes/review'
-import { Route as RegistrationRouteImport } from './routes/registration'
 import { Route as ReadinessRouteImport } from './routes/readiness'
 import { Route as PricingWorkbookRouteImport } from './routes/pricing-workbook'
 import { Route as MarketValidationRouteImport } from './routes/market-validation'
@@ -34,11 +33,6 @@ const ScaRoute = ScaRouteImport.update({
 const ReviewRoute = ReviewRouteImport.update({
   id: '/review',
   path: '/review',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegistrationRoute = RegistrationRouteImport.update({
-  id: '/registration',
-  path: '/registration',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReadinessRoute = ReadinessRouteImport.update({
@@ -85,7 +79,6 @@ export interface FileRoutesByFullPath {
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
-  '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
@@ -98,7 +91,6 @@ export interface FileRoutesByTo {
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
-  '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
@@ -112,7 +104,6 @@ export interface FileRoutesById {
   '/market-validation': typeof MarketValidationRoute
   '/pricing-workbook': typeof PricingWorkbookRoute
   '/readiness': typeof ReadinessRoute
-  '/registration': typeof RegistrationRoute
   '/review': typeof ReviewRoute
   '/sca': typeof ScaRoute
   '/sin': typeof SinRoute
@@ -127,7 +118,6 @@ export interface FileRouteTypes {
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
-    | '/registration'
     | '/review'
     | '/sca'
     | '/sin'
@@ -140,7 +130,6 @@ export interface FileRouteTypes {
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
-    | '/registration'
     | '/review'
     | '/sca'
     | '/sin'
@@ -153,7 +142,6 @@ export interface FileRouteTypes {
     | '/market-validation'
     | '/pricing-workbook'
     | '/readiness'
-    | '/registration'
     | '/review'
     | '/sca'
     | '/sin'
@@ -167,7 +155,6 @@ export interface RootRouteChildren {
   MarketValidationRoute: typeof MarketValidationRoute
   PricingWorkbookRoute: typeof PricingWorkbookRoute
   ReadinessRoute: typeof ReadinessRoute
-  RegistrationRoute: typeof RegistrationRoute
   ReviewRoute: typeof ReviewRoute
   ScaRoute: typeof ScaRoute
   SinRoute: typeof SinRoute
@@ -194,13 +181,6 @@ declare module '@tanstack/react-router' {
       path: '/review'
       fullPath: '/review'
       preLoaderRoute: typeof ReviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/registration': {
-      id: '/registration'
-      path: '/registration'
-      fullPath: '/registration'
-      preLoaderRoute: typeof RegistrationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/readiness': {
@@ -263,7 +243,6 @@ const rootRouteChildren: RootRouteChildren = {
   MarketValidationRoute: MarketValidationRoute,
   PricingWorkbookRoute: PricingWorkbookRoute,
   ReadinessRoute: ReadinessRoute,
-  RegistrationRoute: RegistrationRoute,
   ReviewRoute: ReviewRoute,
   ScaRoute: ScaRoute,
   SinRoute: SinRoute,
@@ -271,3 +250,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
