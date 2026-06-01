@@ -124,7 +124,7 @@ export function useReadinessRollup(): RollupResult {
   };
 
   // Review — derived: ready only when all upstream are ≥ 80
-  const upstreamReady = [sin, registration, docs_, pricing, compliance].every(
+  const upstreamReady = [sin, docs_, pricing, compliance].every(
     (m) => m.score >= 80,
   );
   const reviewScore = upstreamReady ? 85 : Math.min(70, Math.round((docScore + compScore) / 2));
@@ -158,7 +158,7 @@ export function useReadinessRollup(): RollupResult {
         ],
   };
 
-  const modules = [intake, sin, registration, docs_, pricing, compliance, review, exportMod];
+  const modules = [intake, sin, docs_, pricing, compliance, review, exportMod];
 
   const totalWeight = modules.reduce((a, m) => a + m.weight, 0);
   const composite =
