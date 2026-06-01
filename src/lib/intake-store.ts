@@ -111,6 +111,7 @@ let state: IntakeState = {
   corporate: {
     uei: "",
     cageCode: "",
+    orgType: "",
     parentUei: "",
     legalName: "",
     dba: "",
