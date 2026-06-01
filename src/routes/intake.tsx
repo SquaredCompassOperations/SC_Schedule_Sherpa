@@ -864,22 +864,14 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
     }
   };
 
-  const onImage = async (file: File | null) => {
-    if (!file) return;
+  const runExtract = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }) => {
     setStatus({ kind: "working", via: "image" });
     try {
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let binary = "";
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-      const dataBase64 = btoa(binary);
-      const res = await extractImg({
-        data: {
-          filename: file.name,
-          mediaType: file.type || "image/png",
-          dataBase64,
-        },
-      });
+      const res = await extractImg({ data: payload });
       setSbaCerts(res.certs);
       if (res.error) setStatus({ kind: "error", message: res.error });
       else if (res.certs.length === 0)
@@ -892,6 +884,34 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       });
     }
   };
+
+  const onImage = async (file: File | null) => {
+    if (!file) return;
+    const buf = await file.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    await runExtract({
+      filename: file.name,
+      mediaType: file.type || "image/png",
+      dataBase64: btoa(binary),
+    });
+  };
+
+  const onDrivePick = async (file: GDriveFile) => {
+    setShowDrive(false);
+    setStatus({ kind: "working", via: "image" });
+    try {
+      const payload = await fetchDrive({ data: { fileId: file.id } });
+      await runExtract(payload);
+    } catch (err) {
+      setStatus({
+        kind: "error",
+        message: err instanceof Error ? err.message : "Drive import failed.",
+      });
+    }
+  };
+
 
 
   return (
