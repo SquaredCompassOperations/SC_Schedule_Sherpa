@@ -817,6 +817,8 @@ function NegotiatorCard({
 function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
   const lookup = useServerFn(lookupSbaCertifications);
   const extractImg = useServerFn(extractSbaCertsFromImage);
+  const fetchDrive = useServerFn(fetchDriveFile);
+  const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
     { kind: "idle" } | { kind: "working"; via: "scan" | "image" } | { kind: "error"; message: string }
   >({ kind: "idle" });
