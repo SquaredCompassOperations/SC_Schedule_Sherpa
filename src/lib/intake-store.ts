@@ -110,7 +110,7 @@ const emptyNegotiator = (): Negotiator => ({
 let state: IntakeState = {
   corporate: {
     uei: "",
-    orgType: "",
+    cageCode: "",
     parentUei: "",
     legalName: "",
     dba: "",
