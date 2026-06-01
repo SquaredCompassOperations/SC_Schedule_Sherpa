@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { MODULES } from "@/lib/mock-data";
 
 const groups = [
+  { id: "Status", label: "Status Tracker" },
   { id: "Intake", label: "Intake & Readiness" },
   { id: "Engine", label: "Automation Engine" },
   { id: "Final", label: "Finalization" },
