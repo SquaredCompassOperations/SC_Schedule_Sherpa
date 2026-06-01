@@ -44,6 +44,8 @@ const STEPS = [
 function IntakePage() {
   const [step, setStep] = useState(0);
   const intake = useIntake();
+  const navigate = useNavigate();
+  const isLast = step === STEPS.length - 1;
 
   return (
     <>
