@@ -19,6 +19,14 @@ export type SelectedLcat = {
   rationale: string;
 };
 
+export type PriceListLcat = {
+  title: string;
+  rate?: string;
+  unit?: string;
+  sin?: string;
+};
+
+
 export type MarketRow = {
   sin: string;
   clientLcat?: string;
@@ -34,6 +42,9 @@ export type MarketRow = {
 export type AutomationState = {
   selectedSins: SelectedSin[];
   selectedLcats: SelectedLcat[];
+  priceListLcats: PriceListLcat[];
+  priceListSource: string | null;
+  priceListExtractedAt: number | null;
   marketRows: MarketRow[];
   marketRunAt: number | null;
   pricingTemplate: "fcp-product" | "fcp-services-plus" | null;
@@ -42,10 +53,14 @@ export type AutomationState = {
 const defaultState = (): AutomationState => ({
   selectedSins: [],
   selectedLcats: [],
+  priceListLcats: [],
+  priceListSource: null,
+  priceListExtractedAt: null,
   marketRows: [],
   marketRunAt: null,
   pricingTemplate: null,
 });
+
 
 let state: AutomationState = loadPersisted<AutomationState>(PERSIST_KEY, defaultState());
 
@@ -74,6 +89,16 @@ export function setSelectedSins(sins: SelectedSin[]) {
 
 export function setSelectedLcats(lcats: SelectedLcat[]) {
   state = { ...state, selectedLcats: lcats };
+  emit();
+}
+
+export function setPriceListLcats(lcats: PriceListLcat[], source: string | null) {
+  state = {
+    ...state,
+    priceListLcats: lcats,
+    priceListSource: source,
+    priceListExtractedAt: Date.now(),
+  };
   emit();
 }
 
