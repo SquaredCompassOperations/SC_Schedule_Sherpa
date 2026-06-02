@@ -19,10 +19,18 @@ function MarketPage() {
   const [notes, setNotes] = useState<string[]>([]);
 
   const rows = automation.marketRows;
+  const benchmarkLcats =
+    automation.priceListLcats.length > 0
+      ? automation.priceListLcats.map((l) => l.title)
+      : automation.selectedLcats.map((l) => l.title);
 
   const run = async () => {
     if (!activeSin) {
       setError("Pick a SIN to validate.");
+      return;
+    }
+    if (benchmarkLcats.length === 0) {
+      setError("No LCATs available. Upload the client's price list on the SIN Recommendation Engine first.");
       return;
     }
     setRunning(true);
@@ -32,7 +40,7 @@ function MarketPage() {
       const res = await fn({
         data: {
           sin: activeSin,
-          lcats: automation.selectedLcats.map((l) => l.title).slice(0, 10),
+          lcats: benchmarkLcats.slice(0, 50),
         },
       });
       if (res.error) setError(res.error);
@@ -44,6 +52,7 @@ function MarketPage() {
       setRunning(false);
     }
   };
+
 
   const exportCsv = () => {
     const header = ["Client LCAT", "SIN", "Competitor Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
