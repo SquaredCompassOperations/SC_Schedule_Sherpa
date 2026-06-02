@@ -5,6 +5,7 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { SIN_MATCHES } from "@/lib/mock-data";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
 import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
+import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
 import { useIntake } from "@/lib/intake-store";
 import { useAutomation, setSelectedSins, setPriceListLcats } from "@/lib/automation-store";
 
