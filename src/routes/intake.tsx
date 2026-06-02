@@ -5,6 +5,8 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { extractBusinessIdentity } from "@/lib/intake-extract.functions";
 import { fetchDriveFile, listDriveFiles, type GDriveFile } from "@/lib/gdrive.functions";
 import { detectPnlLoss } from "@/lib/financials-check.functions";
+import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
+import { setPriceListLcats } from "@/lib/automation-store";
 import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
 import {
   DOC_LABELS,
@@ -573,9 +575,11 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const checkLoss = useServerFn(detectPnlLoss);
   const fetchDrive = useServerFn(fetchDriveFile);
+  const extractPl = useServerFn(extractPriceListLcats);
   const [analyzing, setAnalyzing] = useState(false);
   const [showDrive, setShowDrive] = useState(false);
   const isPnl = docKey === "pnlYear1" || docKey === "pnlYear2";
+  const isPriceList = docKey === "corporatePriceList";
 
   const analyzeLoss = async (payload: {
     filename: string;
@@ -590,6 +594,15 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
     }
   };
 
+  const extractLcats = async (payload: { filename: string; mediaType: string; dataBase64: string }) => {
+    try {
+      const res = await extractPl({ data: payload });
+      setPriceListLcats(res.lcats, payload.filename);
+    } catch {
+      // ignore — user can re-run from the SIN page
+    }
+  };
+
   const handle = async (file: File) => {
     const next: DocEntry = {
       filename: file.name,
@@ -597,7 +610,7 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
       uploadedAt: Date.now(),
     };
 
-    if (isPnl && file.size <= EXTRACT_MAX_BYTES) {
+    if ((isPnl || isPriceList) && file.size <= EXTRACT_MAX_BYTES) {
       setAnalyzing(true);
       try {
         const buf = await file.arrayBuffer();
@@ -607,11 +620,13 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
         for (let i = 0; i < bytes.length; i += CHUNK) {
           binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
         }
-        next.loss = await analyzeLoss({
+        const payload = {
           filename: file.name,
           mediaType: file.type || "application/octet-stream",
           dataBase64: btoa(binary),
-        });
+        };
+        if (isPnl) next.loss = await analyzeLoss(payload);
+        if (isPriceList) await extractLcats(payload);
       } finally {
         setAnalyzing(false);
       }
@@ -629,14 +644,15 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
       uploadedAt: Date.now(),
     };
 
-    if (isPnl) {
+    if (isPnl || isPriceList) {
       setAnalyzing(true);
       try {
         const payload = await fetchDrive({ data: { fileId: file.id } });
         next.filename = payload.filename;
-        next.loss = await analyzeLoss(payload);
+        if (isPnl) next.loss = await analyzeLoss(payload);
+        if (isPriceList) await extractLcats(payload);
       } catch {
-        next.loss = null;
+        if (isPnl) next.loss = null;
       } finally {
         setAnalyzing(false);
       }
