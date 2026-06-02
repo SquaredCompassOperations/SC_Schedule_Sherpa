@@ -25,6 +25,7 @@ type Candidate = {
 
 function SinPage() {
   const crawl = useServerFn(crawlClientForSins);
+  const crawlPriceList = useServerFn(crawlPriceListFromSite);
   const intake = useIntake();
   const automation = useAutomation();
   const [url, setUrl] = useState(intake.corporate.website || "");
