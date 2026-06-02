@@ -58,9 +58,10 @@ export const extractPriceListLcats = createServerFn({ method: "POST" })
             const title = String((r as Record<string, unknown>).title ?? "").trim();
             if (!title) continue;
             const rate = ((r as Record<string, unknown>).rate ?? "") as string;
-            const key = `${title}|${rate}`;
-            if (seen.has(key)) continue;
-            seen.add(key);
+            const dedupeKey = `${title}|${rate}`;
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
+
             lcats.push({
               title: title.slice(0, 200),
               rate: rate ? String(rate).trim().slice(0, 40) : undefined,
