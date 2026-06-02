@@ -1,11 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { SIN_MATCHES } from "@/lib/mock-data";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
+import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
 import { useIntake } from "@/lib/intake-store";
-import { useAutomation, setSelectedSins } from "@/lib/automation-store";
+import { useAutomation, setSelectedSins, setPriceListLcats } from "@/lib/automation-store";
+
 
 export const Route = createFileRoute("/sin")({
   head: () => ({ meta: [{ title: "SIN Recommendation Engine — ScheduleBuilder" }] }),
