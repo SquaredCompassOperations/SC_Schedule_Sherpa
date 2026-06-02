@@ -92,6 +92,16 @@ export function setSelectedLcats(lcats: SelectedLcat[]) {
   emit();
 }
 
+export function setPriceListLcats(lcats: PriceListLcat[], source: string | null) {
+  state = {
+    ...state,
+    priceListLcats: lcats,
+    priceListSource: source,
+    priceListExtractedAt: Date.now(),
+  };
+  emit();
+}
+
 export function setMarketRows(rows: MarketRow[]) {
   state = { ...state, marketRows: rows, marketRunAt: Date.now() };
   emit();
