@@ -7,7 +7,7 @@ import { useAutomation, setSelectedLcats, type SelectedLcat } from "@/lib/automa
 import { useIntake } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/sca")({
-  head: () => ({ meta: [{ title: "LCAT Identification — ScheduleBuilder" }] }),
+  head: () => ({ meta: [{ title: "LCAT Confirmation — ScheduleBuilder" }] }),
   component: ScaPage,
 });
 
@@ -72,9 +72,9 @@ function ScaPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Automation Engine • Module 2"
-        title="LCAT Identification"
-        description="Identify Labor Categories (LCATs) from the client's uploaded price list or website and map each to the best-fit Service Contract Act (SCA) occupation from the DOL SCA Directory of Occupations. Not all LCATs will have an SCA equivalent."
+        eyebrow="Automation Engine • Module 3"
+        title="LCAT Confirmation"
+        description="Take the LCATs identified in Market Validation along with the client's position descriptions, and match each to the best-fit Service Contract Act (SCA) occupation from the DOL SCA Directory of Occupations (Fifth Edition). Rename LCATs where applicable. Not all roles will have an SCA equivalent."
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Selected</div>
