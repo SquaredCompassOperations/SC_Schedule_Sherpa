@@ -59,7 +59,7 @@ function DocsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="AI-Assisted Drafting"
+        eyebrow="Automation Engine • Module 4"
         title="Document Generator"
         description="Generates narratives, summaries, and policy text from the master intake record. Every draft requires human review before approval."
         actions={

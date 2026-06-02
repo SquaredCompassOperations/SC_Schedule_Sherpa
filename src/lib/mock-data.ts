@@ -25,9 +25,9 @@ export const MODULES = [
   { slug: "/intake", label: "Client Intake", status: "in_progress" as ModuleStatus, group: "Intake" },
   { slug: "/readiness", label: "Readiness Assessment", status: "in_progress" as ModuleStatus, group: "Intake" },
   { slug: "/sin", label: "SIN Recommendation", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/sca", label: "SCA Matrix", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/sca", label: "LCAT Identification", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/market-validation", label: "Market Validation", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/pricing-workbook", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
 
   { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
@@ -66,9 +66,10 @@ export const COMPLIANCE_MATRIX = [
 
 
 export const DOCUMENT_QUEUE = [
-  { name: "Quality Control Narrative", kind: "quality-control", status: "draft" },
-  { name: "Corporate Experience Narrative", kind: "corporate-experience", status: "draft" },
+  { name: "Technical Proposal: Corporate Experience", kind: "corporate-experience", status: "draft" },
+  { name: "Technical Proposal: Quality Control", kind: "quality-control", status: "draft" },
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
+  { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
   { name: "Capability Statement", kind: "capability-statement", status: "draft" },
   { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
   { name: "Accounting Controls Narrative", kind: "accounting-controls", status: "draft" },
@@ -80,7 +81,7 @@ export const DOCUMENT_QUEUE = [
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
   "corporate-experience": {
-    source: "GSA MAS Solicitation — Corporate Experience",
+    source: "GSA MAS Solicitation — Technical Proposal: Corporate Experience",
     items: [
       "Minimum two (2) years of corporate experience in the products/services under this Schedule",
       "Organization's employee count, field experience, and resources to fulfill requirements",
@@ -92,7 +93,7 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
     ],
   },
   "quality-control": {
-    source: "GSA MAS Solicitation — Quality Control",
+    source: "GSA MAS Solicitation — Technical Proposal: Quality Control",
     items: [
       "Internal review procedures that facilitate high-quality standards",
       "Individuals responsible for ensuring quality control (named roles)",
@@ -115,7 +116,16 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Performance period (months/years) and total project dollar value",
       "Dollar value received for SIN-relevant work",
       "Brief project summary (background, purpose)",
-      "Startup Springboard substitution: identify predecessor entity or key personnel (if used)",
+    ],
+  },
+  "startup-springboard": {
+    source: "GSA MAS Solicitation — Startup Springboard (Substitution for Relevant Project Experience)",
+    items: [
+      "Substitution used only when relevant project experience does not exist",
+      "Clearly identify predecessor company or key personnel performing major work",
+      "Describe predecessor or personnel's relevant projects in scope and complexity",
+      "Role each identified individual will play in performing the proposed work",
+      "Narrative explicitly attributes each prior project to the substituting entity/person",
     ],
   },
 };

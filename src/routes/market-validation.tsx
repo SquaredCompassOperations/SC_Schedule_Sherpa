@@ -67,7 +67,7 @@ function MarketPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Automation Engine • Module 4"
+        eyebrow="Automation Engine • Module 3"
         title="Market Validation"
         description="Pull recent GSA Advantage price lists for the selected SIN and cross-reference labor-category pricing for competitive benchmarking."
         actions={
