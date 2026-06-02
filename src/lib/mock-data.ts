@@ -25,9 +25,9 @@ export const MODULES = [
   { slug: "/intake", label: "Client Intake", status: "in_progress" as ModuleStatus, group: "Intake" },
   { slug: "/readiness", label: "Readiness Assessment", status: "in_progress" as ModuleStatus, group: "Intake" },
   { slug: "/sin", label: "SIN Recommendation", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/sca", label: "SCA Matrix", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/sca", label: "LCAT Identification", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/market-validation", label: "Market Validation", status: "in_progress" as ModuleStatus, group: "Engine" },
+  { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
   { slug: "/pricing-workbook", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
 
   { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
