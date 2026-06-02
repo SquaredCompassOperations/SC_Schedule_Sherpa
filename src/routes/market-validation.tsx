@@ -67,9 +67,9 @@ function MarketPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Automation Engine • Module 3"
+        eyebrow="Automation Engine • Module 2"
         title="Market Validation"
-        description="Pull recent GSA Advantage price lists for the selected SIN and cross-reference labor-category pricing for competitive benchmarking."
+        description="Identify Labor Categories (LCATs) from the client's uploaded price list or website, then cross-reference the 5 most recent GSA eLibrary contracts with matching offerings. Pulls SIN, Labor Category, Unit of Issue, and GSA Net Price (incl. IFF) into a comparable spreadsheet so commercial pricing can be validated against what the government is paying."
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Rows</div>
