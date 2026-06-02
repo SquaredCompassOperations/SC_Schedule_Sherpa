@@ -240,7 +240,7 @@ function SinPage() {
 
       <Panel title="Labor Categories from Commercial Price List" className="mt-8">
         <div className="text-[11px] text-muted-foreground mb-3">
-          Upload the client's commercial price list (PDF, XLSX, CSV). Each distinct LCAT/offering is extracted and passed to Market Validation as the basis for the GSA Advantage benchmark.
+          Auto-synced from the Client Intake upload (Corporate Price List). If none was uploaded, <strong>Crawl &amp; Match</strong> will also search the client's website for a price list. Override here only if needed — each distinct LCAT/offering becomes the basis for the Market Validation benchmark.
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input
