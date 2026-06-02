@@ -5,6 +5,7 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { SIN_MATCHES } from "@/lib/mock-data";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
 import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
+import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
 import { useIntake } from "@/lib/intake-store";
 import { useAutomation, setSelectedSins, setPriceListLcats } from "@/lib/automation-store";
 
@@ -24,6 +25,7 @@ type Candidate = {
 
 function SinPage() {
   const crawl = useServerFn(crawlClientForSins);
+  const crawlPriceList = useServerFn(crawlPriceListFromSite);
   const intake = useIntake();
   const automation = useAutomation();
   const [url, setUrl] = useState(intake.corporate.website || "");
@@ -67,6 +69,21 @@ function SinPage() {
       setKeywords(res.keywords);
       setSummary(res.summary);
       if (res.candidates.length > 0) setMatches(res.candidates);
+
+      // If we don't already have a price list from Intake (or earlier upload),
+      // try to discover one on the client's website.
+      if (automation.priceListLcats.length === 0) {
+        try {
+          const pl = await crawlPriceList({ data: { url: url.trim() } });
+          if (pl.lcats.length > 0) {
+            setPriceListLcats(pl.lcats, pl.source || `${url.trim()} (auto-discovered)`);
+          } else if (pl.error) {
+            setPlError(pl.error);
+          }
+        } catch (e) {
+          setPlError(e instanceof Error ? e.message : "Price list crawl failed");
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Crawl failed");
     } finally {
@@ -223,7 +240,7 @@ function SinPage() {
 
       <Panel title="Labor Categories from Commercial Price List" className="mt-8">
         <div className="text-[11px] text-muted-foreground mb-3">
-          Upload the client's commercial price list (PDF, XLSX, CSV). Each distinct LCAT/offering is extracted and passed to Market Validation as the basis for the GSA Advantage benchmark.
+          Auto-synced from the Client Intake upload (Corporate Price List). If none was uploaded, <strong>Crawl &amp; Match</strong> will also search the client's website for a price list. Override here only if needed — each distinct LCAT/offering becomes the basis for the Market Validation benchmark.
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input
