@@ -73,8 +73,8 @@ function ScaPage() {
     <>
       <PageHeader
         eyebrow="Automation Engine • Module 2"
-        title="SCA Matrix"
-        description="Suggest applicable Service Contract Act (SCA) Labor Categories from the DOL SCA Directory of Occupations based on your selected SINs and business profile."
+        title="LCAT Identification"
+        description="Identify Labor Categories (LCATs) from the client's uploaded price list or website and map each to the best-fit Service Contract Act (SCA) occupation from the DOL SCA Directory of Occupations. Not all LCATs will have an SCA equivalent."
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Selected</div>
