@@ -7,7 +7,7 @@ import { useAutomation, setSelectedLcats, type SelectedLcat } from "@/lib/automa
 import { useIntake } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/sca")({
-  head: () => ({ meta: [{ title: "LCAT Identification — ScheduleBuilder" }] }),
+  head: () => ({ meta: [{ title: "LCAT Confirmation — ScheduleBuilder" }] }),
   component: ScaPage,
 });
 
