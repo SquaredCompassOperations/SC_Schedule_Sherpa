@@ -42,6 +42,9 @@ export type MarketRow = {
 export type AutomationState = {
   selectedSins: SelectedSin[];
   selectedLcats: SelectedLcat[];
+  priceListLcats: PriceListLcat[];
+  priceListSource: string | null;
+  priceListExtractedAt: number | null;
   marketRows: MarketRow[];
   marketRunAt: number | null;
   pricingTemplate: "fcp-product" | "fcp-services-plus" | null;
@@ -50,10 +53,14 @@ export type AutomationState = {
 const defaultState = (): AutomationState => ({
   selectedSins: [],
   selectedLcats: [],
+  priceListLcats: [],
+  priceListSource: null,
+  priceListExtractedAt: null,
   marketRows: [],
   marketRunAt: null,
   pricingTemplate: null,
 });
+
 
 let state: AutomationState = loadPersisted<AutomationState>(PERSIST_KEY, defaultState());
 
