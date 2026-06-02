@@ -123,9 +123,12 @@ function MarketPage() {
             Export CSV
           </button>
           <span className="text-[10px] font-mono text-muted-foreground ml-auto">
-            Targets up to 5 contractors. Best-effort PDF parsing — review the "needs review" flag.
+            {benchmarkLcats.length > 0
+              ? `${benchmarkLcats.length} LCAT${benchmarkLcats.length === 1 ? "" : "s"} from ${automation.priceListLcats.length > 0 ? "price list" : "LCAT Confirmation"}`
+              : "No LCATs — upload price list on SIN Engine"}
           </span>
         </div>
+
         {error && (
           <div className="mt-3 text-xs text-destructive border border-destructive/30 bg-destructive/5 rounded-sm px-3 py-2">
             {error}
