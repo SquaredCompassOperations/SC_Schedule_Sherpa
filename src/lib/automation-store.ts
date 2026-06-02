@@ -62,7 +62,7 @@ const defaultState = (): AutomationState => ({
 });
 
 
-let state: AutomationState = loadPersisted<AutomationState>(PERSIST_KEY, defaultState());
+let state: AutomationState = { ...defaultState(), ...loadPersisted<Partial<AutomationState>>(PERSIST_KEY, {}) };
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
