@@ -46,11 +46,11 @@ function MarketPage() {
   };
 
   const exportCsv = () => {
-    const header = ["SIN", "Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
+    const header = ["Client LCAT", "SIN", "Competitor Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
     const lines = [header.join(",")];
     for (const r of rows) {
       lines.push(
-        [r.sin, r.laborCategory, r.unitOfIssue, r.netPrice, r.contractor, r.contractNumber, r.sourceUrl]
+        [r.clientLcat || "", r.sin, r.laborCategory, r.unitOfIssue, r.netPrice, r.contractor, r.contractNumber, r.sourceUrl]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(","),
       );
@@ -63,6 +63,13 @@ function MarketPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Group rows by the client LCAT they benchmark
+  const grouped = rows.reduce<Record<string, MarketRow[]>>((acc, r) => {
+    const key = r.clientLcat || "Unassigned";
+    (acc[key] ||= []).push(r);
+    return acc;
+  }, {});
 
   return (
     <>
