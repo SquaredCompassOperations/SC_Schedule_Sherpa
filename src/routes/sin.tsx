@@ -48,6 +48,12 @@ function SinPage() {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Price list extraction
+  const extractPl = useServerFn(extractPriceListLcats);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [plRunning, setPlRunning] = useState(false);
+  const [plError, setPlError] = useState<string | null>(null);
+
   const toggle = (code: string) =>
     setSelected((s) => (s.includes(code) ? s.filter((c) => c !== code) : [...s, code]));
 
@@ -67,6 +73,34 @@ function SinPage() {
       setRunning(false);
     }
   };
+
+  const handlePriceListFile = async (file: File) => {
+    setPlRunning(true);
+    setPlError(null);
+    try {
+      const buf = await file.arrayBuffer();
+      // base64 encode
+      let binary = "";
+      const bytes = new Uint8Array(buf);
+      const chunk = 0x8000;
+      for (let i = 0; i < bytes.length; i += chunk) {
+        binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+      }
+      const dataBase64 = btoa(binary);
+      const mediaType = file.type || "application/pdf";
+      const res = await extractPl({ data: { filename: file.name, mediaType, dataBase64 } });
+      if (res.error) setPlError(res.error);
+      if (res.lcats.length === 0 && !res.error) {
+        setPlError("No labor categories could be extracted from this file.");
+      }
+      setPriceListLcats(res.lcats, file.name);
+    } catch (e) {
+      setPlError(e instanceof Error ? e.message : "Extract failed");
+    } finally {
+      setPlRunning(false);
+    }
+  };
+
 
   return (
     <>
