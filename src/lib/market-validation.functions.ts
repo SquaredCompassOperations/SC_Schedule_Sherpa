@@ -3,11 +3,12 @@ import { z } from "zod";
 
 const InputSchema = z.object({
   sin: z.string().min(1).max(20),
-  lcats: z.array(z.string().min(1).max(200)).max(50).default([]),
+  lcats: z.array(z.string().min(1).max(200)).min(1).max(50),
 });
 
 type Row = {
   sin: string;
+  clientLcat: string;
   laborCategory: string;
   unitOfIssue: string;
   netPrice: string;
@@ -76,61 +77,85 @@ function parseJson<T>(text: string, fallback: T): T {
   }
 }
 
-export const runMarketValidation = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => InputSchema.parse(d))
-  .handler(async ({ data }): Promise<Result> => {
-    const notes: string[] = [];
-    try {
-      // 1. Search GSA eLibrary + GSA Advantage for price list PDFs matching SIN
-      const query = `site:gsaadvantage.gov ${data.sin} price list ${data.lcats.slice(0, 3).join(" ")}`;
-      const search = await firecrawlSearch(query, 10);
-      const pdfLinks = search
-        .filter((r) => r.url && /\.pdf|gsaadvantage\.gov\/ref_text/i.test(r.url))
-        .slice(0, 5);
+async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Promise<{ rows: Row[]; scanned: number }> {
+  // Build a targeted query for this single LCAT
+  const query = `site:gsaadvantage.gov ${sin} "${lcat}" price list`;
+  let search: Array<{ url: string; title?: string; description?: string }> = [];
+  try {
+    search = await firecrawlSearch(query, 6);
+  } catch (e) {
+    notes.push(`[${lcat}] search failed: ${e instanceof Error ? e.message : String(e)}`);
+    return { rows: [], scanned: 0 };
+  }
 
-      if (pdfLinks.length === 0) {
-        notes.push("No GSA Advantage price-list PDFs found via search. Try broadening SIN/LCAT terms.");
-        return { rows: [], contractorsScanned: 0, notes };
-      }
+  const pdfLinks = search
+    .filter((r) => r.url && /\.pdf|gsaadvantage\.gov\/ref_text/i.test(r.url))
+    .slice(0, 5);
 
-      const allRows: Row[] = [];
-      for (const link of pdfLinks) {
-        const { markdown } = await firecrawlScrape(link.url);
-        if (!markdown.trim()) {
-          notes.push(`Could not extract ${link.url}`);
-          continue;
-        }
-        const contractor = link.title || link.url.split("/").pop() || "Unknown";
+  if (pdfLinks.length === 0) {
+    notes.push(`[${lcat}] no GSA Advantage results matched.`);
+    return { rows: [], scanned: 0 };
+  }
 
-        const prompt = `Extract GSA Schedule pricing rows from this price-list document. Focus on SIN ${data.sin}${data.lcats.length ? ` and Labor Categories matching: ${data.lcats.join(", ")}` : ""}.
+  const rows: Row[] = [];
+  for (const link of pdfLinks) {
+    const { markdown } = await firecrawlScrape(link.url);
+    if (!markdown.trim()) continue;
+    const contractor = link.title || link.url.split("/").pop() || "Unknown";
 
-For each pricing row return: sin, laborCategory, unitOfIssue (e.g. "Hour", "Each"), netPrice (the GSA Net Price INCLUDING IFF, as a string like "$185.50").
+    const prompt = `Extract GSA Schedule pricing rows from the document below. ONLY return rows whose Labor Category is an equivalent of "${lcat}" under SIN ${sin}. An equivalent includes the same role title or a clearly synonymous title at a matching seniority level. Do NOT return unrelated LCATs.
+
+For each matching row return: laborCategory (exact title as printed), unitOfIssue (e.g. "Hour"), netPrice (GSA Net Price INCLUDING IFF, e.g. "$185.50").
 
 Respond with ONLY a JSON array. Return [] if no matching rows.
 
 Document:
 ${markdown}`;
-        const text = await aiCall(prompt);
-        const extracted = parseJson<Array<{ sin: string; laborCategory: string; unitOfIssue: string; netPrice: string }>>(text, []);
-        for (const row of extracted) {
-          allRows.push({
-            sin: row.sin || data.sin,
-            laborCategory: String(row.laborCategory || "").slice(0, 200),
-            unitOfIssue: String(row.unitOfIssue || "").slice(0, 40),
-            netPrice: String(row.netPrice || "").slice(0, 40),
-            contractor: contractor.slice(0, 120),
-            contractNumber: (link.url.match(/[A-Z0-9]{8,}/)?.[0] || "").slice(0, 40),
-            sourceUrl: link.url,
-            needsReview: !row.netPrice || !row.laborCategory,
-          });
-        }
-      }
+    let text = "";
+    try {
+      text = await aiCall(prompt);
+    } catch (e) {
+      notes.push(`[${lcat}] extract failed for ${link.url}: ${e instanceof Error ? e.message : String(e)}`);
+      continue;
+    }
+    const extracted = parseJson<Array<{ laborCategory: string; unitOfIssue: string; netPrice: string }>>(text, []);
+    for (const row of extracted) {
+      rows.push({
+        sin,
+        clientLcat: lcat,
+        laborCategory: String(row.laborCategory || "").slice(0, 200),
+        unitOfIssue: String(row.unitOfIssue || "").slice(0, 40),
+        netPrice: String(row.netPrice || "").slice(0, 40),
+        contractor: contractor.slice(0, 120),
+        contractNumber: (link.url.match(/[A-Z0-9]{8,}/)?.[0] || "").slice(0, 40),
+        sourceUrl: link.url,
+        needsReview: !row.netPrice || !row.laborCategory,
+      });
+    }
+  }
 
-      if (allRows.length === 0) {
-        notes.push("PDFs were scanned but no clean pricing rows could be extracted. Open source URLs manually to review.");
-      }
+  if (rows.length === 0) {
+    notes.push(`[${lcat}] ${pdfLinks.length} PDF(s) scanned but no comparable rows extracted.`);
+  }
 
-      return { rows: allRows, contractorsScanned: pdfLinks.length, notes };
+  return { rows, scanned: pdfLinks.length };
+}
+
+export const runMarketValidation = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => InputSchema.parse(d))
+  .handler(async ({ data }): Promise<Result> => {
+    const notes: string[] = [];
+    try {
+      // Iterate per LCAT so each unique offering gets its own benchmark.
+      // Run sequentially to stay polite to the upstream APIs.
+      const all: Row[] = [];
+      let totalScanned = 0;
+      for (const lcat of data.lcats) {
+        const { rows, scanned } = await benchmarkOneLcat(data.sin, lcat, notes);
+        all.push(...rows);
+        totalScanned += scanned;
+      }
+      return { rows: all, contractorsScanned: totalScanned, notes };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("runMarketValidation error:", msg);

@@ -21,6 +21,7 @@ export type SelectedLcat = {
 
 export type MarketRow = {
   sin: string;
+  clientLcat?: string;
   laborCategory: string;
   unitOfIssue: string;
   netPrice: string;

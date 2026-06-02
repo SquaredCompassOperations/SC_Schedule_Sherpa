@@ -46,11 +46,11 @@ function MarketPage() {
   };
 
   const exportCsv = () => {
-    const header = ["SIN", "Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
+    const header = ["Client LCAT", "SIN", "Competitor Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
     const lines = [header.join(",")];
     for (const r of rows) {
       lines.push(
-        [r.sin, r.laborCategory, r.unitOfIssue, r.netPrice, r.contractor, r.contractNumber, r.sourceUrl]
+        [r.clientLcat || "", r.sin, r.laborCategory, r.unitOfIssue, r.netPrice, r.contractor, r.contractNumber, r.sourceUrl]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(","),
       );
@@ -63,6 +63,13 @@ function MarketPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Group rows by the client LCAT they benchmark
+  const grouped = rows.reduce<Record<string, MarketRow[]>>((acc, r) => {
+    const key = r.clientLcat || "Unassigned";
+    (acc[key] ||= []).push(r);
+    return acc;
+  }, {});
 
   return (
     <>
@@ -130,40 +137,58 @@ function MarketPage() {
       </Panel>
 
       {rows.length > 0 && (
-        <div className="border border-border rounded-sm bg-card overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-muted/40 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-              <tr>
-                <th className="text-left px-3 py-2">SIN</th>
-                <th className="text-left px-3 py-2">Labor Category</th>
-                <th className="text-left px-3 py-2">UoI</th>
-                <th className="text-left px-3 py-2">GSA Net (w/ IFF)</th>
-                <th className="text-left px-3 py-2">Contractor</th>
-                <th className="text-left px-3 py-2">Source</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((r: MarketRow, i) => (
-                <tr key={i} className={r.needsReview ? "bg-warning/5" : ""}>
-                  <td className="px-3 py-2 font-mono">{r.sin}</td>
-                  <td className="px-3 py-2">
-                    {r.laborCategory}
-                    {r.needsReview && (
-                      <span className="ml-2 text-[9px] font-mono uppercase text-warning">review</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">{r.unitOfIssue}</td>
-                  <td className="px-3 py-2 font-mono font-bold">{r.netPrice}</td>
-                  <td className="px-3 py-2 truncate max-w-[180px]" title={r.contractor}>{r.contractor}</td>
-                  <td className="px-3 py-2">
-                    <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-[10px] font-mono uppercase">
-                      open ↗
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          {Object.entries(grouped).map(([clientLcat, groupRows]) => {
+            // compute simple avg of numeric netPrice for at-a-glance comparison
+            const nums = groupRows
+              .map((r) => Number(String(r.netPrice).replace(/[^0-9.]/g, "")))
+              .filter((n) => !isNaN(n) && n > 0);
+            const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
+            return (
+              <div key={clientLcat} className="border border-border rounded-sm bg-card overflow-hidden">
+                <div className="flex items-baseline justify-between px-3 py-2 bg-muted/40 border-b border-border">
+                  <div className="text-xs font-bold uppercase tracking-widest">{clientLcat}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    {groupRows.length} comparable row{groupRows.length === 1 ? "" : "s"}
+                    {avg !== null && <> • avg GSA net <span className="text-primary font-bold">${avg.toFixed(2)}</span></>}
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-3 py-2">Competitor Labor Category</th>
+                        <th className="text-left px-3 py-2">UoI</th>
+                        <th className="text-left px-3 py-2">GSA Net (w/ IFF)</th>
+                        <th className="text-left px-3 py-2">Contractor</th>
+                        <th className="text-left px-3 py-2">Source</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {groupRows.map((r: MarketRow, i) => (
+                        <tr key={i} className={r.needsReview ? "bg-warning/5" : ""}>
+                          <td className="px-3 py-2">
+                            {r.laborCategory}
+                            {r.needsReview && (
+                              <span className="ml-2 text-[9px] font-mono uppercase text-warning">review</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">{r.unitOfIssue}</td>
+                          <td className="px-3 py-2 font-mono font-bold">{r.netPrice}</td>
+                          <td className="px-3 py-2 truncate max-w-[180px]" title={r.contractor}>{r.contractor}</td>
+                          <td className="px-3 py-2">
+                            <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-[10px] font-mono uppercase">
+                              open ↗
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </>
