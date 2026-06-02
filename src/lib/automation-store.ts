@@ -19,6 +19,14 @@ export type SelectedLcat = {
   rationale: string;
 };
 
+export type PriceListLcat = {
+  title: string;
+  rate?: string;
+  unit?: string;
+  sin?: string;
+};
+
+
 export type MarketRow = {
   sin: string;
   clientLcat?: string;
