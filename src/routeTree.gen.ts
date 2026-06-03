@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SubmissionRouteImport } from './routes/submission'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as SinRouteImport } from './routes/sin'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -31,6 +32,11 @@ import { Route as StatusActivityRouteImport } from './routes/status.activity'
 import { Route as ClientTimelineRouteImport } from './routes/client.timeline'
 import { Route as ClientMessagesRouteImport } from './routes/client.messages'
 
+const SubmissionRoute = SubmissionRouteImport.update({
+  id: '/submission',
+  path: '/submission',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatusRoute = StatusRouteImport.update({
   id: '/status',
   path: '/status',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
   '/status': typeof StatusRouteWithChildren
+  '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/sca': typeof ScaRoute
   '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
+  '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/sin': typeof SinRoute
   '/status': typeof StatusRouteWithChildren
+  '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sin'
     | '/status'
+    | '/submission'
     | '/client/messages'
     | '/client/timeline'
     | '/status/activity'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/sca'
     | '/signup'
     | '/sin'
+    | '/submission'
     | '/client/messages'
     | '/client/timeline'
     | '/status/activity'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/sin'
     | '/status'
+    | '/submission'
     | '/client/messages'
     | '/client/timeline'
     | '/status/activity'
@@ -290,10 +302,18 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SinRoute: typeof SinRoute
   StatusRoute: typeof StatusRouteWithChildren
+  SubmissionRoute: typeof SubmissionRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/submission': {
+      id: '/submission'
+      path: '/submission'
+      fullPath: '/submission'
+      preLoaderRoute: typeof SubmissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/status': {
       id: '/status'
       path: '/status'
@@ -491,6 +511,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SinRoute: SinRoute,
   StatusRoute: StatusRouteWithChildren,
+  SubmissionRoute: SubmissionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
