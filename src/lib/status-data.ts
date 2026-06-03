@@ -138,10 +138,29 @@ export function useStatus() {
     {
       id: "submission",
       label: "eOffer Submission",
-      date: offset(21),
-      status: exportReady ? "current" : "upcoming",
-      detail: "Package upload to GSA eOffer portal",
+      date: submission.receipt
+        ? new Date(submission.receipt.submittedAt).toISOString().slice(0, 10)
+        : offset(21),
+      status: submitted ? "done" : exportReady ? "current" : "upcoming",
+      detail: submission.receipt
+        ? `Confirmation #${submission.receipt.confirmationNumber}`
+        : "Package upload to GSA eOffer portal",
     },
+    ...(awarded
+      ? [
+          {
+            id: "award",
+            label: "Award",
+            date: new Date(
+              submission.events.find((e) => e.kind === "awarded")!.ts,
+            )
+              .toISOString()
+              .slice(0, 10),
+            status: "done" as const,
+            detail: submission.events.find((e) => e.kind === "awarded")!.title,
+          },
+        ]
+      : []),
   ];
 
   // Open items — derived from module blockers
@@ -199,6 +218,13 @@ export function useStatus() {
         message: `${name} marked ${d?.status}`,
         clientVisible: true,
       })),
+    ...submission.events.map((e) => ({
+      id: `a-sub-${e.id}`,
+      ts: new Date(e.ts).toISOString().slice(0, 10),
+      module: "Submission",
+      message: e.title,
+      clientVisible: true,
+    })),
     {
       id: "a-kickoff",
       ts: offset(-21),
