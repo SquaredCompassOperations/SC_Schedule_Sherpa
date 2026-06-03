@@ -5,6 +5,7 @@ import { useReadinessRollup, type ModuleReadiness } from "./readiness-rollup";
 import { useIntake } from "./intake-store";
 import { useAutomation } from "./automation-store";
 import { useDocStore } from "./doc-store";
+import { useSubmission } from "./submission-store";
 import { CLIENT, DOCUMENT_QUEUE } from "./mock-data";
 
 export type StageId = "intake" | "engine" | "review" | "submission";
@@ -44,6 +45,7 @@ export function useStatus() {
   const intake = useIntake();
   const automation = useAutomation();
   const docs = useDocStore();
+  const submission = useSubmission();
 
   // Stage derivation
   const intakeComplete = !!(intake.corporate.legalName && intake.corporate.uei);
@@ -51,6 +53,8 @@ export function useStatus() {
     automation.selectedSins.length > 0 || automation.selectedLcats.length > 0;
   const docsActive = Object.values(docs).some((d) => d?.status === "review" || d?.status === "final");
   const exportReady = rollup.exportReady;
+  const submitted = !!submission.receipt;
+  const awarded = submission.events.some((e) => e.kind === "awarded");
 
   const stages: Stage[] = [
     {
@@ -78,8 +82,14 @@ export function useStatus() {
     {
       id: "submission",
       label: "eOffer Submission",
-      status: exportReady ? "active" : "pending",
-      description: exportReady ? "Package ready to build" : "Blocked by upstream gaps",
+      status: awarded || submitted ? "complete" : exportReady ? "active" : "pending",
+      description: awarded
+        ? "Awarded"
+        : submitted
+          ? `Submitted · #${submission.receipt!.confirmationNumber}`
+          : exportReady
+            ? "Package ready to build"
+            : "Blocked by upstream gaps",
     },
   ];
 
@@ -128,10 +138,29 @@ export function useStatus() {
     {
       id: "submission",
       label: "eOffer Submission",
-      date: offset(21),
-      status: exportReady ? "current" : "upcoming",
-      detail: "Package upload to GSA eOffer portal",
+      date: submission.receipt
+        ? new Date(submission.receipt.submittedAt).toISOString().slice(0, 10)
+        : offset(21),
+      status: submitted ? "done" : exportReady ? "current" : "upcoming",
+      detail: submission.receipt
+        ? `Confirmation #${submission.receipt.confirmationNumber}`
+        : "Package upload to GSA eOffer portal",
     },
+    ...(awarded
+      ? [
+          {
+            id: "award",
+            label: "Award",
+            date: new Date(
+              submission.events.find((e) => e.kind === "awarded")!.ts,
+            )
+              .toISOString()
+              .slice(0, 10),
+            status: "done" as const,
+            detail: submission.events.find((e) => e.kind === "awarded")!.title,
+          },
+        ]
+      : []),
   ];
 
   // Open items — derived from module blockers
@@ -189,6 +218,13 @@ export function useStatus() {
         message: `${name} marked ${d?.status}`,
         clientVisible: true,
       })),
+    ...submission.events.map((e) => ({
+      id: `a-sub-${e.id}`,
+      ts: new Date(e.ts).toISOString().slice(0, 10),
+      module: "Submission",
+      message: e.title,
+      clientVisible: true,
+    })),
     {
       id: "a-kickoff",
       ts: offset(-21),

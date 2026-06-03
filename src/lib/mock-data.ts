@@ -32,6 +32,7 @@ export const MODULES = [
 
   { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
   { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
+  { slug: "/submission", label: "Submission Tracker", status: "not_started" as ModuleStatus, group: "Final" },
 ];
 
 export const REGISTRATION_ITEMS = [
