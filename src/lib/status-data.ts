@@ -5,6 +5,7 @@ import { useReadinessRollup, type ModuleReadiness } from "./readiness-rollup";
 import { useIntake } from "./intake-store";
 import { useAutomation } from "./automation-store";
 import { useDocStore } from "./doc-store";
+import { useSubmission } from "./submission-store";
 import { CLIENT, DOCUMENT_QUEUE } from "./mock-data";
 
 export type StageId = "intake" | "engine" | "review" | "submission";
@@ -44,6 +45,7 @@ export function useStatus() {
   const intake = useIntake();
   const automation = useAutomation();
   const docs = useDocStore();
+  const submission = useSubmission();
 
   // Stage derivation
   const intakeComplete = !!(intake.corporate.legalName && intake.corporate.uei);
@@ -51,6 +53,8 @@ export function useStatus() {
     automation.selectedSins.length > 0 || automation.selectedLcats.length > 0;
   const docsActive = Object.values(docs).some((d) => d?.status === "review" || d?.status === "final");
   const exportReady = rollup.exportReady;
+  const submitted = !!submission.receipt;
+  const awarded = submission.events.some((e) => e.kind === "awarded");
 
   const stages: Stage[] = [
     {
@@ -78,8 +82,14 @@ export function useStatus() {
     {
       id: "submission",
       label: "eOffer Submission",
-      status: exportReady ? "active" : "pending",
-      description: exportReady ? "Package ready to build" : "Blocked by upstream gaps",
+      status: awarded || submitted ? "complete" : exportReady ? "active" : "pending",
+      description: awarded
+        ? "Awarded"
+        : submitted
+          ? `Submitted · #${submission.receipt!.confirmationNumber}`
+          : exportReady
+            ? "Package ready to build"
+            : "Blocked by upstream gaps",
     },
   ];
 
