@@ -203,12 +203,31 @@ function DocsPage() {
 
           <Panel title="Source Fields (from Master Intake)">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-[11px] font-mono">
-              <Field k="UEI" v={CLIENT.uei} />
-              <Field k="CAGE" v={CLIENT.cage} />
-              <Field k="NAICS" v={CLIENT.naicsPrimary} />
-              <Field k="POC" v={CLIENT.poc} />
-              <Field k="Employees" v={String(CLIENT.employees)} />
-              <Field k="Socioeconomic" v={CLIENT.socioeconomic} />
+              <Field k="Legal Name" v={intake.corporate.legalName || CLIENT.name} />
+              <Field k="UEI" v={intake.corporate.uei || CLIENT.uei} />
+              <Field k="CAGE" v={intake.corporate.cageCode || CLIENT.cage} />
+              <Field k="EIN" v={intake.corporate.ein || CLIENT.ein} />
+              <Field k="NAICS" v={intake.corporate.naicsPrimary || CLIENT.naicsPrimary} />
+              <Field
+                k="POC"
+                v={
+                  intake.negotiators[0]?.name
+                    ? `${intake.negotiators[0].name}${intake.negotiators[0].email ? " <" + intake.negotiators[0].email + ">" : ""}`
+                    : CLIENT.poc
+                }
+              />
+              <Field
+                k="SBA Certs"
+                v={intake.sbaCerts.length ? intake.sbaCerts.map((s) => s.program).join(", ") : "None on file"}
+              />
+              <Field
+                k="Selected SINs"
+                v={automation.selectedSins.length ? automation.selectedSins.map((s) => s.code).join(", ") : "—"}
+              />
+              <Field
+                k="SCA LCATs"
+                v={automation.selectedLcats.length ? String(automation.selectedLcats.length) + " selected" : "—"}
+              />
             </div>
           </Panel>
         </div>
