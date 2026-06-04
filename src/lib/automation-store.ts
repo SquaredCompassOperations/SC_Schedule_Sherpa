@@ -39,6 +39,16 @@ export type MarketRow = {
   needsReview?: boolean;
 };
 
+export type PricingRow = {
+  sin: string;
+  title: string;
+  description: string;
+  minimumEducation: string;
+  minimumYearsExperience: string;
+  unitOfMeasure: string;
+  price: string;
+};
+
 export type AutomationState = {
   selectedSins: SelectedSin[];
   selectedLcats: SelectedLcat[];
@@ -48,6 +58,8 @@ export type AutomationState = {
   marketRows: MarketRow[];
   marketRunAt: number | null;
   pricingTemplate: "fcp-product" | "fcp-services-plus" | null;
+  pricingRows: PricingRow[];
+  pricingSavedAt: number | null;
 };
 
 const defaultState = (): AutomationState => ({
@@ -59,6 +71,8 @@ const defaultState = (): AutomationState => ({
   marketRows: [],
   marketRunAt: null,
   pricingTemplate: null,
+  pricingRows: [],
+  pricingSavedAt: null,
 });
 
 
@@ -109,6 +123,12 @@ export function setMarketRows(rows: MarketRow[]) {
 
 export function setPricingTemplate(t: AutomationState["pricingTemplate"]) {
   state = { ...state, pricingTemplate: t };
+  emit();
+}
+
+
+export function savePricingRows(rows: PricingRow[]) {
+  state = { ...state, pricingRows: rows, pricingSavedAt: Date.now() };
   emit();
 }
 

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { generatePricingWorkbook } from "@/lib/pricing-workbook.functions";
 import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
-import { useAutomation, setPricingTemplate } from "@/lib/automation-store";
+import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/pricing-workbook")({
@@ -44,7 +44,11 @@ function PricingWorkbookPage() {
     automation.pricingTemplate || "fcp-services-plus",
   );
   const [rows, setRows] = useState<Row[]>(() => {
-    // seed from selected LCATs + first SIN
+    // hydrate from previously saved rows first
+    if (automation.pricingRows && automation.pricingRows.length > 0) {
+      return automation.pricingRows.map((r) => ({ ...r }));
+    }
+    // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
     if (automation.selectedLcats.length > 0) {
       return automation.selectedLcats.map((l) => ({
@@ -55,6 +59,8 @@ function PricingWorkbookPage() {
     }
     return [emptyRow(firstSin)];
   });
+  const [savedAt, setSavedAt] = useState<number | null>(automation.pricingSavedAt);
+  const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState<{ message: string; upToDate: boolean } | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,9 +76,22 @@ function PricingWorkbookPage() {
 
   const update = (i: number, patch: Partial<Row>) => {
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    setDirty(true);
   };
-  const addRow = () => setRows((rs) => [...rs, emptyRow(automation.selectedSins[0]?.code || "")]);
-  const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
+  const addRow = () => {
+    setRows((rs) => [...rs, emptyRow(automation.selectedSins[0]?.code || "")]);
+    setDirty(true);
+  };
+  const removeRow = (i: number) => {
+    setRows((rs) => rs.filter((_, idx) => idx !== i));
+    setDirty(true);
+  };
+
+  const save = () => {
+    savePricingRows(rows);
+    setSavedAt(Date.now());
+    setDirty(false);
+  };
 
   const generate = async () => {
     if (rows.length === 0 || rows.some((r) => !r.sin || !r.title || !r.price)) {
@@ -208,8 +227,58 @@ function PricingWorkbookPage() {
         </button>
       </Panel>
 
+      <Panel
+        title="LCAT Descriptions"
+        trailing={
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            Full functional descriptions written into the workbook
+          </span>
+        }
+        className="mb-4"
+      >
+        {rows.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Add a line item above to write a description.</p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((r, i) => (
+              <div key={i} className="border border-border rounded-sm p-3 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold">
+                    <span className="font-mono text-muted-foreground mr-2">{r.sin || "—"}</span>
+                    {r.title || <span className="text-muted-foreground italic">Untitled LCAT</span>}
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    {r.minimumEducation || "—"} · {r.minimumYearsExperience || "0"} yrs · {r.unitOfMeasure || "Hour"}
+                  </div>
+                </div>
+                <textarea
+                  value={r.description}
+                  onChange={(e) => update(i, { description: e.target.value })}
+                  rows={4}
+                  placeholder="Describe duties, deliverables, supervision level, and SIN alignment for this labor category."
+                  className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                />
+                <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
+                  {r.description.length.toLocaleString()} chars
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
       <div className="flex justify-end gap-2 items-center">
         {error && <span className="text-xs text-destructive mr-auto">{error}</span>}
+        <span className="text-[10px] font-mono uppercase tracking-widest mr-2 text-muted-foreground">
+          {dirty ? <span className="text-warning">Unsaved changes</span> : savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString()}` : "Not saved"}
+        </span>
+        <button
+          onClick={save}
+          disabled={!dirty}
+          className="text-xs font-bold uppercase tracking-widest px-4 py-2 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+        >
+          Save
+        </button>
         <button
           onClick={generate}
           disabled={running}
@@ -218,6 +287,7 @@ function PricingWorkbookPage() {
           {running ? "Generating…" : "Generate & Download .xlsx"}
         </button>
       </div>
+
     </>
   );
 }

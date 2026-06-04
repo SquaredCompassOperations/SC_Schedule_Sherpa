@@ -15,7 +15,8 @@ export const Route = createFileRoute("/documents")({
   component: DocsPage,
 });
 
-const STATUS_ORDER: DocState["status"][] = ["draft", "review", "final"];
+
+
 
 function DocsPage() {
   const fn = useServerFn(generateNarrative);
@@ -39,11 +40,10 @@ function DocsPage() {
 
   const save = () => update(active.name, { savedAt: Date.now(), dirty: false });
 
-  const advanceStatus = () => {
-    const i = STATUS_ORDER.indexOf(current.status);
-    const next = STATUS_ORDER[Math.min(i + 1, STATUS_ORDER.length - 1)];
-    update(active.name, { status: next, savedAt: Date.now(), dirty: false });
-  };
+  const markForReview = () =>
+    update(active.name, { status: "review", savedAt: Date.now(), dirty: false });
+  const finalize = () =>
+    update(active.name, { status: "final", savedAt: Date.now(), dirty: false });
 
 
   const counts = useMemo(() => {
@@ -123,12 +123,18 @@ function DocsPage() {
                   Save
                 </button>
                 <button
-                  onClick={advanceStatus}
+                  onClick={markForReview}
+                  disabled={!current.text || current.status !== "draft"}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+                >
+                  Mark for Review
+                </button>
+                <button
+                  onClick={finalize}
                   disabled={!current.text || current.status === "final"}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
-                  title={current.status === "draft" ? "Mark ready for Review" : current.status === "review" ? "Mark Final" : "Already Final"}
                 >
-                  {current.status === "draft" ? "Mark for Review" : current.status === "review" ? "Approve Final" : "Final"}
+                  {current.status === "final" ? "Final" : "Finalize"}
                 </button>
                 <button
                   onClick={() => exportDocx(active.name, current.text)}
