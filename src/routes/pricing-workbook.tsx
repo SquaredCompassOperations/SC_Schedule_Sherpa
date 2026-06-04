@@ -76,9 +76,22 @@ function PricingWorkbookPage() {
 
   const update = (i: number, patch: Partial<Row>) => {
     setRows((rs) => rs.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    setDirty(true);
   };
-  const addRow = () => setRows((rs) => [...rs, emptyRow(automation.selectedSins[0]?.code || "")]);
-  const removeRow = (i: number) => setRows((rs) => rs.filter((_, idx) => idx !== i));
+  const addRow = () => {
+    setRows((rs) => [...rs, emptyRow(automation.selectedSins[0]?.code || "")]);
+    setDirty(true);
+  };
+  const removeRow = (i: number) => {
+    setRows((rs) => rs.filter((_, idx) => idx !== i));
+    setDirty(true);
+  };
+
+  const save = () => {
+    savePricingRows(rows);
+    setSavedAt(Date.now());
+    setDirty(false);
+  };
 
   const generate = async () => {
     if (rows.length === 0 || rows.some((r) => !r.sin || !r.title || !r.price)) {
