@@ -39,11 +39,10 @@ function DocsPage() {
 
   const save = () => update(active.name, { savedAt: Date.now(), dirty: false });
 
-  const advanceStatus = () => {
-    const i = STATUS_ORDER.indexOf(current.status);
-    const next = STATUS_ORDER[Math.min(i + 1, STATUS_ORDER.length - 1)];
-    update(active.name, { status: next, savedAt: Date.now(), dirty: false });
-  };
+  const markForReview = () =>
+    update(active.name, { status: "review", savedAt: Date.now(), dirty: false });
+  const finalize = () =>
+    update(active.name, { status: "final", savedAt: Date.now(), dirty: false });
 
 
   const counts = useMemo(() => {
