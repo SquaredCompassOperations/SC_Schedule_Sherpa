@@ -105,7 +105,14 @@ function DocsPage() {
                         )}
                         {d.name}
                       </span>
-                      <StatusPill status={s.status} />
+                      {s.na ? (
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-muted-foreground border border-border rounded-sm px-1.5 py-0.5">
+                          N/A
+                        </span>
+                      ) : (
+                        <StatusPill status={s.status} />
+                      )}
+
                     </button>
                   </li>
                 );
