@@ -119,10 +119,11 @@ function ExportPage() {
     if (drafts) {
       for (const d of DOCUMENT_QUEUE) {
         const state = docs[d.name];
-        if (!state?.text) continue;
+        if (!state?.text || state.na) continue;
         drafts.file(`${d.name}.txt`, state.text);
         docCount++;
       }
+
     }
 
     // Compliance matrix CSV → /05_Compliance/Compliance_Matrix.csv
