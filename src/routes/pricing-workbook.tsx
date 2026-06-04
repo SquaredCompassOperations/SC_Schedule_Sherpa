@@ -227,8 +227,58 @@ function PricingWorkbookPage() {
         </button>
       </Panel>
 
+      <Panel
+        title="LCAT Descriptions"
+        trailing={
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+            Full functional descriptions written into the workbook
+          </span>
+        }
+        className="mb-4"
+      >
+        {rows.length === 0 ? (
+          <p className="text-xs text-muted-foreground">Add a line item above to write a description.</p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((r, i) => (
+              <div key={i} className="border border-border rounded-sm p-3 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-bold">
+                    <span className="font-mono text-muted-foreground mr-2">{r.sin || "—"}</span>
+                    {r.title || <span className="text-muted-foreground italic">Untitled LCAT</span>}
+                  </div>
+                  <div className="text-[10px] font-mono text-muted-foreground">
+                    {r.minimumEducation || "—"} · {r.minimumYearsExperience || "0"} yrs · {r.unitOfMeasure || "Hour"}
+                  </div>
+                </div>
+                <textarea
+                  value={r.description}
+                  onChange={(e) => update(i, { description: e.target.value })}
+                  rows={4}
+                  placeholder="Describe duties, deliverables, supervision level, and SIN alignment for this labor category."
+                  className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
+                />
+                <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
+                  {r.description.length.toLocaleString()} chars
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Panel>
+
       <div className="flex justify-end gap-2 items-center">
         {error && <span className="text-xs text-destructive mr-auto">{error}</span>}
+        <span className="text-[10px] font-mono uppercase tracking-widest mr-2 text-muted-foreground">
+          {dirty ? <span className="text-warning">Unsaved changes</span> : savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString()}` : "Not saved"}
+        </span>
+        <button
+          onClick={save}
+          disabled={!dirty}
+          className="text-xs font-bold uppercase tracking-widest px-4 py-2 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
+        >
+          Save
+        </button>
         <button
           onClick={generate}
           disabled={running}
@@ -237,6 +287,7 @@ function PricingWorkbookPage() {
           {running ? "Generating…" : "Generate & Download .xlsx"}
         </button>
       </div>
+
     </>
   );
 }
