@@ -3,7 +3,8 @@ import { useMemo, useState } from "react";
 import JSZip from "jszip";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { COMPLIANCE_MATRIX, EXPORT_BUNDLE, CLIENT, DOCUMENT_QUEUE } from "@/lib/mock-data";
-import { useDocStore } from "@/lib/doc-store";
+import { useDocStore, COMPLIANCE_DOC_LINKS } from "@/lib/doc-store";
+
 
 export const Route = createFileRoute("/export")({
   head: () => ({ meta: [{ title: "Export eOffer Package — ScheduleBuilder" }] }),
