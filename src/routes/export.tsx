@@ -25,10 +25,38 @@ function ExportPage() {
   const [history, setHistory] = useState<ExportRecord[]>([]);
   const [copied, setCopied] = useState(false);
 
-  const missingCompliance = COMPLIANCE_MATRIX.filter((r) => r.status === "missing");
-  const nonFinalDocs = DOCUMENT_QUEUE.filter(
-    (d) => (docs[d.name]?.status ?? "draft") !== "final",
-  );
+  // Helper: map a doc kind → finalized status from the live doc store.
+  const isKindFinal = (kind: string) => {
+    const d = DOCUMENT_QUEUE.find((x) => x.kind === kind);
+    if (!d) return false;
+    return docs[d.name]?.status === "final";
+  };
+  const isDocNa = (name: string) => !!docs[name]?.na;
+
+  // Compliance gaps: a row is a blocker only if it is still "missing" AND no
+  // linked document in the generator has been finalized for that ref.
+  const missingCompliance = COMPLIANCE_MATRIX.filter((r) => {
+    if (r.status !== "missing") return false;
+    const linkedKind = COMPLIANCE_DOC_LINKS[r.ref];
+    if (linkedKind && isKindFinal(linkedKind)) return false;
+    return true;
+  });
+
+  // The pair: Relevant Project Experience OR Startup Springboard Substitution.
+  // At least one must be finalized; N/A on both is not allowed.
+  const PAIR_KINDS = new Set(["relevant-project", "startup-springboard"]);
+  const relevantDoc = DOCUMENT_QUEUE.find((d) => d.kind === "relevant-project");
+  const springboardDoc = DOCUMENT_QUEUE.find((d) => d.kind === "startup-springboard");
+  const pairSatisfied =
+    (relevantDoc && docs[relevantDoc.name]?.status === "final" && !docs[relevantDoc.name]?.na) ||
+    (springboardDoc && docs[springboardDoc.name]?.status === "final" && !docs[springboardDoc.name]?.na);
+
+  // Non-final docs: skip N/A docs, and skip the pair (handled separately).
+  const nonFinalDocs = DOCUMENT_QUEUE.filter((d) => {
+    if (PAIR_KINDS.has(d.kind)) return false;
+    if (isDocNa(d.name)) return false;
+    return (docs[d.name]?.status ?? "draft") !== "final";
+  });
 
   const blockers = useMemo(() => {
     const list: { id: string; label: string; href: string }[] = [];
@@ -42,8 +70,17 @@ function ExportPage() {
         href: "/documents",
       }),
     );
+    if (!pairSatisfied) {
+      list.push({
+        id: "doc-pair",
+        label:
+          "Finalize either Relevant Project Experience or Startup Springboard Substitution",
+        href: "/documents",
+      });
+    }
     return list;
-  }, [missingCompliance, nonFinalDocs]);
+  }, [missingCompliance, nonFinalDocs, pairSatisfied]);
+
 
   const ready = blockers.length === 0;
 
