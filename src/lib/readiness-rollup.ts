@@ -9,7 +9,7 @@ import {
   
   SIN_MATCHES,
 } from "./mock-data";
-import { useDocStore, type DocStatus } from "./doc-store";
+import { useDocStore, COMPLIANCE_DOC_LINKS, type DocStatus } from "./doc-store";
 
 export type ModuleReadiness = {
   slug: string;
