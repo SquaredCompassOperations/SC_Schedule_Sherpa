@@ -248,8 +248,8 @@ function ReviewPage() {
                         </div>
                         <ul className="divide-y divide-border">
                           {g.deliverables.map((name) => {
-                            const d = docByName.get(name);
-                            const st = docs[name]?.status ?? "draft";
+                            const d = docByKind.get(name) ?? docByName.get(name);
+                            const st = statusFor(name);
                             return (
                               <li key={name} className="px-3 py-2 flex items-center gap-3 text-xs">
                                 <div className="flex-1 min-w-0">
