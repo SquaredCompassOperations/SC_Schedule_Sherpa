@@ -13,7 +13,10 @@ export type DocState = {
   status: DocStatus;
   savedAt: number | null;
   dirty: boolean;
+  na?: boolean;
 };
+
+
 
 type Store = Record<string, DocState>;
 
