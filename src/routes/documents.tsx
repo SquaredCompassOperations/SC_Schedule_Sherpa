@@ -45,6 +45,18 @@ function DocsPage() {
   const finalize = () =>
     update(active.name, { status: "final", savedAt: Date.now(), dirty: false });
 
+  const canMarkNa = active.kind === "relevant-project" || active.kind === "startup-springboard";
+  const toggleNa = () =>
+    update(active.name, {
+      na: !current.na,
+      // when marking N/A, clear final status; when unmarking, leave as is
+      status: !current.na ? "draft" : current.status,
+      dirty: false,
+      savedAt: Date.now(),
+    });
+
+
+
 
   const counts = useMemo(() => {
     let draft = 0, review = 0, final = 0;
@@ -93,7 +105,14 @@ function DocsPage() {
                         )}
                         {d.name}
                       </span>
-                      <StatusPill status={s.status} />
+                      {s.na ? (
+                        <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-muted-foreground border border-border rounded-sm px-1.5 py-0.5">
+                          N/A
+                        </span>
+                      ) : (
+                        <StatusPill status={s.status} />
+                      )}
+
                     </button>
                   </li>
                 );
@@ -110,35 +129,46 @@ function DocsPage() {
                 <SaveIndicator state={current} />
                 <button
                   onClick={() => mutation.mutate(active.kind)}
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
                 >
                   {mutation.isPending ? "Generating…" : current.text ? "Regenerate" : "Generate Draft"}
                 </button>
                 <button
                   onClick={save}
-                  disabled={!current.dirty}
+                  disabled={!current.dirty || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   Save
                 </button>
                 <button
                   onClick={markForReview}
-                  disabled={!current.text || current.status !== "draft"}
+                  disabled={!current.text || current.status !== "draft" || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   Mark for Review
                 </button>
                 <button
                   onClick={finalize}
-                  disabled={!current.text || current.status === "final"}
+                  disabled={!current.text || current.status === "final" || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   {current.status === "final" ? "Final" : "Finalize"}
                 </button>
+                {canMarkNa ? (
+                  <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm cursor-pointer hover:bg-muted">
+                    <input
+                      type="checkbox"
+                      checked={!!current.na}
+                      onChange={toggleNa}
+                      className="size-3 accent-primary"
+                    />
+                    N/A
+                  </label>
+                ) : null}
                 <button
                   onClick={() => exportDocx(active.name, current.text)}
-                  disabled={!current.text}
+                  disabled={!current.text || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   Export .docx
@@ -151,9 +181,21 @@ function DocsPage() {
                 {(mutation.error as Error).message}
               </div>
             ) : null}
+            {current.na ? (
+              <div className="mb-3 text-xs text-muted-foreground border border-border bg-muted/30 rounded-sm p-2 font-mono">
+                Marked Not Applicable — this document is excluded from the eOffer package.
+                {active.kind === "relevant-project"
+                  ? " The package will require Startup Springboard Substitution instead."
+                  : active.kind === "startup-springboard"
+                    ? " The package will require Relevant Project Experience instead."
+                    : ""}
+              </div>
+            ) : null}
             <textarea
               value={current.text}
               onChange={(e) => update(active.name, { text: e.target.value, dirty: true })}
+              disabled={current.na}
+
               placeholder={
                 mutation.isPending
                   ? "Drafting narrative with master intake context…"
