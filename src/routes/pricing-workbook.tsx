@@ -44,7 +44,11 @@ function PricingWorkbookPage() {
     automation.pricingTemplate || "fcp-services-plus",
   );
   const [rows, setRows] = useState<Row[]>(() => {
-    // seed from selected LCATs + first SIN
+    // hydrate from previously saved rows first
+    if (automation.pricingRows && automation.pricingRows.length > 0) {
+      return automation.pricingRows.map((r) => ({ ...r }));
+    }
+    // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
     if (automation.selectedLcats.length > 0) {
       return automation.selectedLcats.map((l) => ({
@@ -55,6 +59,8 @@ function PricingWorkbookPage() {
     }
     return [emptyRow(firstSin)];
   });
+  const [savedAt, setSavedAt] = useState<number | null>(automation.pricingSavedAt);
+  const [dirty, setDirty] = useState(false);
   const [version, setVersion] = useState<{ message: string; upToDate: boolean } | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
