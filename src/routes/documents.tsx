@@ -45,6 +45,18 @@ function DocsPage() {
   const finalize = () =>
     update(active.name, { status: "final", savedAt: Date.now(), dirty: false });
 
+  const canMarkNa = active.kind === "relevant-project" || active.kind === "startup-springboard";
+  const toggleNa = () =>
+    update(active.name, {
+      na: !current.na,
+      // when marking N/A, clear final status; when unmarking, leave as is
+      status: !current.na ? "draft" : current.status,
+      dirty: false,
+      savedAt: Date.now(),
+    });
+
+
+
 
   const counts = useMemo(() => {
     let draft = 0, review = 0, final = 0;
