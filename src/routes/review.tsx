@@ -74,13 +74,25 @@ function ReviewPage() {
     return m;
   }, []);
 
+  // GATE_DELIVERABLES references docs by `kind` (e.g. "compensation-plan"),
+  // but doc-store keys by `name` (e.g. "Professional Compensation Plan").
+  const docByKind = useMemo(() => {
+    const m = new Map(DOCUMENT_QUEUE.map((d) => [d.kind, d]));
+    return m;
+  }, []);
+  const statusFor = (kindOrName: string) => {
+    const d = docByKind.get(kindOrName);
+    const key = d?.name ?? kindOrName;
+    return docs[key]?.status ?? "draft";
+  };
+
   const isGateUnblocked = (index: number) => {
     // sequential: all prior gates must be approved
     return gates.slice(0, index).every((g) => g.status === "approved");
   };
 
   const deliverablesReady = (g: Gate) =>
-    g.deliverables.every((name) => docs[name]?.status === "final");
+    g.deliverables.every((name) => statusFor(name) === "final");
 
   const updateGate = (index: number, patch: Partial<Gate>) => {
     setGates((prev) => prev.map((g, i) => (i === index ? { ...g, ...patch } : g)));
@@ -236,8 +248,8 @@ function ReviewPage() {
                         </div>
                         <ul className="divide-y divide-border">
                           {g.deliverables.map((name) => {
-                            const d = docByName.get(name);
-                            const st = docs[name]?.status ?? "draft";
+                            const d = docByKind.get(name) ?? docByName.get(name);
+                            const st = statusFor(name);
                             return (
                               <li key={name} className="px-3 py-2 flex items-center gap-3 text-xs">
                                 <div className="flex-1 min-w-0">
