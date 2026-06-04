@@ -72,12 +72,12 @@ export const DOCUMENT_QUEUE = [
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
   { name: "Capability Statement", kind: "capability-statement", status: "draft" },
+  { name: "Agent Authorization Letter", kind: "agent-authorization", status: "draft" },
   { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
   { name: "Accounting Controls Narrative", kind: "accounting-controls", status: "draft" },
   { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "final" },
   { name: "Professional Compensation Plan", kind: "compensation-plan", status: "review" },
   { name: "Project Summary — VA EHR Modernization", kind: "project-summary", status: "draft" },
-  { name: "Key Personnel — Sr. Systems Architect", kind: "key-personnel", status: "draft" },
 ];
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
@@ -127,6 +127,19 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Describe predecessor or personnel's relevant projects in scope and complexity",
       "Role each identified individual will play in performing the proposed work",
       "Narrative explicitly attributes each prior project to the substituting entity/person",
+    ],
+  },
+  "agent-authorization": {
+    source: "GSA MAS Solicitation — CP-114-A (Authorization of Agent / Consultant)",
+    items: [
+      "Letter on Offeror letterhead, dated, addressed to GSA MAS Contracting Officer",
+      "Offeror identified by legal name, UEI, and CAGE in the Re: line",
+      "Named agent / consultant with full contact information (company, address, phone, email)",
+      "Scope of authority for preparing, submitting, and negotiating the offer in eOffer/eMod",
+      "Explicit limitation that agent cannot sign the contract or binding certifications",
+      "Effective period stated (through award or written revocation)",
+      "Right to revoke authorization in writing at any time",
+      "Signed by the Offeror's Authorized Negotiator with name, title, phone, email",
     ],
   },
 };
