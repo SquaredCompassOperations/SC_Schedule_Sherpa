@@ -265,25 +265,37 @@ function ExportPage() {
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                   {DOCUMENT_QUEUE.map((d) => {
                     const st = docs[d.name]?.status ?? "draft";
+                    const na = !!docs[d.name]?.na;
                     return (
                       <li
                         key={d.name}
-                        className="text-[11px] font-mono flex items-center gap-2 border border-border rounded-sm px-2 py-1 bg-surface"
+                        className={`text-[11px] font-mono flex items-center gap-2 border border-border rounded-sm px-2 py-1 bg-surface ${na ? "opacity-50" : ""}`}
                       >
                         <span
                           className={`size-1.5 rounded-full shrink-0 ${
-                            st === "final"
-                              ? "bg-success"
-                              : st === "review"
-                                ? "bg-warning"
-                                : "bg-muted-foreground"
+                            na
+                              ? "bg-border"
+                              : st === "final"
+                                ? "bg-success"
+                                : st === "review"
+                                  ? "bg-warning"
+                                  : "bg-muted-foreground"
                           }`}
                         />
-                        <span className="truncate flex-1 text-muted-foreground">{d.name}.txt</span>
-                        <StatusPill status={st} />
+                        <span className={`truncate flex-1 ${na ? "line-through text-muted-foreground" : "text-muted-foreground"}`}>
+                          {d.name}.txt
+                        </span>
+                        {na ? (
+                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground border border-border rounded-sm px-1.5 py-0.5">
+                            N/A
+                          </span>
+                        ) : (
+                          <StatusPill status={st} />
+                        )}
                       </li>
                     );
                   })}
+
                 </ul>
               </div>
             </div>
