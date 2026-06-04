@@ -126,6 +126,16 @@ export function setPricingTemplate(t: AutomationState["pricingTemplate"]) {
   emit();
 }
 
+export function setPricingTemplate(t: AutomationState["pricingTemplate"]) {
+  state = { ...state, pricingTemplate: t };
+  emit();
+}
+
+export function savePricingRows(rows: PricingRow[]) {
+  state = { ...state, pricingRows: rows, pricingSavedAt: Date.now() };
+  emit();
+}
+
 export function resetAutomation() {
   state = defaultState();
   emit();
