@@ -15,7 +15,8 @@ export const Route = createFileRoute("/documents")({
   component: DocsPage,
 });
 
-const STATUS_ORDER: DocState["status"][] = ["draft", "review", "final"];
+
+
 
 function DocsPage() {
   const fn = useServerFn(generateNarrative);
