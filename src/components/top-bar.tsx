@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { CLIENT } from "@/lib/mock-data";
+import { useEntity } from "@/lib/intake-store";
 import { useAuth } from "@/lib/auth-context";
 
 export function TopBar() {
   const { user, fullName, signOut, role } = useAuth();
+  const entity = useEntity();
   const initials = (fullName || user?.email || "U")
     .split(/\s+/)
     .map((s) => s[0])
@@ -25,7 +26,7 @@ export function TopBar() {
       </div>
       <div className="flex items-center gap-3">
         <div className="text-[10px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-sm border border-border hidden sm:block">
-          UEI: {CLIENT.uei}
+          UEI: {entity.uei}
         </div>
         {user ? (
           <>

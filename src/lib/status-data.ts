@@ -6,7 +6,7 @@ import { useIntake } from "./intake-store";
 import { useAutomation } from "./automation-store";
 import { useDocStore } from "./doc-store";
 import { useSubmission } from "./submission-store";
-import { CLIENT, DOCUMENT_QUEUE } from "./mock-data";
+import { DOCUMENT_QUEUE } from "./mock-data";
 
 export type StageId = "intake" | "engine" | "review" | "submission";
 export type Stage = {
@@ -103,13 +103,14 @@ export function useStatus() {
     return dt.toISOString().slice(0, 10);
   };
 
+  const entityName = intake.corporate.legalName || "the Offeror";
   const milestones: Milestone[] = [
     {
       id: "kickoff",
       label: "Engagement Kickoff",
       date: offset(-21),
       status: "done",
-      detail: `${CLIENT.name} onboarded`,
+      detail: `${entityName} onboarded`,
     },
     {
       id: "intake-done",
@@ -242,5 +243,6 @@ export function useStatus() {
     openItems,
     activity,
     rollup,
+    entityName,
   };
 }

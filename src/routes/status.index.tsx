@@ -104,7 +104,7 @@ function StatusOverview() {
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            {CLIENT.name} · Stage: {status.currentStage.label}
+            {status.entityName || "—"} · Stage: {status.currentStage.label}
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight">Requirements Matrix</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
