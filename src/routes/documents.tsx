@@ -143,11 +143,16 @@ function DocsPage() {
                 <SaveIndicator state={current} />
                 <button
                   onClick={() => mutation.mutate(active.kind)}
-                  disabled={mutation.isPending || current.na}
+                  disabled={
+                    mutation.isPending ||
+                    current.na ||
+                    (active.kind === "epa-narrative" && !epaMechanism)
+                  }
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90 disabled:opacity-50"
                 >
                   {mutation.isPending ? "Generating…" : current.text ? "Regenerate" : "Generate Draft"}
                 </button>
+
                 <button
                   onClick={save}
                   disabled={!current.dirty || current.na}
@@ -205,6 +210,39 @@ function DocsPage() {
                     : ""}
               </div>
             ) : null}
+            {active.kind === "epa-narrative" && !current.na ? (
+              <div className="mb-3 border border-border rounded-sm p-3 bg-surface">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+                  EPA Mechanism (required before generating)
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {([
+                    { v: "commercial-price-list", label: "Commercial Price List", hint: "GSAR 552.238-120 Alt I" },
+                    { v: "market-indicator", label: "Market Indicator", hint: "Alt II — e.g. BLS ECI" },
+                    { v: "fixed-ceiling", label: "Fixed Ceiling", hint: "Alt III — fixed annual cap" },
+                  ] as const).map((opt) => (
+                    <label
+                      key={opt.v}
+                      className={`flex-1 cursor-pointer border rounded-sm px-3 py-2 text-xs transition-colors ${
+                        epaMechanism === opt.v ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="epa-mechanism"
+                        value={opt.v}
+                        checked={epaMechanism === opt.v}
+                        onChange={() => update(active.name, { epaMechanism: opt.v, dirty: true })}
+                        className="mr-2 accent-primary"
+                      />
+                      <span className="font-bold">{opt.label}</span>
+                      <div className="text-[10px] font-mono text-muted-foreground mt-0.5 ml-5">{opt.hint}</div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             <textarea
               value={current.text}
               onChange={(e) => update(active.name, { text: e.target.value, dirty: true })}
