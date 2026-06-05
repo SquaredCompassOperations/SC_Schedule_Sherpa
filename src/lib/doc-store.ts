@@ -64,11 +64,11 @@ export function useDocStore(): Store {
 // Status of the linked doc derives compliance status (final=valid, review=review, draft=missing).
 export const COMPLIANCE_DOC_LINKS: Record<string, string> = {
   "SCP-FSS-001": "corporate-experience",
-  "CP-114-A": "agent-authorization",
   "FAR 52.222-46": "compensation-plan",
   "FAR 52.237-10": "uncompensated-overtime",
   "GSAR 552.216-70": "epa-narrative",
   "I-FSS-969": "epa-narrative",
-  "FAR 31.201-2": "accounting-controls",
+  // Accounting controls are now part of the Quality Control deliverable
+  "FAR 31.201-2": "quality-control",
 };
 
