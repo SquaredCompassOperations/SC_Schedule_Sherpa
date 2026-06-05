@@ -61,7 +61,15 @@ function PricingWorkbookPage() {
   });
   const [savedAt, setSavedAt] = useState<number | null>(automation.pricingSavedAt);
   const [dirty, setDirty] = useState(false);
-  const [version, setVersion] = useState<{ message: string; upToDate: boolean } | null>(null);
+  const [version, setVersion] = useState<{
+    message: string;
+    upToDate: boolean;
+    interactMessage?: string;
+    interactAlerts?: Array<{ keyword: string; excerpt: string }>;
+    interactAcknowledged?: boolean;
+  } | null>(null);
+  const [interactAck, setInteractAck] = useState(false);
+
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -148,16 +156,51 @@ function PricingWorkbookPage() {
       />
 
       {version && (
-        <div
-          className={`mb-4 text-xs px-3 py-2 rounded-sm border ${
-            version.upToDate
-              ? "border-success/30 bg-success/5 text-success"
-              : "border-warning/40 bg-warning/5 text-warning"
-          }`}
-        >
-          {version.message}
+        <div className="mb-4 space-y-2">
+          <div
+            className={`text-xs px-3 py-2 rounded-sm border ${
+              version.upToDate
+                ? "border-success/30 bg-success/5 text-success"
+                : "border-warning/40 bg-warning/5 text-warning"
+            }`}
+          >
+            {version.message}
+          </div>
+          {version.interactMessage ? (
+            <div
+              className={`text-xs px-3 py-2 rounded-sm border ${
+                version.interactAlerts && version.interactAlerts.length > 0
+                  ? "border-warning/40 bg-warning/5"
+                  : "border-border bg-muted/30"
+              }`}
+            >
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-1">
+                GSA Interact — Activity Feed
+              </div>
+              <div className="text-foreground">{version.interactMessage}</div>
+              {version.interactAlerts && version.interactAlerts.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                  {version.interactAlerts.map((a, i) => (
+                    <li key={i}>
+                      <span className="font-bold text-foreground">{a.keyword}:</span> {a.excerpt}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <label className="mt-2 flex items-center gap-2 text-[11px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={interactAck}
+                  onChange={(e) => setInteractAck(e.target.checked)}
+                  className="size-3 accent-primary"
+                />
+                <span>I have reviewed the GSA Interact feed and confirm bundled templates are correct.</span>
+              </label>
+            </div>
+          ) : null}
         </div>
       )}
+
 
       <Panel title="Template" className="mb-4">
         <div className="flex flex-wrap gap-2">
