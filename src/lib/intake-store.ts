@@ -49,6 +49,7 @@ export type DocKey =
   | "compensationPlan"
   | "uotPolicy"
   | "corporatePriceList"
+  | "companyLogo"
   | "pnlYear1"
   | "pnlYear2"
   | "balanceYear1"
@@ -236,6 +237,7 @@ export const DOC_LABELS: Record<DocKey, string> = {
   compensationPlan: "Professional/Employee Compensation Plan",
   uotPolicy: "Uncompensated Overtime Policy",
   corporatePriceList: "Corporate Price List(s)",
+  companyLogo: "Company Logo (High-Resolution)",
   pnlYear1: "P&L Statement — Year 1",
   pnlYear2: "P&L Statement — Year 2",
   balanceYear1: "Balance Sheet — Year 1",
@@ -266,5 +268,31 @@ export function removePastPerformance(id: string) {
 export function resetIntake() {
   state = defaultState();
   emit();
+}
+
+// Convenience selector: returns the live entity identity for any module that
+// previously hard-coded CLIENT defaults. Falls back to "—" when the user has
+// not filled the value in Intake yet.
+export function useEntity() {
+  const s = useIntake();
+  const c = s.corporate;
+  const neg = s.negotiators[0];
+  const pocLine = neg?.name
+    ? `${neg.name}${neg.email ? " <" + neg.email + ">" : ""}`
+    : "—";
+  return {
+    name: c.legalName || "—",
+    uei: c.uei || "—",
+    cage: c.cageCode || "—",
+    ein: c.ein || "—",
+    naicsPrimary: c.naicsPrimary || "—",
+    samStatus: c.samStatus || "—",
+    samExpires: c.samExpires || "—",
+    website: c.website || "",
+    poc: pocLine,
+    pocName: neg?.name || "",
+    pocEmail: neg?.email || "",
+    socioeconomic: s.sbaCerts.map((c) => c.program).join(", ") || "—",
+  };
 }
 

@@ -425,6 +425,7 @@ const DOC_ACCEPT =
   ".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.rtf,.txt,.png,.jpg,.jpeg,.tif,.tiff,.zip,.json,.xml,.msg,.eml,.odt,.ods,.md";
 
 const DOC_ORDER: DocKey[] = [
+  "companyLogo",
   "compensationPlan",
   "uotPolicy",
   "corporatePriceList",
