@@ -9,6 +9,8 @@ import {
   REGISTRATION_ITEMS,
   SIN_MATCHES,
 } from "@/lib/mock-data";
+import { useEntity } from "@/lib/intake-store";
+import { useReadinessRollup } from "@/lib/readiness-rollup";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,26 +26,30 @@ function WorkspacePage() {
   const verified = COMPLIANCE_MATRIX.filter((r) => r.status === "valid").length;
   const missing = COMPLIANCE_MATRIX.filter((r) => r.status === "missing").length;
   const gaps = REGISTRATION_ITEMS.filter((r) => r.status === "gap").length;
+  const entity = useEntity();
+  const rollup = useReadinessRollup();
+  const readiness = rollup.composite;
 
   return (
     <>
       <PageHeader
         eyebrow={`${CLIENT.schedule} • ${CLIENT.solicitation} • ${CLIENT.refresh}`}
-        title={`Active Offer: ${CLIENT.name}`}
+        title={`Active Offer: ${entity.name}`}
         description="Master intake record feeds every module below. All data shown is sourced from the single client profile."
         actions={
           <>
             <div className="text-right">
               <div className="text-[10px] font-mono text-muted-foreground uppercase">Readiness</div>
-              <div className="text-2xl font-mono font-bold text-primary leading-none">{CLIENT.readiness}%</div>
+              <div className="text-2xl font-mono font-bold text-primary leading-none">{readiness}%</div>
             </div>
             <div className="w-32 h-10 bg-muted rounded-sm overflow-hidden relative border border-border">
-              <div className="h-full bg-primary/20" style={{ width: `${CLIENT.readiness}%` }} />
+              <div className="h-full bg-primary/20" style={{ width: `${readiness}%` }} />
               <div className="absolute inset-x-0 animate-scan bg-gradient-to-b from-transparent via-primary/40 to-transparent h-4" />
             </div>
           </>
         }
       />
+
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-12 lg:col-span-4 space-y-6">

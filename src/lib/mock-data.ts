@@ -1,18 +1,21 @@
+// Static defaults. Entity-specific identity (name, UEI, CAGE, EIN, POC, etc.)
+// is intentionally blank — those values come from the live Intake store via
+// useEntity(). Only generic GSA solicitation defaults remain here.
 export const CLIENT = {
-  name: "Advantix Systems LLC",
-  uei: "Z9L8H2M7K4P1",
-  cage: "8K2P7",
-  ein: "47-3920184",
-  naicsPrimary: "541512",
+  name: "",
+  uei: "",
+  cage: "",
+  ein: "",
+  naicsPrimary: "",
   solicitation: "47QSMD20R0001",
-  schedule: "GSA Schedule MAS / IT",
-  refresh: "Refresh 18",
-  poc: "Jordan Daniels",
-  employees: 84,
-  socioeconomic: "SDVOSB",
+  schedule: "GSA Schedule MAS",
+  refresh: "Refresh 31",
+  poc: "",
+  employees: 0,
+  socioeconomic: "",
   fasId: "Pending Link",
-  samExpires: "2025-04-12",
-  readiness: 88.4,
+  samExpires: "",
+  readiness: 0,
 };
 
 export type ModuleStatus = "complete" | "in_progress" | "blocked" | "not_started";
@@ -36,13 +39,13 @@ export const MODULES = [
 ];
 
 export const REGISTRATION_ITEMS = [
-  { label: "SAM.gov Active Registration", status: "ok", note: "Expires 2025-04-12" },
-  { label: "UEI Issued", status: "ok", note: "Z9L8H2M7K4P1" },
-  { label: "CAGE Code", status: "ok", note: "8K2P7" },
+  { label: "SAM.gov Active Registration", status: "ok", note: "Verify expiration in Intake" },
+  { label: "UEI Issued", status: "ok", note: "From SAM.gov entity record" },
+  { label: "CAGE Code", status: "ok", note: "From SAM.gov entity record" },
   { label: "FAS ID Linked", status: "gap", note: "Required for eOffer portal" },
   { label: "eOffer Digital Cert", status: "gap", note: "Authorized negotiator missing" },
-  { label: "Pathways to Success", status: "ok", note: "Completed 2024-11-02" },
-  { label: "Readiness Assessment", status: "ok", note: "Score 88.4" },
+  { label: "Pathways to Success", status: "ok", note: "Course completion certificate" },
+  { label: "Readiness Assessment", status: "ok", note: "See Readiness module" },
 ];
 
 export const SIN_MATCHES = [
@@ -55,11 +58,10 @@ export const SIN_MATCHES = [
 export const COMPLIANCE_MATRIX = [
   { ref: "SCP-FSS-001", cat: "technical", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "missing" },
   { ref: "I-FSS-600", cat: "pricing", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
-  { ref: "CP-114-A", cat: "administrative", req: "Agent Authorization Letter", source: "—", status: "missing" },
   { ref: "FAR 52.222-46", cat: "compliance", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
   { ref: "FAR 52.237-10", cat: "compliance", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
   { ref: "GSAR 552.216-70", cat: "pricing", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
-  { ref: "FAR 31.201-2", cat: "compliance", req: "Accounting Controls Narrative", source: "Acct_Controls.docx", status: "missing" },
+  { ref: "FAR 31.201-2", cat: "compliance", req: "Accounting Controls (within Quality Control)", source: "QC_Narrative.docx", status: "missing" },
   { ref: "I-FSS-639", cat: "pricing", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
   { ref: "SCP-FSS-004", cat: "administrative", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
   { ref: "I-FSS-969", cat: "pricing", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
@@ -71,13 +73,10 @@ export const DOCUMENT_QUEUE = [
   { name: "Technical Proposal: Quality Control", kind: "quality-control", status: "draft" },
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
-  { name: "Capability Statement", kind: "capability-statement", status: "draft" },
-  { name: "Agent Authorization Letter", kind: "agent-authorization", status: "draft" },
   { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
-  { name: "Accounting Controls Narrative", kind: "accounting-controls", status: "draft" },
   { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "final" },
   { name: "Professional Compensation Plan", kind: "compensation-plan", status: "review" },
-  { name: "Project Summary — VA EHR Modernization", kind: "project-summary", status: "draft" },
+  { name: "Project Summary", kind: "project-summary", status: "draft" },
 ];
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
@@ -87,14 +86,13 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Minimum two (2) years of corporate experience in the products/services under this Schedule",
       "Organization's employee count, field experience, and resources to fulfill requirements",
       "Brief history of activities developing relevant expertise and capabilities",
-      "Information demonstrating organizational and accounting controls",
       "Description of in-house resources or ability to acquire personnel/products proposed",
       "How the Offeror intends to market proposed products/services to Federal clients",
       "Discussion of intended use of subcontractors",
     ],
   },
   "quality-control": {
-    source: "GSA MAS Solicitation — Technical Proposal: Quality Control",
+    source: "GSA MAS Solicitation — Technical Proposal: Quality Control (incl. Accounting Controls)",
     items: [
       "Internal review procedures that facilitate high-quality standards",
       "Individuals responsible for ensuring quality control (named roles)",
@@ -102,6 +100,8 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "How potential problem areas and solutions are handled",
       "Procedures for ensuring quality when meeting urgent requirements",
       "Managing QC across multiple simultaneous projects for multiple agencies",
+      "Accounting controls demonstrating segregation of direct/indirect costs (FAR 31.201-2)",
+      "Auditable cost-tracking process consistent with FAR Part 31 and DCAA expectations",
     ],
   },
   "relevant-project": {
@@ -129,17 +129,13 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Narrative explicitly attributes each prior project to the substituting entity/person",
     ],
   },
-  "agent-authorization": {
-    source: "GSA MAS Solicitation — CP-114-A (Authorization of Agent / Consultant)",
+  "epa-narrative": {
+    source: "GSA MAS Solicitation — EPA Methodology (GSAR 552.216-70 / I-FSS-969)",
     items: [
-      "Letter on Offeror letterhead, dated, addressed to GSA MAS Contracting Officer",
-      "Offeror identified by legal name, UEI, and CAGE in the Re: line",
-      "Named agent / consultant with full contact information (company, address, phone, email)",
-      "Scope of authority for preparing, submitting, and negotiating the offer in eOffer/eMod",
-      "Explicit limitation that agent cannot sign the contract or binding certifications",
-      "Effective period stated (through award or written revocation)",
-      "Right to revoke authorization in writing at any time",
-      "Signed by the Offeror's Authorized Negotiator with name, title, phone, email",
+      "Identify the elected EPA mechanism (Commercial Price List, Market Indicator, or Fixed Ceiling)",
+      "Describe the basis for adjustment and any caps (e.g., 10% per period, 4% annual)",
+      "State the frequency and supporting documentation submitted with each request",
+      "Comply with GSAR 552.216-70 / I-FSS-969 escalation limitations",
     ],
   },
 };
@@ -162,10 +158,10 @@ export const REVIEW_GATES = [
   { stage: "Authorized Negotiator Certify", owner: "Authorized Negotiator", status: "pending" },
 ];
 
+// Static folders for binary forms we don't yet generate (SF1449, Reps & Certs).
+// Document drafts and pricing workbook outputs are added dynamically by the
+// export module from the live stores — no duplication.
 export const EXPORT_BUNDLE = [
-  { folder: "01_Administrative", files: ["SF1449.pdf", "Agent_Authorization.pdf", "Signed_Reps_Certs.pdf"] },
-  { folder: "02_Technical", files: ["Corporate_Experience.docx", "Capability_Statement.docx", "Key_Personnel.docx"] },
-  { folder: "03_Past_Performance", files: ["Project_Summaries.docx", "CPARS_Refs.pdf"] },
-  { folder: "04_Pricing", files: ["CPL_Pricing_Final.xlsx", "CSP-1.xlsx", "EPA_Narrative.docx"] },
-  { folder: "05_Compliance", files: ["Compliance_Matrix.xlsx", "Accounting_Controls.docx", "UOT_Policy.docx"] },
+  { folder: "01_Administrative", files: ["SF1449.pdf", "Signed_Reps_Certs.pdf"] },
+  { folder: "03_Past_Performance", files: ["Past_Performance_Index.txt"] },
 ];

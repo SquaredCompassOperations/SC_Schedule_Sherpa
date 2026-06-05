@@ -4,6 +4,8 @@ import JSZip from "jszip";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { COMPLIANCE_MATRIX, EXPORT_BUNDLE, CLIENT, DOCUMENT_QUEUE } from "@/lib/mock-data";
 import { useDocStore, COMPLIANCE_DOC_LINKS } from "@/lib/doc-store";
+import { useEntity } from "@/lib/intake-store";
+import { useAutomation } from "@/lib/automation-store";
 
 
 export const Route = createFileRoute("/export")({
@@ -21,11 +23,12 @@ type ExportRecord = {
 
 function ExportPage() {
   const docs = useDocStore();
+  const entity = useEntity();
+  const automation = useAutomation();
   const [downloading, setDownloading] = useState(false);
   const [history, setHistory] = useState<ExportRecord[]>([]);
   const [copied, setCopied] = useState(false);
 
-  // Helper: map a doc kind → finalized status from the live doc store.
   const isKindFinal = (kind: string) => {
     const d = DOCUMENT_QUEUE.find((x) => x.kind === kind);
     if (!d) return false;
@@ -33,8 +36,6 @@ function ExportPage() {
   };
   const isDocNa = (name: string) => !!docs[name]?.na;
 
-  // Compliance gaps: a row is a blocker only if it is still "missing" AND no
-  // linked document in the generator has been finalized for that ref.
   const missingCompliance = COMPLIANCE_MATRIX.filter((r) => {
     if (r.status !== "missing") return false;
     const linkedKind = COMPLIANCE_DOC_LINKS[r.ref];
@@ -42,8 +43,6 @@ function ExportPage() {
     return true;
   });
 
-  // The pair: Relevant Project Experience OR Startup Springboard Substitution.
-  // At least one must be finalized; N/A on both is not allowed.
   const PAIR_KINDS = new Set(["relevant-project", "startup-springboard"]);
   const relevantDoc = DOCUMENT_QUEUE.find((d) => d.kind === "relevant-project");
   const springboardDoc = DOCUMENT_QUEUE.find((d) => d.kind === "startup-springboard");
@@ -51,7 +50,6 @@ function ExportPage() {
     (relevantDoc && docs[relevantDoc.name]?.status === "final" && !docs[relevantDoc.name]?.na) ||
     (springboardDoc && docs[springboardDoc.name]?.status === "final" && !docs[springboardDoc.name]?.na);
 
-  // Non-final docs: skip N/A docs, and skip the pair (handled separately).
   const nonFinalDocs = DOCUMENT_QUEUE.filter((d) => {
     if (PAIR_KINDS.has(d.kind)) return false;
     if (isDocNa(d.name)) return false;
@@ -61,7 +59,7 @@ function ExportPage() {
   const blockers = useMemo(() => {
     const list: { id: string; label: string; href: string }[] = [];
     missingCompliance.forEach((m) =>
-      list.push({ id: `comp-${m.ref}`, label: `Compliance gap · ${m.ref} ${m.req}`, href: "/compliance" }),
+      list.push({ id: `comp-${m.ref}`, label: `Compliance gap · ${m.ref} ${m.req}`, href: "/status" }),
     );
     nonFinalDocs.forEach((d) =>
       list.push({
@@ -84,14 +82,16 @@ function ExportPage() {
 
   const ready = blockers.length === 0;
 
+  const proposedSins = automation.selectedSins.map((s) => s.code).join(", ") || "—";
+
   const eofferText = [
-    `Offeror Name: ${CLIENT.name}`,
-    `UEI: ${CLIENT.uei}`,
-    `CAGE Code: ${CLIENT.cage}`,
+    `Offeror Name: ${entity.name}`,
+    `UEI: ${entity.uei}`,
+    `CAGE Code: ${entity.cage}`,
     `Solicitation: ${CLIENT.solicitation}`,
     `Schedule: ${CLIENT.schedule}`,
-    `Proposed SINs: 54151S`,
-    `Authorized Negotiator: ${CLIENT.poc}`,
+    `Proposed SINs: ${proposedSins}`,
+    `Authorized Negotiator: ${entity.pocName || "—"}`,
   ].join("\n");
 
   const copyEOffer = async () => {
@@ -100,44 +100,88 @@ function ExportPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  // Live folder map — drives both preview and zip generation, no duplication.
+  const activeDrafts = DOCUMENT_QUEUE.filter((d) => {
+    const st = docs[d.name];
+    return st && st.text && !st.na;
+  });
+
+  const docFolder = (kind: string) => {
+    if (["corporate-experience", "quality-control", "relevant-project", "startup-springboard"].includes(kind)) {
+      return "02_Technical";
+    }
+    if (["epa-narrative", "compensation-plan"].includes(kind)) {
+      return "04_Pricing";
+    }
+    if (["uncompensated-overtime"].includes(kind)) {
+      return "05_Compliance";
+    }
+    if (kind === "project-summary") return "03_Past_Performance";
+    return "02_Technical";
+  };
+
+  type FolderRow = { name: string; status: string; na: boolean; source: "static" | "draft" | "generated" };
+  const folderMap = useMemo(() => {
+    const m: Record<string, FolderRow[]> = {};
+    for (const b of EXPORT_BUNDLE) {
+      m[b.folder] = b.files.map((f) => ({ name: f, status: "static", na: false, source: "static" as const }));
+    }
+    for (const d of activeDrafts) {
+      const folder = docFolder(d.kind);
+      (m[folder] ||= []).push({
+        name: `${d.name}.docx`,
+        status: docs[d.name]?.status ?? "draft",
+        na: false,
+        source: "draft",
+      });
+    }
+    if (automation.pricingRows.length > 0) {
+      (m["04_Pricing"] ||= []).push({
+        name: "Pricing_Workbook.xlsx",
+        status: "final",
+        na: false,
+        source: "generated",
+      });
+    }
+    (m["05_Compliance"] ||= []).push({
+      name: "Compliance_Matrix.csv",
+      status: "final",
+      na: false,
+      source: "generated",
+    });
+    return m;
+  }, [activeDrafts, docs, automation.pricingRows.length]);
+
   const generateZip = async () => {
     setDownloading(true);
     const zip = new JSZip();
 
-    // Folder bundle (placeholders for binaries we don't yet generate)
-    for (const b of EXPORT_BUNDLE) {
-      const folder = zip.folder(b.folder);
+    for (const [folderName, files] of Object.entries(folderMap)) {
+      const folder = zip.folder(folderName);
       if (!folder) continue;
-      for (const f of b.files) {
-        folder.file(f, fileContent(f));
+      for (const f of files) {
+        if (f.source === "static") {
+          folder.file(f.name, fileContent(f.name));
+        } else if (f.source === "draft") {
+          const base = f.name.replace(/\.docx$/, "");
+          const state = docs[base];
+          if (state?.text) folder.file(`${base}.txt`, state.text);
+        } else if (f.name === "Compliance_Matrix.csv") {
+          const csv =
+            "Ref,Requirement,Status\n" +
+            COMPLIANCE_MATRIX.map(
+              (r) => `"${r.ref}","${r.req.replace(/"/g, '""')}",${r.status}`,
+            ).join("\n");
+          folder.file("Compliance_Matrix.csv", csv);
+        } else if (f.name === "Pricing_Workbook.xlsx") {
+          folder.file("Pricing_Workbook.txt", "Generated from Pricing Workbook module. Open that module to download the live .xlsx.");
+        }
       }
     }
 
-    // Real document drafts from the doc store → /02_Technical/drafts/
-    const drafts = zip.folder("02_Technical")?.folder("drafts");
-    let docCount = 0;
-    if (drafts) {
-      for (const d of DOCUMENT_QUEUE) {
-        const state = docs[d.name];
-        if (!state?.text || state.na) continue;
-        drafts.file(`${d.name}.txt`, state.text);
-        docCount++;
-      }
-
-    }
-
-    // Compliance matrix CSV → /05_Compliance/Compliance_Matrix.csv
-    const csv =
-      "Ref,Requirement,Status\n" +
-      COMPLIANCE_MATRIX.map(
-        (r) => `"${r.ref}","${r.req.replace(/"/g, '""')}",${r.status}`,
-      ).join("\n");
-    zip.folder("05_Compliance")?.file("Compliance_Matrix.csv", csv);
-
-    // eOffer field-ready text → root
     zip.file("eOffer_Fields.txt", eofferText);
 
-    // Manifest
+    const docCount = activeDrafts.length;
     const now = new Date();
     const manifest = [
       "eOffer Package Manifest",
@@ -146,18 +190,20 @@ function ExportPage() {
       "",
       "Offeror",
       "-------",
-      `Name:          ${CLIENT.name}`,
-      `UEI:           ${CLIENT.uei}`,
-      `CAGE:          ${CLIENT.cage}`,
+      `Name:          ${entity.name}`,
+      `UEI:           ${entity.uei}`,
+      `CAGE:          ${entity.cage}`,
       `Solicitation:  ${CLIENT.solicitation}`,
       `Schedule:      ${CLIENT.schedule}`,
-      `Negotiator:    ${CLIENT.poc}`,
+      `Negotiator:    ${entity.pocName || "—"}`,
+      `Proposed SINs: ${proposedSins}`,
       "",
       "Contents",
       "--------",
-      ...EXPORT_BUNDLE.flatMap((b) => [`/${b.folder}/`, ...b.files.map((f) => `  - ${f}`)]),
-      `  - 02_Technical/drafts/  (${docCount} document drafts)`,
-      "/05_Compliance/Compliance_Matrix.csv",
+      ...Object.entries(folderMap).flatMap(([folder, files]) => [
+        `/${folder}/`,
+        ...files.map((f) => `  - ${f.name}`),
+      ]),
       "/eOffer_Fields.txt",
       "",
       "Submission",
@@ -168,7 +214,8 @@ function ExportPage() {
     zip.file("00_Manifest.txt", manifest);
 
     const blob = await zip.generateAsync({ type: "blob" });
-    const filename = `eOffer_Package_${CLIENT.cage}_${now.toISOString().slice(0, 10)}.zip`;
+    const cageSlug = entity.cage !== "—" ? entity.cage : "offer";
+    const filename = `eOffer_Package_${cageSlug}_${now.toISOString().slice(0, 10)}.zip`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -232,72 +279,38 @@ function ExportPage() {
         <div className="col-span-12 lg:col-span-8 space-y-6">
           <Panel title="Package Folder Structure" className="p-0">
             <div className="divide-y divide-border">
-              {EXPORT_BUNDLE.map((b) => (
-                <div key={b.folder} className="p-4">
+              {Object.entries(folderMap).map(([folder, files]) => (
+                <div key={folder} className="p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-mono text-xs font-bold text-foreground">/{b.folder}</span>
+                    <span className="font-mono text-xs font-bold text-foreground">/{folder}</span>
                     <span className="text-[10px] font-mono text-muted-foreground">
-                      {b.files.length} files
+                      {files.length} file{files.length === 1 ? "" : "s"}
                     </span>
                   </div>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                    {b.files.map((f) => (
+                    {files.map((f) => (
                       <li
-                        key={f}
-                        className="text-[11px] font-mono text-muted-foreground flex items-center gap-2 border border-border rounded-sm px-2 py-1 bg-surface"
+                        key={f.name}
+                        className="text-[11px] font-mono flex items-center gap-2 border border-border rounded-sm px-2 py-1 bg-surface"
                       >
-                        <span className="size-1.5 bg-success rounded-full shrink-0" />
-                        <span className="truncate">{f}</span>
+                        <span
+                          className={`size-1.5 rounded-full shrink-0 ${
+                            f.source === "static" || f.status === "final"
+                              ? "bg-success"
+                              : f.status === "review"
+                                ? "bg-warning"
+                                : "bg-muted-foreground"
+                          }`}
+                        />
+                        <span className="truncate flex-1 text-muted-foreground">{f.name}</span>
+                        {f.source !== "static" ? (
+                          <StatusPill status={f.status} />
+                        ) : null}
                       </li>
                     ))}
                   </ul>
                 </div>
               ))}
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-mono text-xs font-bold text-foreground">
-                    /02_Technical/drafts
-                  </span>
-                  <span className="text-[10px] font-mono text-muted-foreground">
-                    {DOCUMENT_QUEUE.length} documents · synced from generator
-                  </span>
-                </div>
-                <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
-                  {DOCUMENT_QUEUE.map((d) => {
-                    const st = docs[d.name]?.status ?? "draft";
-                    const na = !!docs[d.name]?.na;
-                    return (
-                      <li
-                        key={d.name}
-                        className={`text-[11px] font-mono flex items-center gap-2 border border-border rounded-sm px-2 py-1 bg-surface ${na ? "opacity-50" : ""}`}
-                      >
-                        <span
-                          className={`size-1.5 rounded-full shrink-0 ${
-                            na
-                              ? "bg-border"
-                              : st === "final"
-                                ? "bg-success"
-                                : st === "review"
-                                  ? "bg-warning"
-                                  : "bg-muted-foreground"
-                          }`}
-                        />
-                        <span className={`truncate flex-1 ${na ? "line-through text-muted-foreground" : "text-muted-foreground"}`}>
-                          {d.name}.txt
-                        </span>
-                        {na ? (
-                          <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground border border-border rounded-sm px-1.5 py-0.5">
-                            N/A
-                          </span>
-                        ) : (
-                          <StatusPill status={st} />
-                        )}
-                      </li>
-                    );
-                  })}
-
-                </ul>
-              </div>
             </div>
           </Panel>
 
@@ -313,13 +326,13 @@ function ExportPage() {
             }
           >
             <div className="space-y-2 text-[11px] font-mono">
-              <Row k="Offeror Name" v={CLIENT.name} />
-              <Row k="UEI" v={CLIENT.uei} />
-              <Row k="CAGE Code" v={CLIENT.cage} />
+              <Row k="Offeror Name" v={entity.name} />
+              <Row k="UEI" v={entity.uei} />
+              <Row k="CAGE Code" v={entity.cage} />
               <Row k="Solicitation" v={CLIENT.solicitation} />
               <Row k="Schedule" v={CLIENT.schedule} />
-              <Row k="Proposed SINs" v="54151S" />
-              <Row k="Authorized Negotiator" v={CLIENT.poc} />
+              <Row k="Proposed SINs" v={proposedSins} />
+              <Row k="Authorized Negotiator" v={entity.pocName || "—"} />
             </div>
           </Panel>
 
@@ -348,7 +361,6 @@ function ExportPage() {
             <ul className="space-y-2 text-xs">
               {[
                 ["SF1449 Cover", "approved"],
-                ["Agent Authorization Letter", "pending"],
                 ["Reps & Certs (SAM)", "approved"],
                 ["Subcontracting Plan", "na"],
               ].map(([name, status]) => (

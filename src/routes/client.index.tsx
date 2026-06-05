@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useStatus } from "@/lib/status-data";
 import { CLIENT } from "@/lib/mock-data";
+import { useEntity } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/client/")({
   component: ClientOverview,
@@ -8,6 +9,7 @@ export const Route = createFileRoute("/client/")({
 
 function ClientOverview() {
   const status = useStatus();
+  const entity = useEntity();
   const nextMilestone = status.milestones.find((m) => m.status === "current" || m.status === "upcoming");
 
   return (
@@ -16,11 +18,12 @@ function ClientOverview() {
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           Your GSA MAS Offer
         </div>
-        <h1 className="text-3xl font-bold mt-1">{CLIENT.name}</h1>
+        <h1 className="text-3xl font-bold mt-1">{entity.name}</h1>
         <p className="text-sm text-muted-foreground mt-1">
           {CLIENT.schedule} · {CLIENT.solicitation}
         </p>
       </div>
+
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="border border-border rounded-sm p-5 bg-card">
