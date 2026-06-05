@@ -8,13 +8,16 @@ import { loadPersisted, savePersisted } from "./persist";
 const PERSIST_KEY = "doc-store";
 
 export type DocStatus = "draft" | "review" | "final";
+export type EpaMechanism = "commercial-price-list" | "market-indicator" | "fixed-ceiling";
 export type DocState = {
   text: string;
   status: DocStatus;
   savedAt: number | null;
   dirty: boolean;
   na?: boolean;
+  epaMechanism?: EpaMechanism;
 };
+
 
 
 

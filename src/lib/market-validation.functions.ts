@@ -78,8 +78,10 @@ function parseJson<T>(text: string, fallback: T): T {
 }
 
 async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Promise<{ rows: Row[]; scanned: number }> {
-  // Build a targeted query for this single LCAT
-  const query = `site:gsaadvantage.gov ${sin} "${lcat}" price list`;
+  // Build a targeted query for this single LCAT. Restrict to ACTIVE contracts only —
+  // GSA Advantage lists both current and expired vendors; expired pricing is not a
+  // valid benchmark for a new offer.
+  const query = `site:gsaadvantage.gov ${sin} "${lcat}" price list active contract`;
   let search: Array<{ url: string; title?: string; description?: string }> = [];
   try {
     search = await firecrawlSearch(query, 6);
@@ -97,6 +99,7 @@ async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Pro
     return { rows: [], scanned: 0 };
   }
 
+
   const rows: Row[] = [];
   for (const link of pdfLinks) {
     const { markdown } = await firecrawlScrape(link.url);
@@ -105,9 +108,11 @@ async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Pro
 
     const prompt = `Extract GSA Schedule pricing rows from the document below. ONLY return rows whose Labor Category is an equivalent of "${lcat}" under SIN ${sin}. An equivalent includes the same role title or a clearly synonymous title at a matching seniority level. Do NOT return unrelated LCATs.
 
-For each matching row return: laborCategory (exact title as printed), unitOfIssue (e.g. "Hour"), netPrice (GSA Net Price INCLUDING IFF, e.g. "$185.50").
+CRITICAL — CONTRACT MUST BE ACTIVE: Inspect the document for the contract's period of performance / expiration / end date. If the contract is EXPIRED (end date is in the past relative to today, or the document is marked cancelled / terminated / not current), return [] and do NOT extract any rows. Expired pricing is not a valid market benchmark.
 
-Respond with ONLY a JSON array. Return [] if no matching rows.
+For each matching row from an active contract return: laborCategory (exact title as printed), unitOfIssue (e.g. "Hour"), netPrice (GSA Net Price INCLUDING IFF, e.g. "$185.50").
+
+Respond with ONLY a JSON array. Return [] if no matching rows or the contract is expired.
 
 Document:
 ${markdown}`;
@@ -119,6 +124,9 @@ ${markdown}`;
       continue;
     }
     const extracted = parseJson<Array<{ laborCategory: string; unitOfIssue: string; netPrice: string }>>(text, []);
+    if (extracted.length === 0) {
+      notes.push(`[${lcat}] ${link.url} skipped — no active-contract matches.`);
+    }
     for (const row of extracted) {
       rows.push({
         sin,
@@ -133,6 +141,7 @@ ${markdown}`;
       });
     }
   }
+
 
   if (rows.length === 0) {
     notes.push(`[${lcat}] ${pdfLinks.length} PDF(s) scanned but no comparable rows extracted.`);
