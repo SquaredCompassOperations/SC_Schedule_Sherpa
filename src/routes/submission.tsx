@@ -11,7 +11,7 @@ import {
   EVENT_KIND_META,
   type TrackerEventKind,
 } from "@/lib/submission-store";
-import { CLIENT } from "@/lib/mock-data";
+import { useEntity } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/submission")({
   head: () => ({ meta: [{ title: "Submission Tracker — ScheduleBuilder" }] }),
@@ -57,12 +57,14 @@ function toneClass(tone: "success" | "warning" | "info" | "destructive" | "muted
 
 function SubmissionPage() {
   const sub = useSubmission();
+  const entity = useEntity();
+  const defaultPoc = entity.pocName || entity.name || "Authorized Negotiator";
   const submitted = !!sub.receipt;
   const awarded = sub.events.some((e) => e.kind === "awarded");
 
   // Receipt form
   const [confirmationNumber, setConfirmationNumber] = useState("");
-  const [submittedBy, setSubmittedBy] = useState(CLIENT.poc);
+  const [submittedBy, setSubmittedBy] = useState(defaultPoc);
   const [portal, setPortal] = useState("eOffer.gsa.gov");
   const [notes, setNotes] = useState("");
   const [attachment, setAttachment] = useState<File | null>(null);
@@ -81,7 +83,7 @@ function SubmissionPage() {
     setReceipt({
       confirmationNumber: confirmationNumber.trim(),
       submittedAt: Date.now(),
-      submittedBy: submittedBy.trim() || CLIENT.poc,
+      submittedBy: submittedBy.trim() || defaultPoc,
       portal: portal.trim() || "eOffer.gsa.gov",
       notes: notes.trim(),
       attachmentName: attachment?.name ?? null,
@@ -110,8 +112,8 @@ function SubmissionPage() {
     if (!submitted) return;
     lockArchive({
       archivedAt: Date.now(),
-      archivedBy: sub.receipt?.submittedBy ?? CLIENT.poc,
-      snapshotName: `eOffer_Snapshot_${CLIENT.cage}_${new Date().toISOString().slice(0, 10)}.zip`,
+      archivedBy: sub.receipt?.submittedBy ?? defaultPoc,
+      snapshotName: `eOffer_Snapshot_${(entity.cage !== "—" ? entity.cage : "offer")}_${new Date().toISOString().slice(0, 10)}.zip`,
       notes: archiveNotes.trim(),
     });
     setArchiveNotes("");
