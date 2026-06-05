@@ -33,10 +33,24 @@ function DocsPage() {
 
   const update = (name: string, patch: Partial<DocState>) => patchDoc(name, patch);
 
+  const epaMechanism = current.epaMechanism;
+  const epaMechanismLabel: Record<NonNullable<DocState["epaMechanism"]>, string> = {
+    "commercial-price-list": "Commercial Price List (GSAR 552.238-120 Alt I)",
+    "market-indicator": "Market Indicator (Alt II)",
+    "fixed-ceiling": "Fixed Ceiling (Alt III)",
+  };
+
   const mutation = useMutation({
-    mutationFn: async (kind: string) => fn({ data: { kind, context: buildContext(intake, automation) } }),
+    mutationFn: async (kind: string) => {
+      const extra =
+        kind === "epa-narrative" && epaMechanism
+          ? `EPA Mechanism: ${epaMechanismLabel[epaMechanism]}`
+          : undefined;
+      return fn({ data: { kind, context: buildContext(intake, automation, extra) } });
+    },
     onSuccess: (res) => update(active.name, { text: res.text, dirty: true }),
   });
+
 
   const save = () => update(active.name, { savedAt: Date.now(), dirty: false });
 
