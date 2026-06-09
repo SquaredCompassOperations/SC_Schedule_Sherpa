@@ -6,18 +6,114 @@ type InteractAlert = {
   excerpt: string;
 };
 
+type TemplateLink = {
+  label: string;
+  url: string;
+};
+
 type VersionStatus = {
   bundledRefresh: string;
   latestDetected: string | null;
   upToDate: boolean;
   message: string;
+  source: string;
+  detectedLinks: TemplateLink[];
   interactChecked: boolean;
   interactAlerts: InteractAlert[];
   interactMessage: string;
 };
 
+const REQUIRED_TEMPLATES_URL =
+  "https://www.gsa.gov/sell-to-government/step-1-learn-about-government-contracting/how-to-access-contract-opportunities/help-with-mas-contracts-to-sell-to-government/roadmap-to-get-a-mas-contract/required-templates-for-a-mas-offer";
 const INTERACT_URL = "https://buy.gsa.gov/interact/community/6/activity-feed";
-const INTERACT_KEYWORDS = ["New Offer Checklist", "Pricing Terms", "Pricing File"];
+const INTERACT_KEYWORDS = ["New Offer Checklist", "Pricing Terms", "Pricing File", "Refresh"];
+
+const TRACKED_TEMPLATES: Array<{ label: string; pattern: RegExp }> = [
+  { label: "Pricing Terms", pattern: /Pricing[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+  { label: "FCP Product File", pattern: /FCP[^"'<>]*Product[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+  { label: "FCP Services Plus File", pattern: /FCP[^"'<>]*Services[^"'<>]*Plus[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+  { label: "New Offer Checklist", pattern: /New[%\s_-]*Offer[%\s_-]*Checklist[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+];
+
+async function scrapeRequiredTemplates(): Promise<{
+  html: string;
+  source: string;
+} | null> {
+  // Try direct fetch first (page is public).
+  try {
+    const res = await fetch(REQUIRED_TEMPLATES_URL, {
+      headers: { "User-Agent": "Mozilla/5.0 ScheduleBuilder/1.0" },
+    });
+    if (res.ok) {
+      const html = await res.text();
+      if (html.length > 1000) return { html, source: "gsa.gov (direct)" };
+    }
+  } catch {
+    // fall through to Firecrawl
+  }
+  // Firecrawl fallback for environments that block outbound HTML.
+  const key = process.env.FIRECRAWL_API_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: REQUIRED_TEMPLATES_URL,
+        formats: ["html", "markdown"],
+        onlyMainContent: true,
+      }),
+    });
+    if (!res.ok) return null;
+    const j: { data?: { html?: string; markdown?: string } } = await res.json();
+    const html = j.data?.html ?? j.data?.markdown ?? "";
+    if (html.length > 500) return { html, source: "gsa.gov (Firecrawl)" };
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function findLatestRefresh(html: string): {
+  latest: number;
+  links: TemplateLink[];
+} {
+  let latest = 0;
+  const links: TemplateLink[] = [];
+  for (const t of TRACKED_TEMPLATES) {
+    let m: RegExpExecArray | null;
+    let best = 0;
+    let bestUrl = "";
+    const re = new RegExp(t.pattern.source, "gi");
+    while ((m = re.exec(html)) !== null) {
+      const n = parseInt(m[1], 10);
+      if (!Number.isFinite(n)) continue;
+      if (n > best) {
+        best = n;
+        // Reconstruct URL: find the nearest preceding https:// up to the match
+        const before = html.slice(0, m.index);
+        const urlStart = before.lastIndexOf("https://");
+        if (urlStart >= 0) {
+          const tail = html.slice(urlStart);
+          const urlEnd = tail.search(/["'<>\s)]/);
+          bestUrl = urlEnd > 0 ? tail.slice(0, urlEnd) : "";
+        }
+      }
+    }
+    if (best > 0) {
+      latest = Math.max(latest, best);
+      links.push({ label: `${t.label} (Refresh ${best})`, url: bestUrl });
+    }
+  }
+  // Final sweep: any "Refresh NN" mention as a safety net
+  const generic = /Refresh[%\s_-]*(\d{2,3})/gi;
+  let g: RegExpExecArray | null;
+  while ((g = generic.exec(html)) !== null) {
+    const n = parseInt(g[1], 10);
+    if (Number.isFinite(n) && n > latest) latest = n;
+  }
+  return { latest, links };
+}
 
 async function checkInteractFeed(): Promise<{
   checked: boolean;
@@ -76,32 +172,42 @@ async function checkInteractFeed(): Promise<{
   }
 }
 
-// Quick HEAD-check of GSA template URLs. GSA names files like "Refresh 31",
-// "Refresh 32", etc. We probe the next 3 increments to see if a newer one exists.
-// Also scrapes the GSA Interact activity feed for new refresh announcements.
+// Scrapes the official GSA "Required templates for a MAS offer" page and
+// extracts the highest "Refresh NN" number referenced in the template filenames.
+// This is more robust than HEAD-probing guessed filenames because GSA appends
+// suffixes like _0, _TDR_EDIT_060126, etc. Also checks the Interact activity feed.
 export const checkGsaTemplateVersion = createServerFn({ method: "GET" }).handler(
   async (): Promise<VersionStatus> => {
     const bundled = parseInt(manifest.refresh, 10);
-    let latest = bundled;
-    try {
-      for (let i = 1; i <= 3; i++) {
-        const probe = bundled + i;
-        const url = `https://www.gsa.gov/system/files/Pricing%20Terms%20Attachment%20-Refresh%20${probe}_01.xlsx`;
-        const res = await fetch(url, { method: "HEAD" });
-        if (res.ok) latest = probe;
-      }
-    } catch {
-      // network failure — treat as up-to-date
-    }
-    const upToDate = latest === bundled;
+    const scrape = await scrapeRequiredTemplates();
     const interact = await checkInteractFeed();
+
+    if (!scrape) {
+      return {
+        bundledRefresh: manifest.refresh,
+        latestDetected: null,
+        upToDate: true,
+        message: `Unable to reach GSA template index — bundled Refresh ${bundled} (verified ${manifest.downloadedAt}) assumed current.`,
+        source: "offline",
+        detectedLinks: [],
+        interactChecked: interact.checked,
+        interactAlerts: interact.alerts,
+        interactMessage: interact.message,
+      };
+    }
+
+    const { latest, links } = findLatestRefresh(scrape.html);
+    const detected = latest > 0 ? latest : bundled;
+    const upToDate = detected <= bundled;
     return {
       bundledRefresh: manifest.refresh,
-      latestDetected: upToDate ? null : String(latest),
+      latestDetected: upToDate ? null : String(detected),
       upToDate,
       message: upToDate
-        ? `Bundled templates match GSA Refresh ${bundled} (last verified ${manifest.downloadedAt}).`
-        : `Newer GSA refresh detected: Refresh ${latest}. Bundled = Refresh ${bundled}. Update recommended.`,
+        ? `Bundled templates match GSA Refresh ${bundled} (verified against ${scrape.source} on ${new Date().toISOString().slice(0, 10)}).`
+        : `Newer GSA refresh detected: Refresh ${detected}. Bundled = Refresh ${bundled}. Update the bundled templates in /public/templates and bump manifest.refresh.`,
+      source: scrape.source,
+      detectedLinks: links,
       interactChecked: interact.checked,
       interactAlerts: interact.alerts,
       interactMessage: interact.message,
