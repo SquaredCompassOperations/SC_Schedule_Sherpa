@@ -16,6 +16,7 @@ type Row = {
   sin: string;
   title: string;
   description: string;
+  keywords: string;
   minimumEducation: string;
   minimumYearsExperience: string;
   unitOfMeasure: string;
@@ -27,6 +28,7 @@ function emptyRow(sin = ""): Row {
     sin,
     title: "",
     description: "",
+    keywords: "",
     minimumEducation: "Bachelors",
     minimumYearsExperience: "5",
     unitOfMeasure: "Hour",
