@@ -89,10 +89,10 @@ export const generatePricingWorkbook = createServerFn({ method: "POST" })
       const base64 = Buffer.from(out).toString("base64");
       const filename = `${data.companyName || "offer"}_${data.template}_filled.xlsx`.replace(/\s+/g, "_");
 
-      return { filename, base64, templateRefresh: "31", rowCount: data.rows.length };
+      return { filename, base64, templateRefresh: "32", rowCount: data.rows.length };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("generatePricingWorkbook error:", msg);
-      return { filename: "", base64: "", templateRefresh: "31", rowCount: 0, error: msg };
+      return { filename: "", base64: "", templateRefresh: "32", rowCount: 0, error: msg };
     }
   });
