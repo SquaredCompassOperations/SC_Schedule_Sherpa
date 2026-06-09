@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
+import { GsaRefreshBanner } from "@/components/gsa-refresh-banner";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 
 function NotFoundComponent() {
