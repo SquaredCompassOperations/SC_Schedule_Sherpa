@@ -107,8 +107,8 @@ function findLatestRefresh(html: string): {
       links.push({ label: `${t.label} (Refresh ${best})`, url: bestUrl });
     }
   }
-  // Final sweep: any "Refresh NN" mention as a safety net
-  const generic = /Refresh[%\s_-]*(\d{2,3})/gi;
+  // Final sweep: any "Refresh NN" mention as a safety net (1-2 digits only)
+  const generic = /Refresh[\s_-]+(\d{1,2})\b/gi;
   let g: RegExpExecArray | null;
   while ((g = generic.exec(html)) !== null) {
     const n = parseInt(g[1], 10);
