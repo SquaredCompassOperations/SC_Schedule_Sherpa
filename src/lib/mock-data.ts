@@ -76,7 +76,6 @@ export const DOCUMENT_QUEUE = [
   { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
   { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "final" },
   { name: "Professional Compensation Plan", kind: "compensation-plan", status: "review" },
-  { name: "Project Summary", kind: "project-summary", status: "draft" },
 ];
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
