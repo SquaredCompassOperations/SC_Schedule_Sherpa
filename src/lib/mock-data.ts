@@ -253,7 +253,8 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
     ],
   },
   "startup-springboard": {
-    source: "GSA MAS Solicitation — Startup Springboard (Substitution for Relevant Project Experience)",
+    source:
+      "GSA MAS Solicitation — Startup Springboard (Substitution for Relevant Project Experience)",
     items: [
       "Substitution used only when relevant project experience does not exist",
       "Clearly identify predecessor company or key personnel performing major work",
@@ -273,14 +274,55 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
   },
 };
 
-
 export const LABOR_CATEGORIES = [
-  { code: "LCAT-01", title: "Senior Systems Architect", education: "Bachelors", years: 10, commercial: 215.0, gsa: 185.0 },
-  { code: "LCAT-02", title: "Project Manager (PMP)", education: "Masters", years: 12, commercial: 225.0, gsa: 194.2 },
-  { code: "LCAT-03", title: "Cybersecurity Specialist III", education: "Bachelors", years: 7, commercial: 188.5, gsa: 162.5 },
-  { code: "LCAT-04", title: "Senior Data Engineer", education: "Bachelors", years: 8, commercial: 198.0, gsa: 170.4 },
-  { code: "LCAT-05", title: "Technical Writer", education: "Bachelors", years: 4, commercial: 112.0, gsa: 95.75 },
-  { code: "LCAT-06", title: "Junior Analyst", education: "Bachelors", years: 2, commercial: 92.0, gsa: 78.2 },
+  {
+    code: "LCAT-01",
+    title: "Senior Systems Architect",
+    education: "Bachelors",
+    years: 10,
+    commercial: 215.0,
+    gsa: 185.0,
+  },
+  {
+    code: "LCAT-02",
+    title: "Project Manager (PMP)",
+    education: "Masters",
+    years: 12,
+    commercial: 225.0,
+    gsa: 194.2,
+  },
+  {
+    code: "LCAT-03",
+    title: "Cybersecurity Specialist III",
+    education: "Bachelors",
+    years: 7,
+    commercial: 188.5,
+    gsa: 162.5,
+  },
+  {
+    code: "LCAT-04",
+    title: "Senior Data Engineer",
+    education: "Bachelors",
+    years: 8,
+    commercial: 198.0,
+    gsa: 170.4,
+  },
+  {
+    code: "LCAT-05",
+    title: "Technical Writer",
+    education: "Bachelors",
+    years: 4,
+    commercial: 112.0,
+    gsa: 95.75,
+  },
+  {
+    code: "LCAT-06",
+    title: "Junior Analyst",
+    education: "Bachelors",
+    years: 2,
+    commercial: 92.0,
+    gsa: 78.2,
+  },
 ];
 
 export const REVIEW_GATES = [
