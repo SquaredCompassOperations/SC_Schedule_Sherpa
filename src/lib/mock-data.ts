@@ -61,7 +61,6 @@ export const COMPLIANCE_MATRIX = [
   { ref: "FAR 52.222-46", cat: "compliance", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
   { ref: "FAR 52.237-10", cat: "compliance", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
   { ref: "GSAR 552.216-70", cat: "pricing", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
-  { ref: "FAR 31.201-2", cat: "compliance", req: "Accounting Controls (within Quality Control)", source: "QC_Narrative.docx", status: "missing" },
   { ref: "I-FSS-639", cat: "pricing", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
   { ref: "SCP-FSS-004", cat: "administrative", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
   { ref: "I-FSS-969", cat: "pricing", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
@@ -85,13 +84,14 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Minimum two (2) years of corporate experience in the products/services under this Schedule",
       "Organization's employee count, field experience, and resources to fulfill requirements",
       "Brief history of activities developing relevant expertise and capabilities",
+      "Organizational and accounting controls as part of the Corporate Experience narrative",
       "Description of in-house resources or ability to acquire personnel/products proposed",
       "How the Offeror intends to market proposed products/services to Federal clients",
       "Discussion of intended use of subcontractors",
     ],
   },
   "quality-control": {
-    source: "GSA MAS Solicitation — Technical Proposal: Quality Control (incl. Accounting Controls)",
+    source: "GSA MAS Solicitation — Technical Proposal: Quality Control",
     items: [
       "Internal review procedures that facilitate high-quality standards",
       "Individuals responsible for ensuring quality control (named roles)",
@@ -99,8 +99,6 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "How potential problem areas and solutions are handled",
       "Procedures for ensuring quality when meeting urgent requirements",
       "Managing QC across multiple simultaneous projects for multiple agencies",
-      "Accounting controls demonstrating segregation of direct/indirect costs (FAR 31.201-2)",
-      "Auditable cost-tracking process consistent with FAR Part 31 and DCAA expectations",
     ],
   },
   "relevant-project": {

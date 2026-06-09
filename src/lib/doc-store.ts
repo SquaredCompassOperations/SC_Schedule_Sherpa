@@ -71,7 +71,5 @@ export const COMPLIANCE_DOC_LINKS: Record<string, string> = {
   "FAR 52.237-10": "uncompensated-overtime",
   "GSAR 552.216-70": "epa-narrative",
   "I-FSS-969": "epa-narrative",
-  // Accounting controls are now part of the Quality Control deliverable
-  "FAR 31.201-2": "quality-control",
 };
 
