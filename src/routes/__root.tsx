@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
+import { GsaRefreshBanner } from "@/components/gsa-refresh-banner";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 
 function NotFoundComponent() {
@@ -154,6 +155,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <TopBar />
+      <GsaRefreshBanner />
       <div className="flex grow">
         <AppSidebar />
         <main className="grow overflow-y-auto animate-fade-in">
