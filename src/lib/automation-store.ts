@@ -74,7 +74,22 @@ const defaultState = (): AutomationState => ({
   pricingTemplate: null,
   pricingRows: [],
   pricingSavedAt: null,
+  pricingKeyTerms: defaultKeyTerms(),
 });
+
+function defaultKeyTerms(): string {
+  return [
+    "PRICING TERMS (auto-seeded from GSA Pricing Terms Attachment — Refresh 32). Edit per LCAT / SIN as needed.",
+    "",
+    "• Prompt Payment Terms — Commercial: Net 30. Government (GSA): Net 30, no early-payment discount unless otherwise stated.",
+    "• Warranty — Commercial: Standard commercial warranty applies. Government (GSA): Same as commercial warranty extended to ordering activities.",
+    "• Normal Delivery (ARO) — Commercial and Government delivery times stated per SIN (insert specific ARO days per labor category as applicable).",
+    "• Quantity / Volume Discounts — Indicate % discount and applicable SIN(s); state whether at contract or task-order level.",
+    "• Economic Price Adjustment (EPA) — Elected mechanism per GSAM 538.270-4: (a)(1) fixed escalation, (a)(2) market index, or (a)(3) established pricing. Annual on anniversary date of contract award unless otherwise stated.",
+    "• Most Favored Customer (MFC) — Identify the commercial customer or category receiving the best discount that establishes the basis for GSA pricing.",
+    "• Commercial Sales Practices (CSP-1) — Discounts, concessions, and terms granted to commercial customers, mapped to the proposed GSA price.",
+  ].join("\n");
+}
 
 
 let state: AutomationState = { ...defaultState(), ...loadPersisted<Partial<AutomationState>>(PERSIST_KEY, {}) };
@@ -130,6 +145,11 @@ export function setPricingTemplate(t: AutomationState["pricingTemplate"]) {
 
 export function savePricingRows(rows: PricingRow[]) {
   state = { ...state, pricingRows: rows, pricingSavedAt: Date.now() };
+  emit();
+}
+
+export function setPricingKeyTerms(text: string) {
+  state = { ...state, pricingKeyTerms: text };
   emit();
 }
 
