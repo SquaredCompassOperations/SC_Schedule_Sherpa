@@ -341,3 +341,36 @@ function PricingWorkbookPage() {
     </>
   );
 }
+
+function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+  const count = parts.length;
+  const overLimit = parts.filter((p) => p.length > 100);
+  const tooMany = count > 5;
+  return (
+    <div className="mt-3 border-t border-dashed border-border pt-3">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Catalog Keywords (up to 5, comma-separated, ≤100 chars each)
+        </div>
+        <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
+          {count}/5
+        </div>
+      </div>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="e.g. Cloud migration, FedRAMP, Zero Trust, DevSecOps, Kubernetes"
+        className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      {(tooMany || overLimit.length > 0) && (
+        <div className="mt-1 text-[10px] text-destructive">
+          {tooMany && <div>Maximum 5 keywords.</div>}
+          {overLimit.length > 0 && (
+            <div>Each keyword must be ≤100 chars: {overLimit.map((p) => `"${p.slice(0, 30)}…"`).join(", ")}</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
