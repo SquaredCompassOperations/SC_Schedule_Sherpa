@@ -48,7 +48,7 @@ function PricingWorkbookPage() {
   const [rows, setRows] = useState<Row[]>(() => {
     // hydrate from previously saved rows first
     if (automation.pricingRows && automation.pricingRows.length > 0) {
-      return automation.pricingRows.map((r) => ({ ...r }));
+      return automation.pricingRows.map((r) => ({ ...emptyRow(r.sin), ...r, keywords: r.keywords ?? "" }));
     }
     // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
