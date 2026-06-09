@@ -89,7 +89,12 @@ export const MODULES = [
     status: "not_started" as ModuleStatus,
     group: "Final",
   },
-  { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
+  {
+    slug: "/export",
+    label: "Export eOffer",
+    status: "not_started" as ModuleStatus,
+    group: "Final",
+  },
   {
     slug: "/submission",
     label: "Submission Tracker",
@@ -109,26 +114,97 @@ export const REGISTRATION_ITEMS = [
 ];
 
 export const SIN_MATCHES = [
-  { code: "54151S", title: "IT Professional Services", confidence: 98, required: ["Past Performance", "LCAT Matrix", "EPA Narrative"] },
-  { code: "54151HEC", title: "Health IT Services", confidence: 74, required: ["FedRAMP attestation", "Project summaries"] },
-  { code: "541611", title: "Management & Financial Consulting", confidence: 62, required: ["Commercial Sales Practices"] },
-  { code: "518210C", title: "Cloud Computing Services", confidence: 41, required: ["FedRAMP Mod", "SLA narrative"] },
+  {
+    code: "54151S",
+    title: "IT Professional Services",
+    confidence: 98,
+    required: ["Past Performance", "LCAT Matrix", "EPA Narrative"],
+  },
+  {
+    code: "54151HEC",
+    title: "Health IT Services",
+    confidence: 74,
+    required: ["FedRAMP attestation", "Project summaries"],
+  },
+  {
+    code: "541611",
+    title: "Management & Financial Consulting",
+    confidence: 62,
+    required: ["Commercial Sales Practices"],
+  },
+  {
+    code: "518210C",
+    title: "Cloud Computing Services",
+    confidence: 41,
+    required: ["FedRAMP Mod", "SLA narrative"],
+  },
 ];
 
 export const COMPLIANCE_MATRIX = [
-  { ref: "SCP-FSS-001", cat: "technical", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "missing" },
-  { ref: "I-FSS-600", cat: "pricing", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
-  { ref: "FAR 52.222-46", cat: "compliance", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
-  { ref: "FAR 52.237-10", cat: "compliance", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
-  { ref: "GSAR 552.216-70", cat: "pricing", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
-  { ref: "I-FSS-639", cat: "pricing", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
-  { ref: "SCP-FSS-004", cat: "administrative", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
-  { ref: "I-FSS-969", cat: "pricing", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
+  {
+    ref: "SCP-FSS-001",
+    cat: "technical",
+    req: "Technical Proposal Narrative",
+    source: "DocGen_04.pdf",
+    status: "missing",
+  },
+  {
+    ref: "I-FSS-600",
+    cat: "pricing",
+    req: "Contract Sales Criteria",
+    source: "Sales_Hist.xlsx",
+    status: "valid",
+  },
+  {
+    ref: "FAR 52.222-46",
+    cat: "compliance",
+    req: "Professional Compensation Plan",
+    source: "Comp_Plan.docx",
+    status: "review",
+  },
+  {
+    ref: "FAR 52.237-10",
+    cat: "compliance",
+    req: "Uncompensated Overtime Policy",
+    source: "UOT_Policy.docx",
+    status: "valid",
+  },
+  {
+    ref: "GSAR 552.216-70",
+    cat: "pricing",
+    req: "EPA Methodology",
+    source: "EPA_Narrative.docx",
+    status: "review",
+  },
+  {
+    ref: "I-FSS-639",
+    cat: "pricing",
+    req: "Commercial Sales Practices (CSP-1)",
+    source: "CSP-1.xlsx",
+    status: "review",
+  },
+  {
+    ref: "SCP-FSS-004",
+    cat: "administrative",
+    req: "Letter of Supply (if applicable)",
+    source: "—",
+    status: "na",
+  },
+  {
+    ref: "I-FSS-969",
+    cat: "pricing",
+    req: "EPA Negotiated Escalation",
+    source: "—",
+    status: "missing",
+  },
 ];
 
-
 export const DOCUMENT_QUEUE = [
-  { name: "Technical Proposal: Corporate Experience", kind: "corporate-experience", status: "draft" },
+  {
+    name: "Technical Proposal: Corporate Experience",
+    kind: "corporate-experience",
+    status: "draft",
+  },
   { name: "Technical Proposal: Quality Control", kind: "quality-control", status: "draft" },
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
