@@ -198,7 +198,10 @@ export const checkGsaTemplateVersion = createServerFn({ method: "GET" }).handler
       };
     }
 
-    const { latest, links } = findLatestRefresh(scrape.html);
+    // Decode %20 → space so URL-encoded filenames like "Refresh%2032" don't
+    // get misread as "Refresh 2032". Keep other %-encodings intact for URL reconstruction.
+    const normalized = scrape.html.replace(/%20/gi, " ");
+    const { latest, links } = findLatestRefresh(normalized);
     const detected = latest > 0 ? latest : bundled;
     const upToDate = detected <= bundled;
     return {
