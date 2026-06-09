@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { generatePricingWorkbook } from "@/lib/pricing-workbook.functions";
 import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
-import { useAutomation, setPricingTemplate, savePricingRows, setPricingKeyTerms } from "@/lib/automation-store";
+import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/pricing-workbook")({
@@ -16,6 +16,7 @@ type Row = {
   sin: string;
   title: string;
   description: string;
+  keywords: string;
   minimumEducation: string;
   minimumYearsExperience: string;
   unitOfMeasure: string;
@@ -27,6 +28,7 @@ function emptyRow(sin = ""): Row {
     sin,
     title: "",
     description: "",
+    keywords: "",
     minimumEducation: "Bachelors",
     minimumYearsExperience: "5",
     unitOfMeasure: "Hour",
@@ -46,7 +48,7 @@ function PricingWorkbookPage() {
   const [rows, setRows] = useState<Row[]>(() => {
     // hydrate from previously saved rows first
     if (automation.pricingRows && automation.pricingRows.length > 0) {
-      return automation.pricingRows.map((r) => ({ ...r }));
+      return automation.pricingRows.map((r) => ({ ...emptyRow(r.sin), ...r, keywords: r.keywords ?? "" }));
     }
     // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
@@ -304,35 +306,15 @@ function PricingWorkbookPage() {
                 <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
                   {r.description.length.toLocaleString()} chars
                 </div>
+                <KeywordsBox value={r.keywords} onChange={(v) => update(i, { keywords: v })} />
               </div>
             ))}
           </div>
         )}
       </Panel>
 
-      <Panel
-        title="Pricing Terms — Key Terms"
-        trailing={
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-            Seeded from GSA Pricing Terms Attachment (Refresh 32) · editable
-          </span>
-        }
-        className="mb-4"
-      >
-        <p className="text-[11px] text-muted-foreground mb-2 font-mono">
-          Key contract terms attached to the LCATs above (prompt payment, warranty, delivery,
-          EPA, volume discounts, MFC, CSP-1). Edit per LCAT or SIN as needed before submission.
-        </p>
-        <textarea
-          value={automation.pricingKeyTerms}
-          onChange={(e) => setPricingKeyTerms(e.target.value)}
-          rows={10}
-          className="w-full px-3 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed font-mono"
-        />
-        <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
-          {automation.pricingKeyTerms.length.toLocaleString()} chars
-        </div>
-      </Panel>
+
+
 
 
       <div className="flex justify-end gap-2 items-center">
@@ -357,5 +339,38 @@ function PricingWorkbookPage() {
       </div>
 
     </>
+  );
+}
+
+function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+  const count = parts.length;
+  const overLimit = parts.filter((p) => p.length > 100);
+  const tooMany = count > 5;
+  return (
+    <div className="mt-3 border-t border-dashed border-border pt-3">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Catalog Keywords (up to 5, comma-separated, ≤100 chars each)
+        </div>
+        <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
+          {count}/5
+        </div>
+      </div>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="e.g. Cloud migration, FedRAMP, Zero Trust, DevSecOps, Kubernetes"
+        className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary"
+      />
+      {(tooMany || overLimit.length > 0) && (
+        <div className="mt-1 text-[10px] text-destructive">
+          {tooMany && <div>Maximum 5 keywords.</div>}
+          {overLimit.length > 0 && (
+            <div>Each keyword must be ≤100 chars: {overLimit.map((p) => `"${p.slice(0, 30)}…"`).join(", ")}</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

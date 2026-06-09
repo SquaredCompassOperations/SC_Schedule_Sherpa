@@ -43,6 +43,7 @@ export type PricingRow = {
   sin: string;
   title: string;
   description: string;
+  keywords: string;
   minimumEducation: string;
   minimumYearsExperience: string;
   unitOfMeasure: string;

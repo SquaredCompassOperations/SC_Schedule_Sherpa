@@ -12,6 +12,7 @@ const InputSchema = z.object({
         sin: z.string().max(20),
         title: z.string().max(200),
         description: z.string().max(1000).optional().default(""),
+        keywords: z.string().max(600).optional().default(""),
         minimumEducation: z.string().max(40).optional().default(""),
         minimumYearsExperience: z.string().max(10).optional().default(""),
         unitOfMeasure: z.string().max(20).optional().default("Hour"),
