@@ -154,6 +154,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <TopBar />
+      <GsaRefreshBanner />
       <div className="flex grow">
         <AppSidebar />
         <main className="grow overflow-y-auto animate-fade-in">
