@@ -50,6 +50,13 @@ export function TopBar() {
               {fullName || user.email} · {role}
             </div>
             <button
+              onClick={resetWorkspace}
+              title="Clear all local data for a fresh trial run"
+              className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
+            >
+              Reset
+            </button>
+            <button
               onClick={() => signOut()}
               className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
             >
