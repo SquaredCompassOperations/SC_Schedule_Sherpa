@@ -1,6 +1,22 @@
 import { Link } from "@tanstack/react-router";
 import { useEntity } from "@/lib/intake-store";
 import { useAuth } from "@/lib/auth-context";
+import { clearAllPersisted } from "@/lib/persist";
+
+function resetWorkspace() {
+  if (typeof window === "undefined") return;
+  const ok = window.confirm(
+    "Reset workspace? This clears all locally-saved intake, documents, pricing, status, and submission data so you can start a fresh trial run. This cannot be undone.",
+  );
+  if (!ok) return;
+  clearAllPersisted();
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    /* ignore */
+  }
+  window.location.assign("/");
+}
 
 export function TopBar() {
   const { user, fullName, signOut, role } = useAuth();
@@ -33,6 +49,13 @@ export function TopBar() {
             <div className="text-[10px] font-mono text-muted-foreground hidden md:block">
               {fullName || user.email} · {role}
             </div>
+            <button
+              onClick={resetWorkspace}
+              title="Clear all local data for a fresh trial run"
+              className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
+            >
+              Reset
+            </button>
             <button
               onClick={() => signOut()}
               className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
