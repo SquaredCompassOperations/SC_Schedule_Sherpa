@@ -28,11 +28,13 @@ const REQUIRED_TEMPLATES_URL =
 const INTERACT_URL = "https://buy.gsa.gov/interact/community/6/activity-feed";
 const INTERACT_KEYWORDS = ["New Offer Checklist", "Pricing Terms", "Pricing File", "Refresh"];
 
+// Note: HTML is normalized (%20 → space) before regex matching to prevent
+// "Refresh%2032" being misread as "Refresh 2032". Refresh numbers are 1-2 digits.
 const TRACKED_TEMPLATES: Array<{ label: string; pattern: RegExp }> = [
-  { label: "Pricing Terms", pattern: /Pricing[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "FCP Product File", pattern: /FCP[^"'<>]*Product[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "FCP Services Plus File", pattern: /FCP[^"'<>]*Services[^"'<>]*Plus[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "New Offer Checklist", pattern: /New[%\s_-]*Offer[%\s_-]*Checklist[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+  { label: "Pricing Terms", pattern: /Pricing[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "FCP Product File", pattern: /FCP[^"'<>]*Product[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "FCP Services Plus File", pattern: /FCP[^"'<>]*Services[^"'<>]*Plus[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "New Offer Checklist", pattern: /New[\s_-]+Offer[\s_-]+Checklist[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
 ];
 
 async function scrapeRequiredTemplates(): Promise<{
@@ -105,8 +107,8 @@ function findLatestRefresh(html: string): {
       links.push({ label: `${t.label} (Refresh ${best})`, url: bestUrl });
     }
   }
-  // Final sweep: any "Refresh NN" mention as a safety net
-  const generic = /Refresh[%\s_-]*(\d{2,3})/gi;
+  // Final sweep: any "Refresh NN" mention as a safety net (1-2 digits only)
+  const generic = /Refresh[\s_-]+(\d{1,2})\b/gi;
   let g: RegExpExecArray | null;
   while ((g = generic.exec(html)) !== null) {
     const n = parseInt(g[1], 10);
@@ -196,7 +198,10 @@ export const checkGsaTemplateVersion = createServerFn({ method: "GET" }).handler
       };
     }
 
-    const { latest, links } = findLatestRefresh(scrape.html);
+    // Decode %20 → space so URL-encoded filenames like "Refresh%2032" don't
+    // get misread as "Refresh 2032". Keep other %-encodings intact for URL reconstruction.
+    const normalized = scrape.html.replace(/%20/gi, " ");
+    const { latest, links } = findLatestRefresh(normalized);
     const detected = latest > 0 ? latest : bundled;
     const upToDate = detected <= bundled;
     return {
