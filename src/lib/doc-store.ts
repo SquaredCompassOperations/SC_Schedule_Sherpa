@@ -17,10 +17,6 @@ export type DocState = {
   na?: boolean;
   epaMechanism?: EpaMechanism;
 };
-
-
-
-
 type Store = Record<string, DocState>;
 
 const defaultStore = (): Store =>
@@ -54,7 +50,6 @@ export function resetDocStore() {
   emit();
 }
 
-
 export function getDocStore(): Store {
   return store;
 }
@@ -72,4 +67,3 @@ export const COMPLIANCE_DOC_LINKS: Record<string, string> = {
   "GSAR 552.216-70": "epa-narrative",
   "I-FSS-969": "epa-narrative",
 };
-
