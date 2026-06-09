@@ -1,15 +1,13 @@
 // Persistent review-gate store. Survives reloads and route changes so users
-// don't lose approval state when bouncing between gates and other modules.
+// don't lose approval state when navigating between gates and other modules.
 import { useSyncExternalStore } from "react";
-import { REVIEW_GATES, DOCUMENT_QUEUE } from "./mock-data";
+import { REVIEW_GATES } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
 
 const PERSIST_KEY = "review-store";
 
 export type GateStatus = "approved" | "in_review" | "changes_requested" | "pending";
-
 export type Comment = { id: string; author: string; text: string; ts: number };
-
 export type Gate = {
   stage: string;
   owner: string;
@@ -21,7 +19,7 @@ export type Gate = {
   deliverables: string[];
 };
 
-const GATE_DELIVERABLES: Record<string, string[]> = {
+export const GATE_DELIVERABLES: Record<string, string[]> = {
   "Intake QA": ["capability-statement"],
   "SIN Mapping Review": ["corporate-experience"],
   "Pricing Review": ["compensation-plan", "uncompensated-overtime"],
@@ -29,7 +27,14 @@ const GATE_DELIVERABLES: Record<string, string[]> = {
   "Authorized Negotiator Certify": [],
 };
 
-const seed = (): { gates: Gate[]; certifyName: string; certifyTitle: string; certifyAck: boolean } => ({
+type State = {
+  gates: Gate[];
+  certifyName: string;
+  certifyTitle: string;
+  certifyAck: boolean;
+};
+
+const seed = (): State => ({
   gates: REVIEW_GATES.map((g) => ({
     stage: g.stage,
     owner: g.owner,
@@ -45,7 +50,7 @@ const seed = (): { gates: Gate[]; certifyName: string; certifyTitle: string; cer
   certifyAck: false,
 });
 
-let state = loadPersisted<ReturnType<typeof seed>>(PERSIST_KEY, seed());
+let state: State = loadPersisted<State>(PERSIST_KEY, seed());
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
@@ -68,7 +73,9 @@ export function patchGate(index: number, patch: Partial<Gate>) {
   emit();
 }
 
-export function setCertify(patch: Partial<{ certifyName: string; certifyTitle: string; certifyAck: boolean }>) {
+export function setCertify(
+  patch: Partial<{ certifyName: string; certifyTitle: string; certifyAck: boolean }>,
+) {
   state = { ...state, ...patch };
   emit();
 }
@@ -77,6 +84,3 @@ export function resetReview() {
   state = seed();
   emit();
 }
-
-// Keep DOCUMENT_QUEUE referenced to avoid unused import in some builds
-export const _docs = DOCUMENT_QUEUE;
