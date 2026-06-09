@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { generatePricingWorkbook } from "@/lib/pricing-workbook.functions";
 import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
-import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
+import { useAutomation, setPricingTemplate, savePricingRows, setPricingKeyTerms } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
 
 export const Route = createFileRoute("/pricing-workbook")({
