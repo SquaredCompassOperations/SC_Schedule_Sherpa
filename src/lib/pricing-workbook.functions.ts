@@ -45,7 +45,7 @@ export const generatePricingWorkbook = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<Output> => {
     try {
       const isProduct = data.template === "fcp-product";
-      const templateFile = isProduct ? "fcp-product-r31.xlsx" : "fcp-services-plus-r31.xlsx";
+      const templateFile = isProduct ? "fcp-product-r32.xlsx" : "fcp-services-plus-r32.xlsx";
       const buf = await loadTemplate(templateFile);
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.load(buf);
