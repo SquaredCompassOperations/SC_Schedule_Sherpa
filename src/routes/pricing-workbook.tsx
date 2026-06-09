@@ -306,35 +306,15 @@ function PricingWorkbookPage() {
                 <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
                   {r.description.length.toLocaleString()} chars
                 </div>
+                <KeywordsBox value={r.keywords} onChange={(v) => update(i, { keywords: v })} />
               </div>
             ))}
           </div>
         )}
       </Panel>
 
-      <Panel
-        title="Pricing Terms — Key Terms"
-        trailing={
-          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-            Seeded from GSA Pricing Terms Attachment (Refresh 32) · editable
-          </span>
-        }
-        className="mb-4"
-      >
-        <p className="text-[11px] text-muted-foreground mb-2 font-mono">
-          Key contract terms attached to the LCATs above (prompt payment, warranty, delivery,
-          EPA, volume discounts, MFC, CSP-1). Edit per LCAT or SIN as needed before submission.
-        </p>
-        <textarea
-          value={automation.pricingKeyTerms}
-          onChange={(e) => setPricingKeyTerms(e.target.value)}
-          rows={10}
-          className="w-full px-3 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed font-mono"
-        />
-        <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
-          {automation.pricingKeyTerms.length.toLocaleString()} chars
-        </div>
-      </Panel>
+
+
 
 
       <div className="flex justify-end gap-2 items-center">
