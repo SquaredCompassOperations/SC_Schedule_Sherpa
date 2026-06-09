@@ -60,6 +60,7 @@ export type AutomationState = {
   pricingTemplate: "fcp-product" | "fcp-services-plus" | null;
   pricingRows: PricingRow[];
   pricingSavedAt: number | null;
+  pricingKeyTerms: string;
 };
 
 const defaultState = (): AutomationState => ({
