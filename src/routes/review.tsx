@@ -1,43 +1,20 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
-import { REVIEW_GATES, DOCUMENT_QUEUE } from "@/lib/mock-data";
+import { DOCUMENT_QUEUE } from "@/lib/mock-data";
 import { useDocStore } from "@/lib/doc-store";
+import {
+  useReview,
+  patchGate,
+  setCertify,
+  type Gate,
+  type Comment,
+} from "@/lib/review-store";
 
 export const Route = createFileRoute("/review")({
   head: () => ({ meta: [{ title: "Review Workflow — ScheduleBuilder" }] }),
   component: ReviewPage,
 });
-
-type GateStatus = "approved" | "in_review" | "changes_requested" | "pending";
-
-type Comment = {
-  id: string;
-  author: string;
-  text: string;
-  ts: number;
-};
-
-type Gate = {
-  stage: string;
-  owner: string;
-  reviewer: string;
-  status: GateStatus;
-  approvedAt: number | null;
-  approvedBy: string | null;
-  comments: Comment[];
-  // names from DOCUMENT_QUEUE that this gate needs final-status on
-  deliverables: string[];
-};
-
-// Deliverable mapping per gate (by document name from DOCUMENT_QUEUE).
-const GATE_DELIVERABLES: Record<string, string[]> = {
-  "Intake QA": ["capability-statement"],
-  "SIN Mapping Review": ["corporate-experience"],
-  "Pricing Review": ["compensation-plan", "uncompensated-overtime"],
-  "Compliance Matrix Sign-off": ["accounting-controls", "epa-narrative"],
-  "Authorized Negotiator Certify": [],
-};
 
 function fmtTime(ts: number) {
   return new Date(ts).toLocaleString(undefined, {
@@ -50,53 +27,31 @@ function fmtTime(ts: number) {
 
 function ReviewPage() {
   const docs = useDocStore();
+  const review = useReview();
+  const gates = review.gates;
+  const { certifyName, certifyTitle, certifyAck } = review;
+  const setCertifyName = (v: string) => setCertify({ certifyName: v });
+  const setCertifyTitle = (v: string) => setCertify({ certifyTitle: v });
+  const setCertifyAck = (v: boolean) => setCertify({ certifyAck: v });
 
-  const [gates, setGates] = useState<Gate[]>(() =>
-    REVIEW_GATES.map((g) => ({
-      stage: g.stage,
-      owner: g.owner,
-      reviewer: g.owner,
-      status: g.status as GateStatus,
-      approvedAt: g.status === "approved" ? Date.now() - 86_400_000 : null,
-      approvedBy: g.status === "approved" ? g.owner : null,
-      comments: [],
-      deliverables: GATE_DELIVERABLES[g.stage] ?? [],
-    })),
-  );
   const [expanded, setExpanded] = useState<number | null>(2);
   const [draftComment, setDraftComment] = useState<Record<number, string>>({});
-  const [certifyName, setCertifyName] = useState("");
-  const [certifyTitle, setCertifyTitle] = useState("Authorized Negotiator");
-  const [certifyAck, setCertifyAck] = useState(false);
 
-  const docByName = useMemo(() => {
-    const m = new Map(DOCUMENT_QUEUE.map((d) => [d.name, d]));
-    return m;
-  }, []);
-
-  // GATE_DELIVERABLES references docs by `kind` (e.g. "compensation-plan"),
-  // but doc-store keys by `name` (e.g. "Professional Compensation Plan").
-  const docByKind = useMemo(() => {
-    const m = new Map(DOCUMENT_QUEUE.map((d) => [d.kind, d]));
-    return m;
-  }, []);
+  const docByName = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.name, d])), []);
+  const docByKind = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.kind, d])), []);
   const statusFor = (kindOrName: string) => {
     const d = docByKind.get(kindOrName);
     const key = d?.name ?? kindOrName;
     return docs[key]?.status ?? "draft";
   };
 
-  const isGateUnblocked = (index: number) => {
-    // sequential: all prior gates must be approved
-    return gates.slice(0, index).every((g) => g.status === "approved");
-  };
+  const isGateUnblocked = (index: number) =>
+    gates.slice(0, index).every((g) => g.status === "approved");
 
   const deliverablesReady = (g: Gate) =>
     g.deliverables.every((name) => statusFor(name) === "final");
 
-  const updateGate = (index: number, patch: Partial<Gate>) => {
-    setGates((prev) => prev.map((g, i) => (i === index ? { ...g, ...patch } : g)));
-  };
+  const updateGate = (index: number, patch: Partial<Gate>) => patchGate(index, patch);
 
   const approve = (index: number) => {
     const g = gates[index];
@@ -118,15 +73,12 @@ function ReviewPage() {
     });
   };
 
-  const requestChanges = (index: number) => {
+  const requestChanges = (index: number) =>
     updateGate(index, { status: "changes_requested", approvedAt: null, approvedBy: null });
-  };
-  const markInReview = (index: number) => {
+  const markInReview = (index: number) =>
     updateGate(index, { status: "in_review", approvedAt: null, approvedBy: null });
-  };
-  const reset = (index: number) => {
+  const reset = (index: number) =>
     updateGate(index, { status: "pending", approvedAt: null, approvedBy: null });
-  };
 
   const addComment = (index: number) => {
     const text = (draftComment[index] ?? "").trim();

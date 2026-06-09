@@ -44,11 +44,19 @@ function DocsPage() {
     mutationFn: async (kind: string) => {
       const extra =
         kind === "epa-narrative" && epaMechanism
-          ? `EPA Mechanism: ${epaMechanismLabel[epaMechanism]}`
+          ? `EPA Mechanism: ${epaMechanismLabel[epaMechanism]}. Source: GSA Pricing Terms Attachment — Refresh 32 (GSAM 538.270-4).`
           : undefined;
-      return fn({ data: { kind, context: buildContext(intake, automation, extra) } });
+      const ctx = buildContext(intake, automation, extra, kind);
+      return fn({ data: { kind, context: ctx } });
     },
-    onSuccess: (res) => update(active.name, { text: res.text, dirty: true }),
+    onSuccess: (res) =>
+      update(active.name, {
+        text: res.text,
+        dirty: true,
+        // Regenerating a previously finalized doc sends it back through review.
+        status: current.status === "final" ? "draft" : current.status,
+        savedAt: null,
+      }),
   });
 
 
@@ -385,12 +393,19 @@ function buildContext(
   intake: ReturnType<typeof useIntake>,
   automation: ReturnType<typeof useAutomation>,
   extra?: string,
+  kind?: string,
 ): string {
   const c = intake.corporate;
   const negotiator = intake.negotiators[0];
-  const pocLine = negotiator?.name
-    ? `${negotiator.name}${negotiator.title ? ", " + negotiator.title : ""}${negotiator.email ? " <" + negotiator.email + ">" : ""}`
-    : "—";
+  // Relevant Project Experience must pull POC strictly from past performance
+  // documents — never from the offeror's authorized negotiator. Omit POC for
+  // this kind so the model is forced to mark it [TBD] unless a PP doc provides it.
+  const pocLine =
+    kind === "relevant-project"
+      ? "[Customer POC must come from the supplied Past Performance document — do not substitute the Offeror's authorized negotiator]"
+      : negotiator?.name
+        ? `${negotiator.name}${negotiator.title ? ", " + negotiator.title : ""}${negotiator.email ? " <" + negotiator.email + ">" : ""}`
+        : "—";
   const sinLine = automation.selectedSins.length
     ? automation.selectedSins.map((s) => `${s.code} ${s.title}`).join("; ")
     : "(none selected)";
