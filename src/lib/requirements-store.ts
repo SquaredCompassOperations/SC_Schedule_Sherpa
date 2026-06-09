@@ -32,7 +32,11 @@ const seed = (): State => ({
   })),
 });
 
-let state: State = loadPersisted<State>(PERSIST_KEY, seed());
+const migrate = (s: State): State => ({
+  rows: s.rows.filter((r) => r.ref !== "FAR 31.201-2"),
+});
+
+let state: State = migrate(loadPersisted<State>(PERSIST_KEY, seed()));
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {

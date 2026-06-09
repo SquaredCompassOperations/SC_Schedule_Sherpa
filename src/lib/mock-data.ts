@@ -22,20 +22,85 @@ export type ModuleStatus = "complete" | "in_progress" | "blocked" | "not_started
 
 export const MODULES = [
   { slug: "/status", label: "Overview", status: "in_progress" as ModuleStatus, group: "Status" },
-  { slug: "/status/milestones", label: "Milestones", status: "in_progress" as ModuleStatus, group: "Status" },
-  { slug: "/status/open-items", label: "Open Items", status: "in_progress" as ModuleStatus, group: "Status" },
-  { slug: "/status/activity", label: "Activity Log", status: "in_progress" as ModuleStatus, group: "Status" },
-  { slug: "/intake", label: "Client Intake", status: "in_progress" as ModuleStatus, group: "Intake" },
-  { slug: "/readiness", label: "Readiness Assessment", status: "in_progress" as ModuleStatus, group: "Intake" },
-  { slug: "/sin", label: "SIN Recommendation", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/market-validation", label: "Market Validation", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/sca", label: "LCAT Confirmation", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/documents", label: "Documentation Generator", status: "in_progress" as ModuleStatus, group: "Engine" },
-  { slug: "/pricing-workbook", label: "Pricing Workbook", status: "in_progress" as ModuleStatus, group: "Engine" },
+  {
+    slug: "/status/milestones",
+    label: "Milestones",
+    status: "in_progress" as ModuleStatus,
+    group: "Status",
+  },
+  {
+    slug: "/status/open-items",
+    label: "Open Items",
+    status: "in_progress" as ModuleStatus,
+    group: "Status",
+  },
+  {
+    slug: "/status/activity",
+    label: "Activity Log",
+    status: "in_progress" as ModuleStatus,
+    group: "Status",
+  },
+  {
+    slug: "/intake",
+    label: "Client Intake",
+    status: "in_progress" as ModuleStatus,
+    group: "Intake",
+  },
+  {
+    slug: "/readiness",
+    label: "Readiness Assessment",
+    status: "in_progress" as ModuleStatus,
+    group: "Intake",
+  },
+  {
+    slug: "/sin",
+    label: "SIN Recommendation",
+    status: "in_progress" as ModuleStatus,
+    group: "Engine",
+  },
+  {
+    slug: "/market-validation",
+    label: "Market Validation",
+    status: "in_progress" as ModuleStatus,
+    group: "Engine",
+  },
+  {
+    slug: "/sca",
+    label: "LCAT Confirmation",
+    status: "in_progress" as ModuleStatus,
+    group: "Engine",
+  },
+  {
+    slug: "/documents",
+    label: "Documentation Generator",
+    status: "in_progress" as ModuleStatus,
+    group: "Engine",
+  },
+  {
+    slug: "/pricing-workbook",
+    label: "Pricing Workbook",
+    status: "in_progress" as ModuleStatus,
+    group: "Engine",
+  },
 
-  { slug: "/review", label: "Review Workflow", status: "not_started" as ModuleStatus, group: "Final" },
-  { slug: "/export", label: "Export eOffer", status: "not_started" as ModuleStatus, group: "Final" },
-  { slug: "/submission", label: "Submission Tracker", status: "not_started" as ModuleStatus, group: "Final" },
+  {
+    slug: "/review",
+    label: "Review Workflow",
+    status: "not_started" as ModuleStatus,
+    group: "Final",
+  },
+  {
+    slug: "/export",
+    label: "Export eOffer",
+    status: "not_started" as ModuleStatus,
+    group: "Final",
+  },
+  {
+    slug: "/submission",
+    label: "Submission Tracker",
+    status: "not_started" as ModuleStatus,
+    group: "Final",
+  },
 ];
 
 export const REGISTRATION_ITEMS = [
@@ -49,27 +114,97 @@ export const REGISTRATION_ITEMS = [
 ];
 
 export const SIN_MATCHES = [
-  { code: "54151S", title: "IT Professional Services", confidence: 98, required: ["Past Performance", "LCAT Matrix", "EPA Narrative"] },
-  { code: "54151HEC", title: "Health IT Services", confidence: 74, required: ["FedRAMP attestation", "Project summaries"] },
-  { code: "541611", title: "Management & Financial Consulting", confidence: 62, required: ["Commercial Sales Practices"] },
-  { code: "518210C", title: "Cloud Computing Services", confidence: 41, required: ["FedRAMP Mod", "SLA narrative"] },
+  {
+    code: "54151S",
+    title: "IT Professional Services",
+    confidence: 98,
+    required: ["Past Performance", "LCAT Matrix", "EPA Narrative"],
+  },
+  {
+    code: "54151HEC",
+    title: "Health IT Services",
+    confidence: 74,
+    required: ["FedRAMP attestation", "Project summaries"],
+  },
+  {
+    code: "541611",
+    title: "Management & Financial Consulting",
+    confidence: 62,
+    required: ["Commercial Sales Practices"],
+  },
+  {
+    code: "518210C",
+    title: "Cloud Computing Services",
+    confidence: 41,
+    required: ["FedRAMP Mod", "SLA narrative"],
+  },
 ];
 
 export const COMPLIANCE_MATRIX = [
-  { ref: "SCP-FSS-001", cat: "technical", req: "Technical Proposal Narrative", source: "DocGen_04.pdf", status: "missing" },
-  { ref: "I-FSS-600", cat: "pricing", req: "Contract Sales Criteria", source: "Sales_Hist.xlsx", status: "valid" },
-  { ref: "FAR 52.222-46", cat: "compliance", req: "Professional Compensation Plan", source: "Comp_Plan.docx", status: "review" },
-  { ref: "FAR 52.237-10", cat: "compliance", req: "Uncompensated Overtime Policy", source: "UOT_Policy.docx", status: "valid" },
-  { ref: "GSAR 552.216-70", cat: "pricing", req: "EPA Methodology", source: "EPA_Narrative.docx", status: "review" },
-  { ref: "FAR 31.201-2", cat: "compliance", req: "Accounting Controls (within Quality Control)", source: "QC_Narrative.docx", status: "missing" },
-  { ref: "I-FSS-639", cat: "pricing", req: "Commercial Sales Practices (CSP-1)", source: "CSP-1.xlsx", status: "review" },
-  { ref: "SCP-FSS-004", cat: "administrative", req: "Letter of Supply (if applicable)", source: "—", status: "na" },
-  { ref: "I-FSS-969", cat: "pricing", req: "EPA Negotiated Escalation", source: "—", status: "missing" },
+  {
+    ref: "SCP-FSS-001",
+    cat: "technical",
+    req: "Technical Proposal Narrative",
+    source: "DocGen_04.pdf",
+    status: "missing",
+  },
+  {
+    ref: "I-FSS-600",
+    cat: "pricing",
+    req: "Contract Sales Criteria",
+    source: "Sales_Hist.xlsx",
+    status: "valid",
+  },
+  {
+    ref: "FAR 52.222-46",
+    cat: "compliance",
+    req: "Professional Compensation Plan",
+    source: "Comp_Plan.docx",
+    status: "review",
+  },
+  {
+    ref: "FAR 52.237-10",
+    cat: "compliance",
+    req: "Uncompensated Overtime Policy",
+    source: "UOT_Policy.docx",
+    status: "valid",
+  },
+  {
+    ref: "GSAR 552.216-70",
+    cat: "pricing",
+    req: "EPA Methodology",
+    source: "EPA_Narrative.docx",
+    status: "review",
+  },
+  {
+    ref: "I-FSS-639",
+    cat: "pricing",
+    req: "Commercial Sales Practices (CSP-1)",
+    source: "CSP-1.xlsx",
+    status: "review",
+  },
+  {
+    ref: "SCP-FSS-004",
+    cat: "administrative",
+    req: "Letter of Supply (if applicable)",
+    source: "—",
+    status: "na",
+  },
+  {
+    ref: "I-FSS-969",
+    cat: "pricing",
+    req: "EPA Negotiated Escalation",
+    source: "—",
+    status: "missing",
+  },
 ];
 
-
 export const DOCUMENT_QUEUE = [
-  { name: "Technical Proposal: Corporate Experience", kind: "corporate-experience", status: "draft" },
+  {
+    name: "Technical Proposal: Corporate Experience",
+    kind: "corporate-experience",
+    status: "draft",
+  },
   { name: "Technical Proposal: Quality Control", kind: "quality-control", status: "draft" },
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
@@ -85,13 +220,14 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "Minimum two (2) years of corporate experience in the products/services under this Schedule",
       "Organization's employee count, field experience, and resources to fulfill requirements",
       "Brief history of activities developing relevant expertise and capabilities",
+      "Organizational and accounting controls as part of the Corporate Experience narrative",
       "Description of in-house resources or ability to acquire personnel/products proposed",
       "How the Offeror intends to market proposed products/services to Federal clients",
       "Discussion of intended use of subcontractors",
     ],
   },
   "quality-control": {
-    source: "GSA MAS Solicitation — Technical Proposal: Quality Control (incl. Accounting Controls)",
+    source: "GSA MAS Solicitation — Technical Proposal: Quality Control",
     items: [
       "Internal review procedures that facilitate high-quality standards",
       "Individuals responsible for ensuring quality control (named roles)",
@@ -99,8 +235,6 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
       "How potential problem areas and solutions are handled",
       "Procedures for ensuring quality when meeting urgent requirements",
       "Managing QC across multiple simultaneous projects for multiple agencies",
-      "Accounting controls demonstrating segregation of direct/indirect costs (FAR 31.201-2)",
-      "Auditable cost-tracking process consistent with FAR Part 31 and DCAA expectations",
     ],
   },
   "relevant-project": {
@@ -119,7 +253,8 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
     ],
   },
   "startup-springboard": {
-    source: "GSA MAS Solicitation — Startup Springboard (Substitution for Relevant Project Experience)",
+    source:
+      "GSA MAS Solicitation — Startup Springboard (Substitution for Relevant Project Experience)",
     items: [
       "Substitution used only when relevant project experience does not exist",
       "Clearly identify predecessor company or key personnel performing major work",
@@ -139,14 +274,55 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
   },
 };
 
-
 export const LABOR_CATEGORIES = [
-  { code: "LCAT-01", title: "Senior Systems Architect", education: "Bachelors", years: 10, commercial: 215.0, gsa: 185.0 },
-  { code: "LCAT-02", title: "Project Manager (PMP)", education: "Masters", years: 12, commercial: 225.0, gsa: 194.2 },
-  { code: "LCAT-03", title: "Cybersecurity Specialist III", education: "Bachelors", years: 7, commercial: 188.5, gsa: 162.5 },
-  { code: "LCAT-04", title: "Senior Data Engineer", education: "Bachelors", years: 8, commercial: 198.0, gsa: 170.4 },
-  { code: "LCAT-05", title: "Technical Writer", education: "Bachelors", years: 4, commercial: 112.0, gsa: 95.75 },
-  { code: "LCAT-06", title: "Junior Analyst", education: "Bachelors", years: 2, commercial: 92.0, gsa: 78.2 },
+  {
+    code: "LCAT-01",
+    title: "Senior Systems Architect",
+    education: "Bachelors",
+    years: 10,
+    commercial: 215.0,
+    gsa: 185.0,
+  },
+  {
+    code: "LCAT-02",
+    title: "Project Manager (PMP)",
+    education: "Masters",
+    years: 12,
+    commercial: 225.0,
+    gsa: 194.2,
+  },
+  {
+    code: "LCAT-03",
+    title: "Cybersecurity Specialist III",
+    education: "Bachelors",
+    years: 7,
+    commercial: 188.5,
+    gsa: 162.5,
+  },
+  {
+    code: "LCAT-04",
+    title: "Senior Data Engineer",
+    education: "Bachelors",
+    years: 8,
+    commercial: 198.0,
+    gsa: 170.4,
+  },
+  {
+    code: "LCAT-05",
+    title: "Technical Writer",
+    education: "Bachelors",
+    years: 4,
+    commercial: 112.0,
+    gsa: 95.75,
+  },
+  {
+    code: "LCAT-06",
+    title: "Junior Analyst",
+    education: "Bachelors",
+    years: 2,
+    commercial: 92.0,
+    gsa: 78.2,
+  },
 ];
 
 export const REVIEW_GATES = [
