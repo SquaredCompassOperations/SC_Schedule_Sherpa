@@ -28,11 +28,13 @@ const REQUIRED_TEMPLATES_URL =
 const INTERACT_URL = "https://buy.gsa.gov/interact/community/6/activity-feed";
 const INTERACT_KEYWORDS = ["New Offer Checklist", "Pricing Terms", "Pricing File", "Refresh"];
 
+// Note: HTML is normalized (%20 → space) before regex matching to prevent
+// "Refresh%2032" being misread as "Refresh 2032". Refresh numbers are 1-2 digits.
 const TRACKED_TEMPLATES: Array<{ label: string; pattern: RegExp }> = [
-  { label: "Pricing Terms", pattern: /Pricing[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "FCP Product File", pattern: /FCP[^"'<>]*Product[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "FCP Services Plus File", pattern: /FCP[^"'<>]*Services[^"'<>]*Plus[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
-  { label: "New Offer Checklist", pattern: /New[%\s_-]*Offer[%\s_-]*Checklist[^"'<>]*Refresh[%\s_-]*(\d+)[^"'<>]*\.xlsx/gi },
+  { label: "Pricing Terms", pattern: /Pricing[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "FCP Product File", pattern: /FCP[^"'<>]*Product[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "FCP Services Plus File", pattern: /FCP[^"'<>]*Services[^"'<>]*Plus[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
+  { label: "New Offer Checklist", pattern: /New[\s_-]+Offer[\s_-]+Checklist[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
 ];
 
 async function scrapeRequiredTemplates(): Promise<{
