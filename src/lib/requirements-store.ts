@@ -32,9 +32,16 @@ const seed = (): State => ({
   })),
 });
 
-const migrate = (s: State): State => ({
-  rows: s.rows.filter((r) => r.ref !== "FAR 31.201-2"),
-});
+const RETIRED_REFS = new Set(["FAR 31.201-2", "GSAR 552.216-70", "I-FSS-969"]);
+const migrate = (s: State): State => {
+  const rows = s.rows.filter((r) => !RETIRED_REFS.has(r.ref));
+  // Ensure current EPA clause is present if any EPA row was removed
+  if (!rows.some((r) => r.ref === "GSAR 552.238-120")) {
+    const seeded = seed().rows.find((r) => r.ref === "GSAR 552.238-120");
+    if (seeded) rows.push(seeded);
+  }
+  return { rows };
+};
 
 let state: State = migrate(loadPersisted<State>(PERSIST_KEY, seed()));
 

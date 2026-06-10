@@ -170,9 +170,9 @@ export const COMPLIANCE_MATRIX = [
     status: "valid",
   },
   {
-    ref: "GSAR 552.216-70",
+    ref: "GSAR 552.238-120",
     cat: "pricing",
-    req: "EPA Methodology",
+    req: "EPA Methodology (GSAM 538.270-4)",
     source: "EPA_Narrative.docx",
     status: "review",
   },
@@ -189,13 +189,6 @@ export const COMPLIANCE_MATRIX = [
     req: "Letter of Supply (if applicable)",
     source: "—",
     status: "na",
-  },
-  {
-    ref: "I-FSS-969",
-    cat: "pricing",
-    req: "EPA Negotiated Escalation",
-    source: "—",
-    status: "missing",
   },
 ];
 
@@ -264,12 +257,12 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
     ],
   },
   "epa-narrative": {
-    source: "GSA MAS Solicitation — EPA Methodology (GSAR 552.216-70 / I-FSS-969)",
+    source: "GSA Pricing Terms Attachment — EPA (GSAM 538.270-4 / GSAR 552.238-120)",
     items: [
       "Identify the elected EPA mechanism (Commercial Price List, Market Indicator, or Fixed Ceiling)",
       "Describe the basis for adjustment and any caps (e.g., 10% per period, 4% annual)",
       "State the frequency and supporting documentation submitted with each request",
-      "Comply with GSAR 552.216-70 / I-FSS-969 escalation limitations",
+      "Cite GSAM 538.270-4 subsection and align with GSAR 552.238-120 (MAS EPA clause)",
     ],
   },
 };
