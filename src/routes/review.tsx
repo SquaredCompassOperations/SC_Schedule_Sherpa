@@ -226,6 +226,61 @@ function ReviewPage() {
                         </div>
                         <ul className="divide-y divide-border">
                           {g.deliverables.map((name) => {
+                            if (name === "pricing-workbook") {
+                              const st = statusFor(name);
+                              return (
+                                <li key={name} className="px-3 py-2 flex items-center gap-3 text-xs">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-foreground truncate">Pricing Workbook</div>
+                                    <div className="text-[10px] font-mono text-muted-foreground">
+                                      pricing-workbook · all areas filled
+                                    </div>
+                                  </div>
+                                  <StatusPill status={st} />
+                                  <Link
+                                    to="/pricing-workbook"
+                                    className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:bg-muted"
+                                  >
+                                    Open
+                                  </Link>
+                                </li>
+                              );
+                            }
+                            if (name.includes("|")) {
+                              const alts = name.split("|");
+                              const anyFinal = alts.some((a) => statusFor(a) === "final");
+                              return (
+                                <li key={name} className="px-3 py-2 text-xs">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex-1 text-[10px] font-mono uppercase text-muted-foreground">
+                                      One of the following (either satisfies this requirement)
+                                    </div>
+                                    <StatusPill status={anyFinal ? "final" : "draft"} />
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {alts.map((alt) => {
+                                      const d = docByKind.get(alt) ?? docByName.get(alt);
+                                      const st = statusFor(alt);
+                                      return (
+                                        <li key={alt} className="flex items-center gap-3 pl-3 border-l border-dashed border-border">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-bold text-foreground truncate">{d?.name ?? alt}</div>
+                                            <div className="text-[10px] font-mono text-muted-foreground">{alt}</div>
+                                          </div>
+                                          <StatusPill status={st} />
+                                          <Link
+                                            to="/documents"
+                                            className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:bg-muted"
+                                          >
+                                            Open
+                                          </Link>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </li>
+                              );
+                            }
                             const d = docByKind.get(name) ?? docByName.get(name);
                             const st = statusFor(name);
                             return (
