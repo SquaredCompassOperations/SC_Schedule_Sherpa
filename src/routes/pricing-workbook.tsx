@@ -430,7 +430,15 @@ function PricingWorkbookPage() {
   );
 }
 
-function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function KeywordsBox({
+  value,
+  onChange,
+  onSuggest,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSuggest?: () => void;
+}) {
   const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
   const count = parts.length;
   const overLimit = parts.filter((p) => p.length > 100);
@@ -441,8 +449,19 @@ function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string)
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           Catalog Keywords (up to 5, comma-separated, ≤100 chars each)
         </div>
-        <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
-          {count}/5
+        <div className="flex items-center gap-2">
+          {onSuggest && (
+            <button
+              type="button"
+              onClick={onSuggest}
+              className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border border-border rounded-sm hover:bg-muted"
+            >
+              Suggest from description
+            </button>
+          )}
+          <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
+            {count}/5
+          </div>
         </div>
       </div>
       <input
