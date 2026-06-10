@@ -170,9 +170,9 @@ export const COMPLIANCE_MATRIX = [
     status: "valid",
   },
   {
-    ref: "GSAR 552.216-70",
+    ref: "GSAR 552.238-120",
     cat: "pricing",
-    req: "EPA Methodology",
+    req: "EPA Methodology (GSAM 538.270-4)",
     source: "EPA_Narrative.docx",
     status: "review",
   },
@@ -189,13 +189,6 @@ export const COMPLIANCE_MATRIX = [
     req: "Letter of Supply (if applicable)",
     source: "—",
     status: "na",
-  },
-  {
-    ref: "I-FSS-969",
-    cat: "pricing",
-    req: "EPA Negotiated Escalation",
-    source: "—",
-    status: "missing",
   },
 ];
 
