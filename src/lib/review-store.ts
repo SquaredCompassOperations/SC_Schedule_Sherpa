@@ -19,11 +19,23 @@ export type Gate = {
   deliverables: string[];
 };
 
+// Deliverable keys are either DOCUMENT_QUEUE `kind` values, the synthetic
+// "pricing-workbook" key (status derived from automation-store), or a pipe-
+// separated alternates expression ("a|b") meaning either suffices.
 export const GATE_DELIVERABLES: Record<string, string[]> = {
   "Intake QA": ["capability-statement"],
-  "SIN Mapping Review": ["corporate-experience"],
-  "Pricing Review": ["compensation-plan", "uncompensated-overtime"],
-  "Compliance Matrix Sign-off": ["quality-control", "epa-narrative"],
+  "SIN Mapping Review": [],
+  "Pricing Review": [
+    "epa-narrative",
+    "compensation-plan",
+    "uncompensated-overtime",
+    "pricing-workbook",
+  ],
+  "Compliance Matrix Sign-off": [
+    "corporate-experience",
+    "quality-control",
+    "relevant-project|startup-springboard",
+  ],
   "Authorized Negotiator Certify": [],
 };
 
