@@ -36,6 +36,58 @@ function emptyRow(sin = ""): Row {
   };
 }
 
+const STOPWORDS = new Set([
+  "the","a","an","and","or","of","for","to","in","on","with","by","at","as","is","are","be","been",
+  "this","that","these","those","from","into","under","over","within","across","per","using","use",
+  "their","they","them","its","it","also","may","such","including","other","than","upon","via","each",
+  "any","all","not","but","if","when","while","will","shall","must","can","should","would","could",
+  "has","have","had","do","does","done","being","etc","e.g","i.e","level","levels","ensure","ensures",
+  "provide","provides","provided","perform","performs","performed","performing","support","supports",
+  "supported","supporting","work","works","working","worked","candidate","candidates","duties","duty",
+  "responsibilities","responsibility","experience","required","requires","requirement","requirements",
+  "year","years","minimum","preferred","plus","including","includes","included","tasks","task",
+]);
+
+function deriveKeywords(description: string): string {
+  if (!description || description.trim().length < 30) return "";
+  // Prefer multi-word "Capitalized Phrases" first (proper nouns / domain terms).
+  const phraseMatches = Array.from(
+    description.matchAll(/\b([A-Z][a-zA-Z0-9]+(?:[ -][A-Z][a-zA-Z0-9]+){0,3})\b/g),
+  ).map((m) => m[1].trim());
+  const phraseFreq = new Map<string, number>();
+  for (const p of phraseMatches) {
+    if (p.length < 3 || p.length > 60) continue;
+    if (STOPWORDS.has(p.toLowerCase())) continue;
+    phraseFreq.set(p, (phraseFreq.get(p) ?? 0) + 1);
+  }
+  const phrases = Array.from(phraseFreq.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([p]) => p);
+
+  // Fall back to frequent single words if not enough phrases.
+  const wordFreq = new Map<string, number>();
+  for (const raw of description.toLowerCase().split(/[^a-z0-9-]+/)) {
+    const w = raw.trim();
+    if (w.length < 4 || STOPWORDS.has(w)) continue;
+    wordFreq.set(w, (wordFreq.get(w) ?? 0) + 1);
+  }
+  const words = Array.from(wordFreq.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([w]) => w);
+
+  const picked: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of [...phrases, ...words]) {
+    const norm = candidate.toLowerCase();
+    if (seen.has(norm)) continue;
+    if (candidate.length > 100) continue;
+    seen.add(norm);
+    picked.push(candidate);
+    if (picked.length >= 5) break;
+  }
+  return picked.join(", ");
+}
+
 function PricingWorkbookPage() {
   const genFn = useServerFn(generatePricingWorkbook);
   const versionFn = useServerFn(checkGsaTemplateVersion);
