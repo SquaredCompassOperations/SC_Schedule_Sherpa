@@ -62,7 +62,15 @@ const seed = (): State => ({
   certifyAck: false,
 });
 
-let state: State = loadPersisted<State>(PERSIST_KEY, seed());
+const migrate = (s: State): State => ({
+  ...s,
+  gates: s.gates.map((g) => ({
+    ...g,
+    deliverables: GATE_DELIVERABLES[g.stage] ?? g.deliverables ?? [],
+  })),
+});
+
+let state: State = migrate(loadPersisted<State>(PERSIST_KEY, seed()));
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
