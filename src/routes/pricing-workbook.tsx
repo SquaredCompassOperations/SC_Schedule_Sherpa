@@ -369,7 +369,15 @@ function PricingWorkbookPage() {
                 </div>
                 <textarea
                   value={r.description}
-                  onChange={(e) => update(i, { description: e.target.value })}
+                  onChange={(e) => {
+                    const description = e.target.value;
+                    const patch: Partial<Row> = { description };
+                    // Auto-fill keywords from description if user hasn't set any yet.
+                    if (!r.keywords.trim()) {
+                      patch.keywords = deriveKeywords(description);
+                    }
+                    update(i, patch);
+                  }}
                   rows={4}
                   placeholder="Describe duties, deliverables, supervision level, and SIN alignment for this labor category."
                   className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
@@ -377,7 +385,16 @@ function PricingWorkbookPage() {
                 <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
                   {r.description.length.toLocaleString()} chars
                 </div>
-                <KeywordsBox value={r.keywords} onChange={(v) => update(i, { keywords: v })} />
+                <KeywordsBox
+                  value={r.keywords}
+                  onChange={(v) => update(i, { keywords: v })}
+                  onSuggest={
+                    r.description.trim().length >= 30
+                      ? () => update(i, { keywords: deriveKeywords(r.description) })
+                      : undefined
+                  }
+                />
+
               </div>
             ))}
           </div>
