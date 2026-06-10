@@ -29,6 +29,7 @@ function fmtTime(ts: number) {
 function ReviewPage() {
   const docs = useDocStore();
   const review = useReview();
+  const automation = useAutomation();
   const gates = review.gates;
   const { certifyName, certifyTitle, certifyAck } = review;
   const setCertifyName = (v: string) => setCertify({ certifyName: v });
@@ -40,17 +41,41 @@ function ReviewPage() {
 
   const docByName = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.name, d])), []);
   const docByKind = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.kind, d])), []);
-  const statusFor = (kindOrName: string) => {
+
+  const pricingWorkbookStatus = (): "final" | "review" | "draft" => {
+    const rows = automation.pricingRows;
+    if (!rows || rows.length === 0) return "draft";
+    const allComplete = rows.every(
+      (r) =>
+        r.sin.trim() &&
+        r.title.trim() &&
+        r.price.trim() &&
+        r.description.trim() &&
+        r.minimumEducation.trim() &&
+        r.minimumYearsExperience.trim() &&
+        r.unitOfMeasure.trim(),
+    );
+    if (!allComplete) return "draft";
+    return automation.pricingSavedAt ? "final" : "review";
+  };
+
+  const statusFor = (kindOrName: string): "final" | "review" | "draft" | "missing" | "na" => {
+    if (kindOrName === "pricing-workbook") return pricingWorkbookStatus();
     const d = docByKind.get(kindOrName);
     const key = d?.name ?? kindOrName;
-    return docs[key]?.status ?? "draft";
+    return (docs[key]?.status as "final" | "review" | "draft") ?? "draft";
   };
 
   const isGateUnblocked = (index: number) =>
     gates.slice(0, index).every((g) => g.status === "approved");
 
   const deliverablesReady = (g: Gate) =>
-    g.deliverables.every((name) => statusFor(name) === "final");
+    g.deliverables.every((name) => {
+      if (name.includes("|")) {
+        return name.split("|").some((alt) => statusFor(alt) === "final");
+      }
+      return statusFor(name) === "final";
+    });
 
   const updateGate = (index: number, patch: Partial<Gate>) => patchGate(index, patch);
 
