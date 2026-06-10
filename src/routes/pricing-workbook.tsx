@@ -102,13 +102,32 @@ function PricingWorkbookPage() {
     if (automation.pricingRows && automation.pricingRows.length > 0) {
       return automation.pricingRows.map((r) => ({ ...emptyRow(r.sin), ...r, keywords: r.keywords ?? "" }));
     }
-    // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
+    // Prefer the uploaded Commercial Price List as the basis for line items.
+    if (automation.priceListLcats && automation.priceListLcats.length > 0) {
+      // Build a quick lookup of any matching SIN-mapping LCAT to inherit descriptions.
+      const descBy = new Map(
+        automation.selectedLcats.map((l) => [l.title.toLowerCase(), l.rationale]),
+      );
+      return automation.priceListLcats.map((p) => {
+        const description = descBy.get(p.title.toLowerCase()) ?? "";
+        return {
+          ...emptyRow(p.sin || firstSin),
+          title: p.title,
+          description,
+          keywords: deriveKeywords(description),
+          unitOfMeasure: p.unit || "Hour",
+          price: (p.rate || "").replace(/[$,]/g, "").trim(),
+        };
+      });
+    }
+    // Fall back to selected LCATs from SIN mapping
     if (automation.selectedLcats.length > 0) {
       return automation.selectedLcats.map((l) => ({
         ...emptyRow(firstSin),
         title: l.title,
         description: l.rationale,
+        keywords: deriveKeywords(l.rationale),
       }));
     }
     return [emptyRow(firstSin)];
