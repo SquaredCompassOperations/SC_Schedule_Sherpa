@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { DOCUMENT_QUEUE } from "@/lib/mock-data";
 import { useDocStore } from "@/lib/doc-store";
+import { useAutomation } from "@/lib/automation-store";
 import {
   useReview,
   patchGate,
