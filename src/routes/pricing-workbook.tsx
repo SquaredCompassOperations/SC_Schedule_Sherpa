@@ -36,6 +36,58 @@ function emptyRow(sin = ""): Row {
   };
 }
 
+const STOPWORDS = new Set([
+  "the","a","an","and","or","of","for","to","in","on","with","by","at","as","is","are","be","been",
+  "this","that","these","those","from","into","under","over","within","across","per","using","use",
+  "their","they","them","its","it","also","may","such","including","other","than","upon","via","each",
+  "any","all","not","but","if","when","while","will","shall","must","can","should","would","could",
+  "has","have","had","do","does","done","being","etc","e.g","i.e","level","levels","ensure","ensures",
+  "provide","provides","provided","perform","performs","performed","performing","support","supports",
+  "supported","supporting","work","works","working","worked","candidate","candidates","duties","duty",
+  "responsibilities","responsibility","experience","required","requires","requirement","requirements",
+  "year","years","minimum","preferred","plus","including","includes","included","tasks","task",
+]);
+
+function deriveKeywords(description: string): string {
+  if (!description || description.trim().length < 30) return "";
+  // Prefer multi-word "Capitalized Phrases" first (proper nouns / domain terms).
+  const phraseMatches = Array.from(
+    description.matchAll(/\b([A-Z][a-zA-Z0-9]+(?:[ -][A-Z][a-zA-Z0-9]+){0,3})\b/g),
+  ).map((m) => m[1].trim());
+  const phraseFreq = new Map<string, number>();
+  for (const p of phraseMatches) {
+    if (p.length < 3 || p.length > 60) continue;
+    if (STOPWORDS.has(p.toLowerCase())) continue;
+    phraseFreq.set(p, (phraseFreq.get(p) ?? 0) + 1);
+  }
+  const phrases = Array.from(phraseFreq.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([p]) => p);
+
+  // Fall back to frequent single words if not enough phrases.
+  const wordFreq = new Map<string, number>();
+  for (const raw of description.toLowerCase().split(/[^a-z0-9-]+/)) {
+    const w = raw.trim();
+    if (w.length < 4 || STOPWORDS.has(w)) continue;
+    wordFreq.set(w, (wordFreq.get(w) ?? 0) + 1);
+  }
+  const words = Array.from(wordFreq.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([w]) => w);
+
+  const picked: string[] = [];
+  const seen = new Set<string>();
+  for (const candidate of [...phrases, ...words]) {
+    const norm = candidate.toLowerCase();
+    if (seen.has(norm)) continue;
+    if (candidate.length > 100) continue;
+    seen.add(norm);
+    picked.push(candidate);
+    if (picked.length >= 5) break;
+  }
+  return picked.join(", ");
+}
+
 function PricingWorkbookPage() {
   const genFn = useServerFn(generatePricingWorkbook);
   const versionFn = useServerFn(checkGsaTemplateVersion);
@@ -50,13 +102,32 @@ function PricingWorkbookPage() {
     if (automation.pricingRows && automation.pricingRows.length > 0) {
       return automation.pricingRows.map((r) => ({ ...emptyRow(r.sin), ...r, keywords: r.keywords ?? "" }));
     }
-    // otherwise seed from selected LCATs + first SIN
     const firstSin = automation.selectedSins[0]?.code || "";
+    // Prefer the uploaded Commercial Price List as the basis for line items.
+    if (automation.priceListLcats && automation.priceListLcats.length > 0) {
+      // Build a quick lookup of any matching SIN-mapping LCAT to inherit descriptions.
+      const descBy = new Map(
+        automation.selectedLcats.map((l) => [l.title.toLowerCase(), l.rationale]),
+      );
+      return automation.priceListLcats.map((p) => {
+        const description = descBy.get(p.title.toLowerCase()) ?? "";
+        return {
+          ...emptyRow(p.sin || firstSin),
+          title: p.title,
+          description,
+          keywords: deriveKeywords(description),
+          unitOfMeasure: p.unit || "Hour",
+          price: (p.rate || "").replace(/[$,]/g, "").trim(),
+        };
+      });
+    }
+    // Fall back to selected LCATs from SIN mapping
     if (automation.selectedLcats.length > 0) {
       return automation.selectedLcats.map((l) => ({
         ...emptyRow(firstSin),
         title: l.title,
         description: l.rationale,
+        keywords: deriveKeywords(l.rationale),
       }));
     }
     return [emptyRow(firstSin)];
@@ -298,7 +369,15 @@ function PricingWorkbookPage() {
                 </div>
                 <textarea
                   value={r.description}
-                  onChange={(e) => update(i, { description: e.target.value })}
+                  onChange={(e) => {
+                    const description = e.target.value;
+                    const patch: Partial<Row> = { description };
+                    // Auto-fill keywords from description if user hasn't set any yet.
+                    if (!r.keywords.trim()) {
+                      patch.keywords = deriveKeywords(description);
+                    }
+                    update(i, patch);
+                  }}
                   rows={4}
                   placeholder="Describe duties, deliverables, supervision level, and SIN alignment for this labor category."
                   className="w-full px-2 py-2 text-xs border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed"
@@ -306,7 +385,16 @@ function PricingWorkbookPage() {
                 <div className="mt-1 text-right text-[10px] font-mono text-muted-foreground">
                   {r.description.length.toLocaleString()} chars
                 </div>
-                <KeywordsBox value={r.keywords} onChange={(v) => update(i, { keywords: v })} />
+                <KeywordsBox
+                  value={r.keywords}
+                  onChange={(v) => update(i, { keywords: v })}
+                  onSuggest={
+                    r.description.trim().length >= 30
+                      ? () => update(i, { keywords: deriveKeywords(r.description) })
+                      : undefined
+                  }
+                />
+
               </div>
             ))}
           </div>
@@ -342,7 +430,15 @@ function PricingWorkbookPage() {
   );
 }
 
-function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function KeywordsBox({
+  value,
+  onChange,
+  onSuggest,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onSuggest?: () => void;
+}) {
   const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
   const count = parts.length;
   const overLimit = parts.filter((p) => p.length > 100);
@@ -353,8 +449,19 @@ function KeywordsBox({ value, onChange }: { value: string; onChange: (v: string)
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           Catalog Keywords (up to 5, comma-separated, ≤100 chars each)
         </div>
-        <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
-          {count}/5
+        <div className="flex items-center gap-2">
+          {onSuggest && (
+            <button
+              type="button"
+              onClick={onSuggest}
+              className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 border border-border rounded-sm hover:bg-muted"
+            >
+              Suggest from description
+            </button>
+          )}
+          <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
+            {count}/5
+          </div>
         </div>
       </div>
       <input

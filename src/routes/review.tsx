@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { DOCUMENT_QUEUE } from "@/lib/mock-data";
 import { useDocStore } from "@/lib/doc-store";
+import { useAutomation } from "@/lib/automation-store";
 import {
   useReview,
   patchGate,
@@ -28,6 +29,7 @@ function fmtTime(ts: number) {
 function ReviewPage() {
   const docs = useDocStore();
   const review = useReview();
+  const automation = useAutomation();
   const gates = review.gates;
   const { certifyName, certifyTitle, certifyAck } = review;
   const setCertifyName = (v: string) => setCertify({ certifyName: v });
@@ -39,17 +41,41 @@ function ReviewPage() {
 
   const docByName = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.name, d])), []);
   const docByKind = useMemo(() => new Map(DOCUMENT_QUEUE.map((d) => [d.kind, d])), []);
-  const statusFor = (kindOrName: string) => {
+
+  const pricingWorkbookStatus = (): "final" | "review" | "draft" => {
+    const rows = automation.pricingRows;
+    if (!rows || rows.length === 0) return "draft";
+    const allComplete = rows.every(
+      (r) =>
+        r.sin.trim() &&
+        r.title.trim() &&
+        r.price.trim() &&
+        r.description.trim() &&
+        r.minimumEducation.trim() &&
+        r.minimumYearsExperience.trim() &&
+        r.unitOfMeasure.trim(),
+    );
+    if (!allComplete) return "draft";
+    return automation.pricingSavedAt ? "final" : "review";
+  };
+
+  const statusFor = (kindOrName: string): "final" | "review" | "draft" | "missing" | "na" => {
+    if (kindOrName === "pricing-workbook") return pricingWorkbookStatus();
     const d = docByKind.get(kindOrName);
     const key = d?.name ?? kindOrName;
-    return docs[key]?.status ?? "draft";
+    return (docs[key]?.status as "final" | "review" | "draft") ?? "draft";
   };
 
   const isGateUnblocked = (index: number) =>
     gates.slice(0, index).every((g) => g.status === "approved");
 
   const deliverablesReady = (g: Gate) =>
-    g.deliverables.every((name) => statusFor(name) === "final");
+    g.deliverables.every((name) => {
+      if (name.includes("|")) {
+        return name.split("|").some((alt) => statusFor(alt) === "final");
+      }
+      return statusFor(name) === "final";
+    });
 
   const updateGate = (index: number, patch: Partial<Gate>) => patchGate(index, patch);
 
@@ -200,6 +226,61 @@ function ReviewPage() {
                         </div>
                         <ul className="divide-y divide-border">
                           {g.deliverables.map((name) => {
+                            if (name === "pricing-workbook") {
+                              const st = statusFor(name);
+                              return (
+                                <li key={name} className="px-3 py-2 flex items-center gap-3 text-xs">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-bold text-foreground truncate">Pricing Workbook</div>
+                                    <div className="text-[10px] font-mono text-muted-foreground">
+                                      pricing-workbook · all areas filled
+                                    </div>
+                                  </div>
+                                  <StatusPill status={st} />
+                                  <Link
+                                    to="/pricing-workbook"
+                                    className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:bg-muted"
+                                  >
+                                    Open
+                                  </Link>
+                                </li>
+                              );
+                            }
+                            if (name.includes("|")) {
+                              const alts = name.split("|");
+                              const anyFinal = alts.some((a) => statusFor(a) === "final");
+                              return (
+                                <li key={name} className="px-3 py-2 text-xs">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex-1 text-[10px] font-mono uppercase text-muted-foreground">
+                                      One of the following (either satisfies this requirement)
+                                    </div>
+                                    <StatusPill status={anyFinal ? "final" : "draft"} />
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {alts.map((alt) => {
+                                      const d = docByKind.get(alt) ?? docByName.get(alt);
+                                      const st = statusFor(alt);
+                                      return (
+                                        <li key={alt} className="flex items-center gap-3 pl-3 border-l border-dashed border-border">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="font-bold text-foreground truncate">{d?.name ?? alt}</div>
+                                            <div className="text-[10px] font-mono text-muted-foreground">{alt}</div>
+                                          </div>
+                                          <StatusPill status={st} />
+                                          <Link
+                                            to="/documents"
+                                            className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 border border-border rounded-sm hover:bg-muted"
+                                          >
+                                            Open
+                                          </Link>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </li>
+                              );
+                            }
                             const d = docByKind.get(name) ?? docByName.get(name);
                             const st = statusFor(name);
                             return (
