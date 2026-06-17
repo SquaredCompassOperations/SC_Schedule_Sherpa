@@ -84,12 +84,15 @@ function DocsPage() {
   const counts = useMemo(() => {
     let draft = 0, review = 0, final = 0;
     Object.values(store).forEach((s) => {
+      if (s.na) { final++; return; }
       if (s.status === "draft") draft++;
       else if (s.status === "review") review++;
       else final++;
     });
     return { draft, review, final };
   }, [store]);
+
+  const allFinal = counts.final === DOCUMENT_QUEUE.length;
 
   return (
     <>
