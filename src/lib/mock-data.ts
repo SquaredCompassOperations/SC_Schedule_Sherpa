@@ -259,7 +259,7 @@ export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> =
   "epa-narrative": {
     source: "GSA Pricing Terms Attachment — EPA (GSAM 538.270-4 / GSAR 552.238-120)",
     items: [
-      "Identify the elected EPA mechanism (Commercial Price List, Market Indicator, or Fixed Ceiling)",
+      "Identify the elected EPA mechanism in canonical order: (a)(1) fixed escalation rates, (a)(2) market index or other basis, (a)(3) established pricing",
       "Describe the basis for adjustment and any caps (e.g., 10% per period, 4% annual)",
       "State the frequency and supporting documentation submitted with each request",
       "Cite GSAM 538.270-4 subsection and align with GSAR 552.238-120 (MAS EPA clause)",

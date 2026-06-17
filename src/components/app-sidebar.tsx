@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { MODULES } from "@/lib/mock-data";
+import { useResolvedModules } from "@/lib/module-status-store";
 
 const groups = [
   { id: "Status", label: "Status Tracker" },
@@ -17,6 +17,7 @@ function statusDot(status: string) {
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const modules = useResolvedModules();
 
   return (
     <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 h-[calc(100vh-3rem)] sticky top-12">
@@ -26,7 +27,7 @@ export function AppSidebar() {
             <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-3">
               {g.label}
             </div>
-            {MODULES.filter((m) => m.group === g.id).map((m) => {
+            {modules.filter((m) => m.group === g.id).map((m) => {
               const active = pathname === m.slug;
               return (
                 <Link

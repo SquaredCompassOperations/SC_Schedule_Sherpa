@@ -39,11 +39,21 @@ export const GATE_DELIVERABLES: Record<string, string[]> = {
   "Authorized Negotiator Certify": [],
 };
 
+export type DeliverableSignOff = {
+  deliverable: string;
+  signerName: string;
+  signerEmail: string;
+  signerTitle: string;
+  signedAt: number;
+};
+
 type State = {
   gates: Gate[];
   certifyName: string;
   certifyTitle: string;
   certifyAck: boolean;
+  /** Sign-offs collected from Authorized Negotiators per deliverable. */
+  signOffs: DeliverableSignOff[];
 };
 
 const seed = (): State => ({
@@ -60,10 +70,12 @@ const seed = (): State => ({
   certifyName: "",
   certifyTitle: "Authorized Negotiator",
   certifyAck: false,
+  signOffs: [],
 });
 
 const migrate = (s: State): State => ({
   ...s,
+  signOffs: s.signOffs ?? [],
   gates: s.gates.map((g) => ({
     ...g,
     deliverables: GATE_DELIVERABLES[g.stage] ?? g.deliverables ?? [],
@@ -97,6 +109,25 @@ export function setCertify(
   patch: Partial<{ certifyName: string; certifyTitle: string; certifyAck: boolean }>,
 ) {
   state = { ...state, ...patch };
+  emit();
+}
+
+export function addSignOff(s: DeliverableSignOff) {
+  // One sign-off per deliverable+signer pair (replace existing).
+  const filtered = state.signOffs.filter(
+    (x) => !(x.deliverable === s.deliverable && x.signerEmail.toLowerCase() === s.signerEmail.toLowerCase()),
+  );
+  state = { ...state, signOffs: [...filtered, s] };
+  emit();
+}
+
+export function removeSignOff(deliverable: string, signerEmail: string) {
+  state = {
+    ...state,
+    signOffs: state.signOffs.filter(
+      (x) => !(x.deliverable === deliverable && x.signerEmail.toLowerCase() === signerEmail.toLowerCase()),
+    ),
+  };
   emit();
 }
 

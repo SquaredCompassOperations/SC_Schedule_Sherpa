@@ -4,11 +4,22 @@
 import { useSyncExternalStore } from "react";
 import { DOCUMENT_QUEUE } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
+import { pushMessage } from "./messages-store";
 
 const PERSIST_KEY = "doc-store";
 
 export type DocStatus = "draft" | "review" | "final";
-export type EpaMechanism = "commercial-price-list" | "market-indicator" | "fixed-ceiling";
+// GSAM 538.270-4 EPA mechanism keys, in canonical (a)(1) → (a)(3) order.
+export type EpaMechanism = "fixed-escalation" | "market-index" | "established-pricing";
+export type DocSource = "generated" | "client-upload";
+
+export type DocSignOff = {
+  signedBy: string;
+  signerEmail: string;
+  signerTitle: string;
+  signedAt: number;
+};
+
 export type DocState = {
   text: string;
   status: DocStatus;
@@ -16,6 +27,9 @@ export type DocState = {
   dirty: boolean;
   na?: boolean;
   epaMechanism?: EpaMechanism;
+  source?: DocSource;
+  sourceFile?: { filename: string; uploadedAt: number } | null;
+  signOff?: DocSignOff | null;
 };
 type Store = Record<string, DocState>;
 
@@ -23,11 +37,36 @@ const defaultStore = (): Store =>
   Object.fromEntries(
     DOCUMENT_QUEUE.map((d) => [
       d.name,
-      { text: "", status: d.status as DocStatus, savedAt: null, dirty: false },
+      {
+        text: "",
+        status: d.status as DocStatus,
+        savedAt: null,
+        dirty: false,
+        source: "generated" as DocSource,
+        sourceFile: null,
+        signOff: null,
+      },
     ]),
   );
 
-let store: Store = { ...defaultStore(), ...loadPersisted<Store>(PERSIST_KEY, {}) };
+// Migrate legacy EPA mechanism keys → canonical (a)(1)-(a)(3) keys.
+const EPA_LEGACY_MAP: Record<string, EpaMechanism> = {
+  "commercial-price-list": "established-pricing",
+  "market-indicator": "market-index",
+  "fixed-ceiling": "fixed-escalation",
+};
+const migrate = (s: Store): Store => {
+  const next: Store = { ...s };
+  for (const k of Object.keys(next)) {
+    const d = next[k];
+    if (d && d.epaMechanism && EPA_LEGACY_MAP[d.epaMechanism as string]) {
+      next[k] = { ...d, epaMechanism: EPA_LEGACY_MAP[d.epaMechanism as string] };
+    }
+  }
+  return next;
+};
+
+let store: Store = migrate({ ...defaultStore(), ...loadPersisted<Store>(PERSIST_KEY, {}) });
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
@@ -41,7 +80,61 @@ const emit = () => {
 
 export function patchDoc(name: string, patch: Partial<DocState>) {
   if (!store[name]) return;
-  store = { ...store, [name]: { ...store[name], ...patch } };
+  const prev = store[name];
+  store = { ...store, [name]: { ...prev, ...patch } };
+
+  // Notify the client when a doc transitions into "review" (ready for review).
+  if (patch.status === "review" && prev.status !== "review") {
+    pushMessage({
+      kind: "doc-ready",
+      title: `${name} is ready for your review`,
+      body: "Open the Review Workflow to read the draft and sign off when satisfied.",
+      href: "/review",
+    });
+  }
+  emit();
+}
+
+/** Mark a doc as final, sourced from a client intake upload. Used when the
+ *  client supplies the artifact during intake so the generator skips drafting. */
+export function setDocFromUpload(name: string, filename: string) {
+  if (!store[name]) return;
+  store = {
+    ...store,
+    [name]: {
+      ...store[name],
+      status: "final",
+      source: "client-upload",
+      sourceFile: { filename, uploadedAt: Date.now() },
+      savedAt: Date.now(),
+      dirty: false,
+      text: store[name].text || `[Client-supplied document: ${filename}]`,
+    },
+  };
+  emit();
+}
+
+/** Flip a client-upload doc back to draft so the team can regenerate from template. */
+export function regenerateUploadedDoc(name: string) {
+  if (!store[name]) return;
+  store = {
+    ...store,
+    [name]: {
+      ...store[name],
+      status: "draft",
+      source: "generated",
+      text: "",
+      savedAt: null,
+      dirty: false,
+      signOff: null,
+    },
+  };
+  emit();
+}
+
+export function signOffDoc(name: string, signOff: DocSignOff) {
+  if (!store[name]) return;
+  store = { ...store, [name]: { ...store[name], signOff, status: "final" } };
   emit();
 }
 
