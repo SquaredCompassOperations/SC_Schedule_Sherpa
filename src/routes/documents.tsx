@@ -84,12 +84,15 @@ function DocsPage() {
   const counts = useMemo(() => {
     let draft = 0, review = 0, final = 0;
     Object.values(store).forEach((s) => {
+      if (s.na) { final++; return; }
       if (s.status === "draft") draft++;
       else if (s.status === "review") review++;
       else final++;
     });
     return { draft, review, final };
   }, [store]);
+
+  const allFinal = counts.final === DOCUMENT_QUEUE.length;
 
   return (
     <>
@@ -336,8 +339,13 @@ function DocsPage() {
 
         </div>
       </div>
-      <div className="mt-8 flex justify-end border-t border-border pt-4">
-        <SaveAndContinue moduleSlug="/documents" nextHref="/review" />
+      <div className="mt-8 flex flex-col items-end gap-2 border-t border-border pt-4">
+        {!allFinal ? (
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Finalize all {DOCUMENT_QUEUE.length} documents to complete this module ({counts.final}/{DOCUMENT_QUEUE.length} final)
+          </div>
+        ) : null}
+        <SaveAndContinue moduleSlug="/documents" nextHref="/review" disabled={!allFinal} />
       </div>
     </>
   );
