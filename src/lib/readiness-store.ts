@@ -99,16 +99,19 @@ export function patchReadiness(patch: Partial<ReadinessState>) {
 }
 
 export function completeSection(section: ReadinessSection) {
+  if (state.sectionsComplete[section]) return;
   state = {
     ...state,
     sectionsComplete: { ...state.sectionsComplete, [section]: true },
     savedAt: Date.now(),
   };
+  logActivity({ module: "MAS Readiness", action: `completed section "${section}"`, clientVisible: true });
   emit();
 }
 
 export function submitReadiness() {
   state = { ...state, submittedAt: Date.now(), savedAt: Date.now() };
+  logActivity({ module: "MAS Readiness", action: "submitted assessment", clientVisible: true });
   emit();
 }
 
