@@ -336,6 +336,9 @@ function DocsPage() {
 
         </div>
       </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/documents" nextHref="/review" />
+      </div>
     </>
   );
 }
