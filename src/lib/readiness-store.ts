@@ -3,6 +3,7 @@
 // localStorage so the client can complete sections across sessions.
 import { useSyncExternalStore } from "react";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "readiness-assessment";
 
