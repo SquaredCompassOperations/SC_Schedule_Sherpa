@@ -35,9 +35,9 @@ function DocsPage() {
 
   const epaMechanism = current.epaMechanism;
   const epaMechanismLabel: Record<NonNullable<DocState["epaMechanism"]>, string> = {
-    "commercial-price-list": "Commercial Price List (GSAR 552.238-120 Alt I)",
-    "market-indicator": "Market Indicator (Alt II)",
-    "fixed-ceiling": "Fixed Ceiling (Alt III)",
+    "fixed-escalation": "GSAM 538.270-4(a)(1) — Adjustments based on fixed escalation rates",
+    "market-index": "GSAM 538.270-4(a)(2) — Adjustments based on a market index or other basis",
+    "established-pricing": "GSAM 538.270-4(a)(3) — Adjustments based on established pricing (commercial price list, catalog, or standard market pricing)",
   };
 
   const mutation = useMutation({
@@ -225,9 +225,9 @@ function DocsPage() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   {([
-                    { v: "commercial-price-list", label: "Commercial Price List", hint: "GSAR 552.238-120 Alt I" },
-                    { v: "market-indicator", label: "Market Indicator", hint: "Alt II — e.g. BLS ECI" },
-                    { v: "fixed-ceiling", label: "Fixed Ceiling", hint: "Alt III — fixed annual cap" },
+                    { v: "fixed-escalation", label: "Fixed escalation rates", hint: "GSAM 538.270-4(a)(1)" },
+                    { v: "market-index", label: "Market index or other basis", hint: "GSAM 538.270-4(a)(2) — e.g. BLS ECI" },
+                    { v: "established-pricing", label: "Established pricing", hint: "GSAM 538.270-4(a)(3) — commercial price list / catalog" },
                   ] as const).map((opt) => (
                     <label
                       key={opt.v}
