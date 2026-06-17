@@ -1,81 +1,89 @@
-## Status Tracker — Build Plan
+## Overview
 
-A new sidebar section at the top of the workspace plus a separate client-facing portal, gated by login. Team members see full tooling; clients see a clean status-only view of their own offer.
+Ten changes touching the client portal, intake, document generator, review workflow, and activity log. Grouping into 4 work areas to keep edits coherent.
 
-### Sidebar restructure (internal)
-Add a new group **"Status Tracker"** above Intake & Readiness in `app-sidebar.tsx` + `mock-data.ts`:
-1. Overview → `/status` (timeline + stage + composite readiness)
-2. Milestones → `/status/milestones` (key dates: kickoff, SIN lock, doc review, submission)
-3. Open Items → `/status/open-items` (blockers/action items, who-owns-it)
-4. Activity Log → `/status/activity` (append-only event feed)
+Before I start, two clarifying decisions I'd like to lock in (I'll proceed with the defaults shown unless you say otherwise in your approval message):
 
-Reuses existing `useReadinessRollup()` for composite score + per-module breakdown. Pulls intake/automation/doc state from existing stores. No new business logic — it's a view layer on what's already tracked.
+- **Item 1 — MAS Readiness placement:** Default = the client portal landing (`/client`) becomes the MAS Readiness Assessment. After submission, the existing dashboard (timeline + messages + doc status) appears. Alternative: keep it as a separate "Step 0" tile.
+- **Item 8 — Sign-off authorization:** Default = any user listed as an Authorized Negotiator (extracted from SAM) sees Sign-off buttons in the review workflow; we match on the logged-in user's email. Sign-offs are recorded with name + timestamp in the review store and surface in the Activity Log.
 
-### Client-facing portal
-Separate route tree `/client/*` rendered WITHOUT the internal sidebar:
-- `/client` → branded status dashboard (company name, stage, % complete, current focus, next milestone, ETA)
-- `/client/timeline` → read-only milestone view
-- `/client/messages` → activity feed filtered to client-visible items only
+---
 
-Layout uses its own minimal shell (no left sidebar, no "Export eOffer" button, no module navigation). Header shows company name + sign-out.
+## Work Area A — Client portal: MAS Readiness + Document Uploads (Items 1, 2)
 
-### Auth + roles
-**Email/password + Google sign-in** via Lovable Cloud.
-- New `/login` route (email/password form + Google button)
-- New `/signup` route (only team members can self-signup initially; clients are invited by team — for v1 we allow both to self-signup and assign role manually via DB)
-- New tables:
-  - `profiles` (id → auth.users, full_name, company, created_at)
-  - `app_role` enum: `team`, `client`
-  - `user_roles` (user_id, role) — separate table per security rules
-  - `has_role()` security-definer function
-- `/login` redirects:
-  - `team` role → `/` (existing workspace)
-  - `client` role → `/client`
-- Route guards via `_authenticated` pathless layout for `/` (team-only) and `_client` layout for `/client` (client OR team).
-- Sign-out button in `top-bar.tsx`.
+**New: `src/lib/readiness-store.ts`**
+- Persisted assessment state with all fields from the uploaded PDF (Pathways training, UEI, offering description, Category/SIN, Contract Admin contact, TAA, Section 889 use/provide, FASCSA, monitoring narratives, target agencies, price posture, annual sales, feedback request).
+- `status: 'not_started' | 'in_progress' | 'complete'`, `savedAt`, `submittedAt`.
 
-### Tying client → offer
-For v1 a single demo offer exists (the `CLIENT` constant). The client-facing view reads from the same intake-store / readiness rollup. When real multi-tenancy lands later, we'll add an `offers` table with `client_user_id`.
+**Rebuild `src/routes/client.index.tsx`** as a stepped flow:
+1. **MAS Readiness Assessment** — multi-section form mirroring the PDF, with **Save & Continue** per section.
+2. **Corporate Document Upload** — file-uploader for the intake doc checklist (SAM profile, Pathways cert, financials, Pro Comp Plan, Uncomp OT Policy, Price List, Letters of Supply, etc.). Shows the *missing items* list pulled from `intake-store` requirements; each row = required label + upload control + status badge (Missing / Uploaded / Accepted).
+3. **Submit for Intake & Readiness** button — disabled until readiness is `complete` AND every required corporate doc has at least one upload. Submission flips the engagement to "Intake submitted" and writes an activity-log entry.
 
-### Files
+The existing `/client/timeline` and `/client/messages` routes remain; add a tab/segmented control on `/client` for "Assessment", "Documents", "Status".
 
-**Create**
-- `src/routes/_authenticated.tsx` — team-only layout (wraps existing `/`, `/sin`, `/sca`, `/documents`, `/market-validation`, `/pricing-workbook`, `/intake`, `/review`, `/export`, `/readiness`)
-- `src/routes/_client.tsx` — client layout (no sidebar, branded shell)
-- `src/routes/login.tsx`
-- `src/routes/signup.tsx`
-- `src/routes/status.tsx` (layout w/ tabs) + `status.index.tsx`, `status.milestones.tsx`, `status.open-items.tsx`, `status.activity.tsx`
-- `src/routes/_client/index.tsx`, `_client/timeline.tsx`, `_client/messages.tsx`
-- `src/lib/status-data.ts` — derives milestones/open items/activity from existing stores + readiness rollup
-- `src/lib/auth-context.tsx` — auth provider hook (`useAuth()` returning session, role, signOut)
-- Supabase migration: `profiles`, `app_role` enum, `user_roles`, `has_role()`, trigger to auto-create profile on signup, RLS + GRANTs
+---
 
-**Edit**
-- `src/lib/mock-data.ts` — add `Status` group, add `/status` items
-- `src/components/app-sidebar.tsx` — render new group first
-- `src/components/top-bar.tsx` — show signed-in user + sign-out
-- `src/routes/__root.tsx` — wrap with auth provider; `onAuthStateChange` cache invalidation
-- All existing routes move under `_authenticated/` (folder restructure) OR we add the guard at root layout level — I'll add guard at root for simplicity, redirecting unauth users to `/login`, and clients away from team routes
-- `src/start.ts` — confirm `attachSupabaseAuth` is wired
+## Work Area B — SAM extraction + EPA ordering (Items 3, 4)
 
-**Migration**
-```sql
-create type public.app_role as enum ('team', 'client');
-create table public.profiles (id uuid primary key references auth.users(id) on delete cascade, full_name text, company text, created_at timestamptz default now());
-create table public.user_roles (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, role app_role not null, unique(user_id, role));
-create or replace function public.has_role(_user_id uuid, _role app_role) returns boolean language sql stable security definer set search_path = public as $$ select exists(select 1 from public.user_roles where user_id=_user_id and role=_role) $$;
--- GRANTs + RLS + auto-profile trigger included per platform rules
-```
+**Item 3 — Authorized Negotiators from SAM**
+- Update `src/lib/sam-lookup.functions.ts` (and/or `intake-extract.functions.ts`) to parse `Government Business POC` from the SAM profile response and populate an `authorizedNegotiators: Array<{name, title, email, phone, isPrimary}>` field on the intake store.
+- Show negotiators in the intake review UI; the list also feeds Work Area D (sign-off auth).
 
-### Scope notes
-- Existing localStorage stores (intake, automation, doc) stay client-side for v1 — Status Tracker reads them. Server-side persistence per-user is a follow-up.
-- Client role can sign up freely in v1; promotion to `team` requires DB edit (or you tell me to add an admin-invite flow).
-- Auto-confirm email is OFF by default (users verify via email) — say if you want it on for demo speed.
-- Google sign-in enabled via `configure_social_auth`.
+**Item 4 — EPA mechanism ordering**
+- Reorder the EPA narrative prompt + UI checklists in `src/lib/narrative.functions.ts`, `src/lib/mock-data.ts`, and the relevant route(s) to render mechanisms in this exact sequence:
+  1. GSAM 538.270-4(a)(1) — Fixed escalation rates
+  2. GSAM 538.270-4(a)(2) — Market index or other basis
+  3. GSAM 538.270-4(a)(3) — Established pricing (commercial price list/catalog/standard market pricing)
+- Update labels to match the longer descriptions verbatim.
 
-### Out of scope this turn
-- Multi-tenant offers table (single demo client for now)
-- In-app messaging client↔team
-- Email notifications to client on status change
+---
 
-Approve and I'll build it in one pass.
+## Work Area C — Document Generator hand-off (Items 5, 6, 7)
+
+**Item 5 — Intake uploads become "final" generated docs (with regenerate)**
+- In `src/lib/doc-store.ts`, add a `source: 'generated' | 'client-upload'` field and a `sourceFileRef` (asset id from intake upload).
+- When a client uploads a document during intake that maps to a generated artifact (Pro Comp Plan, Uncomp OT Policy, Letters of Supply, etc.), the corresponding doc record is automatically created with `status: 'final'` and `source: 'client-upload'`.
+- Add a **"Regenerate from template"** action on each such doc — flips it back to `status: 'draft'` and runs the existing generation pipeline, preserving the original upload as a previous version.
+
+**Item 6 — Ready-for-review alert**
+- When a generated doc transitions to `status: 'ready_for_review'`, push a message into `src/routes/client.messages.tsx` ("[Doc name] is ready for your review") and surface a toast/banner on `/client` next visit. Hook into the existing doc-store event flow.
+
+**Item 7 — Queue sync**
+- Audit `src/routes/documents.tsx` to ensure all status badges (draft, generating, ready_for_review, final, needs_revision) reflect doc-store state in real time, including counts in any header/rollup. Add a `subscribe` pattern if not present so the queue re-renders on store mutations.
+
+---
+
+## Work Area D — Sign-off, Save & Continue, Activity Log (Items 8, 9, 10)
+
+**Item 8 — Client sign-off in review workflow**
+- Extend `src/lib/review-store.ts`: each gate item gains `signOff: { signedBy, signedAt, role } | null`.
+- In `src/routes/review.tsx`, render a **"Sign off"** button next to each item *only* if the current logged-in user's email is in `intake.authorizedNegotiators` AND the item is in `ready_for_review`. Signed items lock and show signer name + timestamp.
+- A gate is "complete" only when every item is signed off.
+
+**Item 9 — Save & Continue everywhere + green status**
+- Add a shared `<SaveAndContinue />` button component used in: intake, MAS readiness, pricing workbook, SCA, SIN, market validation, financials. On click: persist the module's state, mark its module status `complete`, navigate to the next module in the canonical sequence.
+- The readiness rollup indicator (currently orange when "in progress") switches to green when module `status === 'complete'`. Verify `src/components/readiness-rollup.tsx` and `src/lib/readiness-rollup.ts` map all module statuses correctly.
+
+**Item 10 — Activity log + review workflow sync**
+- Centralize activity events in a new helper `src/lib/activity-log.ts` (or extend existing status-data). Every mutation in doc-store / review-store / intake-store / readiness-store / module stores emits `{actor, action, target, timestamp}`.
+- `src/routes/status.activity.tsx` reads from this single source so updates always appear.
+- Review workflow gates re-derive status from these events so completing a module immediately ticks the gate.
+
+---
+
+## Technical notes
+
+- All new stores use the same persistence pattern as existing `src/lib/*-store.ts` (Zustand + `persist`, per `src/lib/persist.ts`).
+- "Current logged-in user" comes from `src/lib/auth-context.tsx`. For sign-off matching, lowercase + trim emails on both sides.
+- No schema/migration changes — all client-side state. Backend remains unchanged.
+- The MAS Readiness form is long; I'll split it into 4 sections (Basics, Compliance, Market Fit, Commercial Practices) with Save & Continue between sections.
+
+---
+
+## Files touched (approx.)
+
+- New: `src/lib/readiness-store.ts`, `src/lib/activity-log.ts`, `src/components/save-and-continue.tsx`, `src/routes/client.readiness.tsx` (or inline into `client.index.tsx`).
+- Edited: `src/routes/client.tsx`, `src/routes/client.index.tsx`, `src/routes/intake.tsx`, `src/routes/documents.tsx`, `src/routes/review.tsx`, `src/routes/status.activity.tsx`, `src/routes/client.messages.tsx`, `src/lib/doc-store.ts`, `src/lib/review-store.ts`, `src/lib/intake-store.ts`, `src/lib/sam-lookup.functions.ts`, `src/lib/intake-extract.functions.ts`, `src/lib/narrative.functions.ts`, `src/lib/mock-data.ts`, `src/lib/readiness-rollup.ts`, `src/components/readiness-rollup.tsx`, and the pricing/SCA/SIN/market/financials route files to wire Save & Continue.
+
+Approve and I'll implement straight through, or tell me which defaults to flip first.
