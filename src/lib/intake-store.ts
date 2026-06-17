@@ -91,6 +91,8 @@ export type IntakeState = {
   pastPerformance: PastPerformanceEntry[];
   sbaCerts: SbaCert[];
   sbaScannedAt: number | null;
+  /** Client-side submission of intake package (corp docs + readiness). */
+  clientSubmittedAt: number | null;
 };
 
 const emptyAddress = (): Address => ({
