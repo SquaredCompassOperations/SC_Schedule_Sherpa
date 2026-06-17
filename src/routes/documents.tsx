@@ -174,7 +174,7 @@ function DocsPage() {
                 </button>
                 <button
                   onClick={markForReview}
-                  disabled={!current.text || current.status !== "draft" || current.na}
+                  disabled={!current.text || current.status === "review" || current.na}
                   className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted disabled:opacity-40"
                 >
                   Mark for Review
