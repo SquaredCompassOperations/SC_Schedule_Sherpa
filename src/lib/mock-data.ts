@@ -201,9 +201,9 @@ export const DOCUMENT_QUEUE = [
   { name: "Technical Proposal: Quality Control", kind: "quality-control", status: "draft" },
   { name: "Relevant Project Experience", kind: "relevant-project", status: "draft" },
   { name: "Startup Springboard Substitution", kind: "startup-springboard", status: "draft" },
-  { name: "EPA Narrative", kind: "epa-narrative", status: "review" },
-  { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "final" },
-  { name: "Professional Compensation Plan", kind: "compensation-plan", status: "review" },
+  { name: "EPA Narrative", kind: "epa-narrative", status: "draft" },
+  { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "draft" },
+  { name: "Professional Compensation Plan", kind: "compensation-plan", status: "draft" },
 ];
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {
