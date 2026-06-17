@@ -227,6 +227,11 @@ export function setSbaCerts(certs: SbaCert[]) {
   emit();
 }
 
+export function submitClientIntake() {
+  state = { ...state, clientSubmittedAt: Date.now() };
+  emit();
+}
+
 export const REQUIRED_CORPORATE_KEYS: (keyof CorporateInfo)[] = [
   "uei",
   "legalName",
