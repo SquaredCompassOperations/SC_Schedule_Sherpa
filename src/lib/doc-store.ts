@@ -92,6 +92,11 @@ export function patchDoc(name: string, patch: Partial<DocState>) {
       body: "Open the Review Workflow to read the draft and sign off when satisfied.",
       href: "/review",
     });
+    logActivity({ module: "Documentation", action: "ready for review", target: name, clientVisible: true });
+  } else if (patch.status === "final" && prev.status !== "final") {
+    logActivity({ module: "Documentation", action: "marked final", target: name, clientVisible: true });
+  } else if (patch.status === "draft" && prev.status !== "draft") {
+    logActivity({ module: "Documentation", action: "moved back to draft", target: name });
   }
   emit();
 }
