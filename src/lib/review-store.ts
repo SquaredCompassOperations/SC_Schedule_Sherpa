@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { REVIEW_GATES } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "review-store";
 
