@@ -140,6 +140,7 @@ const defaultState = (): IntakeState => ({
   pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
+  clientSubmittedAt: null,
 });
 
 let state: IntakeState = loadPersisted<IntakeState>(PERSIST_KEY, defaultState());
