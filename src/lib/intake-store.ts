@@ -4,6 +4,7 @@
 // until the user explicitly clears it.
 import { useSyncExternalStore } from "react";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "intake-state";
 
