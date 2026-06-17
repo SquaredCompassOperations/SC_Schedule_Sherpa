@@ -125,6 +125,9 @@ function IntakePage() {
           </Panel>
         </div>
       </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/intake" nextHref="/sin" />
+      </div>
     </>
   );
 }
