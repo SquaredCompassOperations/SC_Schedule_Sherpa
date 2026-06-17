@@ -30,6 +30,7 @@ import { Route as StatusOpenItemsRouteImport } from './routes/status.open-items'
 import { Route as StatusMilestonesRouteImport } from './routes/status.milestones'
 import { Route as StatusActivityRouteImport } from './routes/status.activity'
 import { Route as ClientTimelineRouteImport } from './routes/client.timeline'
+import { Route as ClientReviewRouteImport } from './routes/client.review'
 import { Route as ClientReadinessRouteImport } from './routes/client.readiness'
 import { Route as ClientMessagesRouteImport } from './routes/client.messages'
 import { Route as ClientDocumentsRouteImport } from './routes/client.documents'
@@ -139,6 +140,11 @@ const ClientTimelineRoute = ClientTimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => ClientRoute,
 } as any)
+const ClientReviewRoute = ClientReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => ClientRoute,
+} as any)
 const ClientReadinessRoute = ClientReadinessRouteImport.update({
   id: '/readiness',
   path: '/readiness',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/client/documents': typeof ClientDocumentsRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/readiness': typeof ClientReadinessRoute
+  '/client/review': typeof ClientReviewRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -198,6 +205,7 @@ export interface FileRoutesByTo {
   '/client/documents': typeof ClientDocumentsRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/readiness': typeof ClientReadinessRoute
+  '/client/review': typeof ClientReviewRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/client/documents': typeof ClientDocumentsRoute
   '/client/messages': typeof ClientMessagesRoute
   '/client/readiness': typeof ClientReadinessRoute
+  '/client/review': typeof ClientReviewRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
     | '/client/documents'
     | '/client/messages'
     | '/client/readiness'
+    | '/client/review'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/client/documents'
     | '/client/messages'
     | '/client/readiness'
+    | '/client/review'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/client/documents'
     | '/client/messages'
     | '/client/readiness'
+    | '/client/review'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -478,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientTimelineRouteImport
       parentRoute: typeof ClientRoute
     }
+    '/client/review': {
+      id: '/client/review'
+      path: '/review'
+      fullPath: '/client/review'
+      preLoaderRoute: typeof ClientReviewRouteImport
+      parentRoute: typeof ClientRoute
+    }
     '/client/readiness': {
       id: '/client/readiness'
       path: '/readiness'
@@ -506,6 +525,7 @@ interface ClientRouteChildren {
   ClientDocumentsRoute: typeof ClientDocumentsRoute
   ClientMessagesRoute: typeof ClientMessagesRoute
   ClientReadinessRoute: typeof ClientReadinessRoute
+  ClientReviewRoute: typeof ClientReviewRoute
   ClientTimelineRoute: typeof ClientTimelineRoute
   ClientIndexRoute: typeof ClientIndexRoute
 }
@@ -514,6 +534,7 @@ const ClientRouteChildren: ClientRouteChildren = {
   ClientDocumentsRoute: ClientDocumentsRoute,
   ClientMessagesRoute: ClientMessagesRoute,
   ClientReadinessRoute: ClientReadinessRoute,
+  ClientReviewRoute: ClientReviewRoute,
   ClientTimelineRoute: ClientTimelineRoute,
   ClientIndexRoute: ClientIndexRoute,
 }

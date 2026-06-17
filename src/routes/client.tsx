@@ -10,6 +10,9 @@ export const Route = createFileRoute("/client")({
 
 const TABS = [
   { to: "/client", label: "Overview" },
+  { to: "/client/readiness", label: "MAS Readiness" },
+  { to: "/client/documents", label: "Documents" },
+  { to: "/client/review", label: "Review & Sign-Off" },
   { to: "/client/timeline", label: "Timeline" },
   { to: "/client/messages", label: "Updates" },
 ] as const;
