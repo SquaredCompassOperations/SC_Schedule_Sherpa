@@ -117,6 +117,12 @@ export function setDocFromUpload(name: string, filename: string) {
       text: store[name].text || `[Client-supplied document: ${filename}]`,
     },
   };
+  logActivity({
+    module: "Documentation",
+    action: `replaced with client upload (${filename})`,
+    target: name,
+    clientVisible: true,
+  });
   emit();
 }
 
@@ -135,12 +141,20 @@ export function regenerateUploadedDoc(name: string) {
       signOff: null,
     },
   };
+  logActivity({ module: "Documentation", action: "regenerated from template", target: name });
   emit();
 }
 
 export function signOffDoc(name: string, signOff: DocSignOff) {
   if (!store[name]) return;
   store = { ...store, [name]: { ...store[name], signOff, status: "final" } };
+  logActivity({
+    module: "Documentation",
+    action: `signed off by ${signOff.signedBy}`,
+    target: name,
+    actor: signOff.signedBy,
+    clientVisible: true,
+  });
   emit();
 }
 
