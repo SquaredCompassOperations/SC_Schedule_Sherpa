@@ -22,6 +22,8 @@ export const useModuleStatuses = () => useSyncExternalStore(subscribe, getModule
 export function markModuleComplete(slug: string) {
   if (state[slug] === "complete") return;
   state = { ...state, [slug]: "complete" };
+  const label = MODULES.find((m) => m.slug === slug)?.label ?? slug;
+  logActivity({ module: label, action: "marked module complete", target: slug, clientVisible: true });
   emit();
 }
 
