@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { DOCUMENT_QUEUE } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
 import { pushMessage } from "./messages-store";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "doc-store";
 
