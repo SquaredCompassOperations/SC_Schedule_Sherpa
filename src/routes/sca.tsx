@@ -171,6 +171,9 @@ function ScaPage() {
           </div>
         </Panel>
       )}
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/sca" nextHref="/pricing-workbook" />
+      </div>
     </>
   );
 }
