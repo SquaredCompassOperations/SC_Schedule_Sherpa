@@ -325,6 +325,24 @@ function SubmissionPage() {
                       placeholder="Detail (e.g. CO requested clarification on LCAT 0301 mapping)"
                       className="w-full px-2 py-1.5 bg-background border border-border rounded-sm text-xs"
                     />
+                    <div>
+                      <div className="text-[10px] font-mono uppercase text-muted-foreground mb-1">
+                        Attach correspondence (award letter, rejection, CO email, etc.)
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx,.msg,.eml,.txt,.rtf,.jpg,.jpeg,.png,.tif,.tiff,.xls,.xlsx,.zip"
+                        onChange={(e) => setEvFiles(Array.from(e.target.files ?? []))}
+                        className="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:border file:border-border file:bg-muted file:text-[10px] file:font-bold file:uppercase file:rounded-sm"
+                      />
+                      {evFiles.length > 0 && (
+                        <div className="text-[10px] font-mono text-muted-foreground mt-1">
+                          {evFiles.length} file{evFiles.length === 1 ? "" : "s"} ready:{" "}
+                          {evFiles.map((f) => f.name).join(", ")}
+                        </div>
+                      )}
+                    </div>
                     <button
                       onClick={postEvent}
                       disabled={!evTitle.trim()}
@@ -363,6 +381,48 @@ function SubmissionPage() {
                           <div className="text-[10px] font-mono text-muted-foreground mt-1">
                             {fmt(e.ts)} · {e.actor}
                           </div>
+                          {e.attachments && e.attachments.length > 0 && (
+                            <ul className="mt-2 space-y-1">
+                              {e.attachments.map((a) => (
+                                <li
+                                  key={a.name}
+                                  className="flex items-center gap-2 text-[10px] font-mono border border-border bg-background rounded-sm px-2 py-1"
+                                >
+                                  <span className="text-muted-foreground uppercase shrink-0">
+                                    {a.category}
+                                  </span>
+                                  <span className="flex-1 truncate text-foreground">{a.name}</span>
+                                  <span className="text-muted-foreground shrink-0">
+                                    {fmtBytes(a.size)}
+                                  </span>
+                                  {!sub.locked && (
+                                    <button
+                                      onClick={() => removeEventAttachment(e.id, a.name)}
+                                      className="text-muted-foreground hover:text-destructive"
+                                      aria-label="Remove attachment"
+                                    >
+                                      ✕
+                                    </button>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {!sub.locked && (
+                            <label className="inline-block mt-2 text-[10px] font-bold uppercase tracking-widest text-primary hover:underline cursor-pointer">
+                              + Attach file
+                              <input
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.msg,.eml,.txt,.rtf,.jpg,.jpeg,.png,.tif,.tiff,.xls,.xlsx,.zip"
+                                className="hidden"
+                                onChange={(ev) => {
+                                  attachToEvent(e.id, ev.target.files);
+                                  ev.target.value = "";
+                                }}
+                              />
+                            </label>
+                          )}
                         </div>
                         {!sub.locked && (
                           <button
