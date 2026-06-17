@@ -3,6 +3,13 @@
 // archive/lock action that snapshots the final package as read-only.
 import { useSyncExternalStore } from "react";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
+
+export type TrackerAttachment = {
+  name: string;
+  size: number;
+  category: string;
+};
 
 const PERSIST_KEY = "submission-state";
 
@@ -34,6 +41,7 @@ export type TrackerEvent = {
   title: string;
   detail: string;
   actor: string; // "GSA" | "Team" | "Client" | person name
+  attachments?: TrackerAttachment[];
 };
 
 export type Archive = {
@@ -103,6 +111,48 @@ export function setReceipt(r: Receipt | null) {
 export function addEvent(e: Omit<TrackerEvent, "id">) {
   const ev: TrackerEvent = { id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, ...e };
   state = { ...state, events: [ev, ...state.events] };
+  emit();
+  const attachNote = ev.attachments?.length
+    ? ` (${ev.attachments.length} file${ev.attachments.length === 1 ? "" : "s"})`
+    : "";
+  logActivity({
+    module: "Submission Tracker",
+    action: `${EVENT_KIND_META[ev.kind].label}${attachNote}`,
+    target: ev.title,
+    actor: ev.actor,
+    clientVisible: ev.kind === "awarded" || ev.kind === "rejected",
+  });
+}
+
+export function addEventAttachments(eventId: string, attachments: TrackerAttachment[]) {
+  state = {
+    ...state,
+    events: state.events.map((e) =>
+      e.id === eventId
+        ? { ...e, attachments: [...(e.attachments ?? []), ...attachments] }
+        : e,
+    ),
+  };
+  emit();
+  const ev = state.events.find((e) => e.id === eventId);
+  if (ev) {
+    logActivity({
+      module: "Submission Tracker",
+      action: `Attached correspondence (${attachments.length} file${attachments.length === 1 ? "" : "s"})`,
+      target: ev.title,
+    });
+  }
+}
+
+export function removeEventAttachment(eventId: string, name: string) {
+  state = {
+    ...state,
+    events: state.events.map((e) =>
+      e.id === eventId
+        ? { ...e, attachments: (e.attachments ?? []).filter((a) => a.name !== name) }
+        : e,
+    ),
+  };
   emit();
 }
 
