@@ -112,6 +112,25 @@ export function setCertify(
   emit();
 }
 
+export function addSignOff(s: DeliverableSignOff) {
+  // One sign-off per deliverable+signer pair (replace existing).
+  const filtered = state.signOffs.filter(
+    (x) => !(x.deliverable === s.deliverable && x.signerEmail.toLowerCase() === s.signerEmail.toLowerCase()),
+  );
+  state = { ...state, signOffs: [...filtered, s] };
+  emit();
+}
+
+export function removeSignOff(deliverable: string, signerEmail: string) {
+  state = {
+    ...state,
+    signOffs: state.signOffs.filter(
+      (x) => !(x.deliverable === deliverable && x.signerEmail.toLowerCase() === signerEmail.toLowerCase()),
+    ),
+  };
+  emit();
+}
+
 export function resetReview() {
   state = seed();
   emit();
