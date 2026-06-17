@@ -6,12 +6,15 @@ import {
   setReceipt,
   addEvent,
   removeEvent,
+  addEventAttachments,
+  removeEventAttachment,
   lockArchive,
   unlockArchive,
   EVENT_KIND_META,
   type TrackerEventKind,
 } from "@/lib/submission-store";
 import { useEntity } from "@/lib/intake-store";
+import { categoryFor } from "@/lib/file-ingest";
 
 export const Route = createFileRoute("/submission")({
   head: () => ({ meta: [{ title: "Submission Tracker — ScheduleBuilder" }] }),
@@ -74,6 +77,7 @@ function SubmissionPage() {
   const [evTitle, setEvTitle] = useState("");
   const [evDetail, setEvDetail] = useState("");
   const [evActor, setEvActor] = useState("GSA");
+  const [evFiles, setEvFiles] = useState<File[]>([]);
 
   // Archive form
   const [archiveNotes, setArchiveNotes] = useState("");
@@ -103,10 +107,31 @@ function SubmissionPage() {
       title: evTitle.trim(),
       detail: evDetail.trim(),
       actor: evActor.trim() || "GSA",
+      attachments: evFiles.map((f) => ({
+        name: f.name,
+        size: f.size,
+        category: categoryFor(f.name) ?? "Correspondence",
+      })),
     });
     setEvTitle("");
     setEvDetail("");
+    setEvFiles([]);
   };
+
+  const attachToEvent = (eventId: string, fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    addEventAttachments(
+      eventId,
+      Array.from(fileList).map((f) => ({
+        name: f.name,
+        size: f.size,
+        category: categoryFor(f.name) ?? "Correspondence",
+      })),
+    );
+  };
+
+  const fmtBytes = (n: number) =>
+    n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
 
   const lock = () => {
     if (!submitted) return;
