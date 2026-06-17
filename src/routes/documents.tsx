@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SaveAndContinue } from "@/components/save-and-continue";
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -334,6 +335,9 @@ function DocsPage() {
           </Panel>
 
         </div>
+      </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/documents" nextHref="/review" />
       </div>
     </>
   );

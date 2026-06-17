@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SaveAndContinue } from "@/components/save-and-continue";
 import { useMemo, useState } from "react";
 import { PageHeader, Panel, StatusPill } from "@/components/ui-primitives";
 import { DOCUMENT_QUEUE } from "@/lib/mock-data";
@@ -453,6 +454,9 @@ function ReviewPage() {
         <span className="font-bold text-foreground">Note:</span> ScheduleBuilder prepares an eOffer-ready
         package but does not submit on behalf of the offeror. The Authorized Negotiator must certify and
         submit through eOffer.
+      </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/review" nextHref="/export" disabled={!allApproved} />
       </div>
     </>
   );

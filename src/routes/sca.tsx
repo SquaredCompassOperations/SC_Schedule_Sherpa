@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SaveAndContinue } from "@/components/save-and-continue";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
@@ -170,6 +171,9 @@ function ScaPage() {
           </div>
         </Panel>
       )}
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/sca" nextHref="/pricing-workbook" />
+      </div>
     </>
   );
 }

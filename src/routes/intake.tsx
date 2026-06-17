@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { SaveAndContinue } from "@/components/save-and-continue";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
@@ -123,6 +124,9 @@ function IntakePage() {
             </div>
           </Panel>
         </div>
+      </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/intake" nextHref="/sin" />
       </div>
     </>
   );

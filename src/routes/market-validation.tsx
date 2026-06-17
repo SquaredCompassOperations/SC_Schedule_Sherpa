@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SaveAndContinue } from "@/components/save-and-continue";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
@@ -203,6 +204,9 @@ function MarketPage() {
           })}
         </div>
       )}
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/market-validation" nextHref="/sca" />
+      </div>
     </>
   );
 }

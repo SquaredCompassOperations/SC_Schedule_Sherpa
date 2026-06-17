@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { REVIEW_GATES } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "review-store";
 
@@ -118,6 +119,13 @@ export function addSignOff(s: DeliverableSignOff) {
     (x) => !(x.deliverable === s.deliverable && x.signerEmail.toLowerCase() === s.signerEmail.toLowerCase()),
   );
   state = { ...state, signOffs: [...filtered, s] };
+  logActivity({
+    module: "Review & Sign-Off",
+    action: `signed off by ${s.signerName} (${s.signerTitle})`,
+    target: s.deliverable,
+    actor: s.signerName,
+    clientVisible: true,
+  });
   emit();
 }
 
@@ -128,6 +136,7 @@ export function removeSignOff(deliverable: string, signerEmail: string) {
       (x) => !(x.deliverable === deliverable && x.signerEmail.toLowerCase() === signerEmail.toLowerCase()),
     ),
   };
+  logActivity({ module: "Review & Sign-Off", action: "revoked sign-off", target: deliverable, actor: signerEmail });
   emit();
 }
 

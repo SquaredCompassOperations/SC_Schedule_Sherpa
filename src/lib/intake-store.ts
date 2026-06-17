@@ -4,6 +4,7 @@
 // until the user explicitly clears it.
 import { useSyncExternalStore } from "react";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "intake-state";
 
@@ -219,6 +220,12 @@ export function setDocument(key: DocKey, entry: DocEntry | null) {
   if (entry) docs[key] = entry;
   else delete docs[key];
   state = { ...state, documents: docs };
+  logActivity({
+    module: "Intake & Readiness",
+    action: entry ? `uploaded ${DOC_LABELS[key]}` : `removed ${DOC_LABELS[key]}`,
+    target: entry?.filename ?? key,
+    clientVisible: true,
+  });
   emit();
 }
 
@@ -229,6 +236,7 @@ export function setSbaCerts(certs: SbaCert[]) {
 
 export function submitClientIntake() {
   state = { ...state, clientSubmittedAt: Date.now() };
+  logActivity({ module: "Intake & Readiness", action: "submitted for review", clientVisible: true });
   emit();
 }
 

@@ -4,6 +4,7 @@
 import { useSyncExternalStore } from "react";
 import { MODULES, type ModuleStatus } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "module-status-overrides";
 
@@ -21,6 +22,8 @@ export const useModuleStatuses = () => useSyncExternalStore(subscribe, getModule
 export function markModuleComplete(slug: string) {
   if (state[slug] === "complete") return;
   state = { ...state, [slug]: "complete" };
+  const label = MODULES.find((m) => m.slug === slug)?.label ?? slug;
+  logActivity({ module: label, action: "marked module complete", target: slug, clientVisible: true });
   emit();
 }
 

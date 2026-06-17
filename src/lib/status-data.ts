@@ -6,6 +6,7 @@ import { useIntake } from "./intake-store";
 import { useAutomation } from "./automation-store";
 import { useDocStore } from "./doc-store";
 import { useSubmission } from "./submission-store";
+import { useActivityLog } from "./activity-log";
 import { DOCUMENT_QUEUE } from "./mock-data";
 
 export type StageId = "intake" | "engine" | "review" | "submission";
@@ -46,6 +47,7 @@ export function useStatus() {
   const automation = useAutomation();
   const docs = useDocStore();
   const submission = useSubmission();
+  const log = useActivityLog();
 
   // Stage derivation
   const intakeComplete = !!(intake.corporate.legalName && intake.corporate.uei);
@@ -179,7 +181,17 @@ export function useStatus() {
   });
 
   // Activity log — synthesized from current state snapshots
+  const fmtDate = (ts: number) => new Date(ts).toISOString().slice(0, 10);
+  const loggedActivity: ActivityEntry[] = log.map((e) => ({
+    id: e.id,
+    ts: fmtDate(e.ts),
+    module: e.module,
+    message: e.target ? `${e.action} — ${e.target}` : e.action,
+    clientVisible: !!e.clientVisible,
+  }));
+
   const activity: ActivityEntry[] = [
+    ...loggedActivity,
     {
       id: "a1",
       ts: offset(0),

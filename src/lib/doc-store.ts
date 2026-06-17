@@ -5,6 +5,7 @@ import { useSyncExternalStore } from "react";
 import { DOCUMENT_QUEUE } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
 import { pushMessage } from "./messages-store";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "doc-store";
 
@@ -91,6 +92,11 @@ export function patchDoc(name: string, patch: Partial<DocState>) {
       body: "Open the Review Workflow to read the draft and sign off when satisfied.",
       href: "/review",
     });
+    logActivity({ module: "Documentation", action: "ready for review", target: name, clientVisible: true });
+  } else if (patch.status === "final" && prev.status !== "final") {
+    logActivity({ module: "Documentation", action: "marked final", target: name, clientVisible: true });
+  } else if (patch.status === "draft" && prev.status !== "draft") {
+    logActivity({ module: "Documentation", action: "moved back to draft", target: name });
   }
   emit();
 }
@@ -111,6 +117,12 @@ export function setDocFromUpload(name: string, filename: string) {
       text: store[name].text || `[Client-supplied document: ${filename}]`,
     },
   };
+  logActivity({
+    module: "Documentation",
+    action: `replaced with client upload (${filename})`,
+    target: name,
+    clientVisible: true,
+  });
   emit();
 }
 
@@ -129,12 +141,20 @@ export function regenerateUploadedDoc(name: string) {
       signOff: null,
     },
   };
+  logActivity({ module: "Documentation", action: "regenerated from template", target: name });
   emit();
 }
 
 export function signOffDoc(name: string, signOff: DocSignOff) {
   if (!store[name]) return;
   store = { ...store, [name]: { ...store[name], signOff, status: "final" } };
+  logActivity({
+    module: "Documentation",
+    action: `signed off by ${signOff.signedBy}`,
+    target: name,
+    actor: signOff.signedBy,
+    clientVisible: true,
+  });
   emit();
 }
 
