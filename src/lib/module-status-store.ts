@@ -4,6 +4,7 @@
 import { useSyncExternalStore } from "react";
 import { MODULES, type ModuleStatus } from "./mock-data";
 import { loadPersisted, savePersisted } from "./persist";
+import { logActivity } from "./activity-log";
 
 const PERSIST_KEY = "module-status-overrides";
 
