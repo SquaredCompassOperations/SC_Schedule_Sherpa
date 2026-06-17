@@ -91,6 +91,8 @@ export type IntakeState = {
   pastPerformance: PastPerformanceEntry[];
   sbaCerts: SbaCert[];
   sbaScannedAt: number | null;
+  /** Client-side submission of intake package (corp docs + readiness). */
+  clientSubmittedAt: number | null;
 };
 
 const emptyAddress = (): Address => ({
@@ -138,6 +140,7 @@ const defaultState = (): IntakeState => ({
   pastPerformance: [],
   sbaCerts: [],
   sbaScannedAt: null,
+  clientSubmittedAt: null,
 });
 
 let state: IntakeState = loadPersisted<IntakeState>(PERSIST_KEY, defaultState());
@@ -221,6 +224,11 @@ export function setDocument(key: DocKey, entry: DocEntry | null) {
 
 export function setSbaCerts(certs: SbaCert[]) {
   state = { ...state, sbaCerts: certs, sbaScannedAt: Date.now() };
+  emit();
+}
+
+export function submitClientIntake() {
+  state = { ...state, clientSubmittedAt: Date.now() };
   emit();
 }
 
