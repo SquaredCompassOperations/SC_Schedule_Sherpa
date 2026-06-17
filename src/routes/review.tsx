@@ -455,6 +455,9 @@ function ReviewPage() {
         package but does not submit on behalf of the offeror. The Authorized Negotiator must certify and
         submit through eOffer.
       </div>
+      <div className="mt-8 flex justify-end border-t border-border pt-4">
+        <SaveAndContinue moduleSlug="/review" nextHref="/export" disabled={!allApproved} />
+      </div>
     </>
   );
 }
