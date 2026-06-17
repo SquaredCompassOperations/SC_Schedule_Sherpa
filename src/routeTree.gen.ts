@@ -30,6 +30,7 @@ import { Route as StatusOpenItemsRouteImport } from './routes/status.open-items'
 import { Route as StatusMilestonesRouteImport } from './routes/status.milestones'
 import { Route as StatusActivityRouteImport } from './routes/status.activity'
 import { Route as ClientTimelineRouteImport } from './routes/client.timeline'
+import { Route as ClientReadinessRouteImport } from './routes/client.readiness'
 import { Route as ClientMessagesRouteImport } from './routes/client.messages'
 
 const SubmissionRoute = SubmissionRouteImport.update({
@@ -137,6 +138,11 @@ const ClientTimelineRoute = ClientTimelineRouteImport.update({
   path: '/timeline',
   getParentRoute: () => ClientRoute,
 } as any)
+const ClientReadinessRoute = ClientReadinessRouteImport.update({
+  id: '/readiness',
+  path: '/readiness',
+  getParentRoute: () => ClientRoute,
+} as any)
 const ClientMessagesRoute = ClientMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -160,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/status': typeof StatusRouteWithChildren
   '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
+  '/client/readiness': typeof ClientReadinessRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -182,6 +189,7 @@ export interface FileRoutesByTo {
   '/sin': typeof SinRoute
   '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
+  '/client/readiness': typeof ClientReadinessRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -207,6 +215,7 @@ export interface FileRoutesById {
   '/status': typeof StatusRouteWithChildren
   '/submission': typeof SubmissionRoute
   '/client/messages': typeof ClientMessagesRoute
+  '/client/readiness': typeof ClientReadinessRoute
   '/client/timeline': typeof ClientTimelineRoute
   '/status/activity': typeof StatusActivityRoute
   '/status/milestones': typeof StatusMilestonesRoute
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/submission'
     | '/client/messages'
+    | '/client/readiness'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -255,6 +265,7 @@ export interface FileRouteTypes {
     | '/sin'
     | '/submission'
     | '/client/messages'
+    | '/client/readiness'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -279,6 +290,7 @@ export interface FileRouteTypes {
     | '/status'
     | '/submission'
     | '/client/messages'
+    | '/client/readiness'
     | '/client/timeline'
     | '/status/activity'
     | '/status/milestones'
@@ -454,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientTimelineRouteImport
       parentRoute: typeof ClientRoute
     }
+    '/client/readiness': {
+      id: '/client/readiness'
+      path: '/readiness'
+      fullPath: '/client/readiness'
+      preLoaderRoute: typeof ClientReadinessRouteImport
+      parentRoute: typeof ClientRoute
+    }
     '/client/messages': {
       id: '/client/messages'
       path: '/messages'
@@ -466,12 +485,14 @@ declare module '@tanstack/react-router' {
 
 interface ClientRouteChildren {
   ClientMessagesRoute: typeof ClientMessagesRoute
+  ClientReadinessRoute: typeof ClientReadinessRoute
   ClientTimelineRoute: typeof ClientTimelineRoute
   ClientIndexRoute: typeof ClientIndexRoute
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
   ClientMessagesRoute: ClientMessagesRoute,
+  ClientReadinessRoute: ClientReadinessRoute,
   ClientTimelineRoute: ClientTimelineRoute,
   ClientIndexRoute: ClientIndexRoute,
 }
