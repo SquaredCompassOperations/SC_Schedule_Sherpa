@@ -292,6 +292,16 @@ function SamProfileExtractor() {
       patchMailingAddress(mail);
       setMailingSame(false);
     }
+    // Government Business POC → seed Authorized Negotiator #1 (if blank).
+    const pocPatch: Partial<Parameters<typeof setNegotiator>[1]> = {};
+    if (fields.pocName) pocPatch.name = fields.pocName;
+    if (fields.pocTitle) pocPatch.title = fields.pocTitle;
+    if (fields.pocEmail) pocPatch.email = fields.pocEmail;
+    if (fields.pocPhone) pocPatch.phoneUs = fields.pocPhone;
+    if (Object.keys(pocPatch).length) {
+      pocPatch.authorizedToSign = true;
+      setNegotiator(0, pocPatch);
+    }
   };
 
   const runExtraction = async (payload: {
