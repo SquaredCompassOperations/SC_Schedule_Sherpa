@@ -47,6 +47,7 @@ export function useStatus() {
   const automation = useAutomation();
   const docs = useDocStore();
   const submission = useSubmission();
+  const log = useActivityLog();
 
   // Stage derivation
   const intakeComplete = !!(intake.corporate.legalName && intake.corporate.uei);
