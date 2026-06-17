@@ -181,7 +181,17 @@ export function useStatus() {
   });
 
   // Activity log — synthesized from current state snapshots
+  const fmtDate = (ts: number) => new Date(ts).toISOString().slice(0, 10);
+  const loggedActivity: ActivityEntry[] = log.map((e) => ({
+    id: e.id,
+    ts: fmtDate(e.ts),
+    module: e.module,
+    message: e.target ? `${e.action} — ${e.target}` : e.action,
+    clientVisible: !!e.clientVisible,
+  }));
+
   const activity: ActivityEntry[] = [
+    ...loggedActivity,
     {
       id: "a1",
       ts: offset(0),
