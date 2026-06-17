@@ -6,6 +6,7 @@ import { useIntake } from "./intake-store";
 import { useAutomation } from "./automation-store";
 import { useDocStore } from "./doc-store";
 import { useSubmission } from "./submission-store";
+import { useActivityLog } from "./activity-log";
 import { DOCUMENT_QUEUE } from "./mock-data";
 
 export type StageId = "intake" | "engine" | "review" | "submission";
