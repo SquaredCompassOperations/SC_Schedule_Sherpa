@@ -336,8 +336,13 @@ function DocsPage() {
 
         </div>
       </div>
-      <div className="mt-8 flex justify-end border-t border-border pt-4">
-        <SaveAndContinue moduleSlug="/documents" nextHref="/review" />
+      <div className="mt-8 flex flex-col items-end gap-2 border-t border-border pt-4">
+        {!allFinal ? (
+          <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Finalize all {DOCUMENT_QUEUE.length} documents to complete this module ({counts.final}/{DOCUMENT_QUEUE.length} final)
+          </div>
+        ) : null}
+        <SaveAndContinue moduleSlug="/documents" nextHref="/review" disabled={!allFinal} />
       </div>
     </>
   );
