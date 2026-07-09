@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
+import type { AppRole } from "./rbac";
 import { mergeUsersWithProfiles, resolveManagedRole, type ManagedUser } from "./user-management";
 
 const UpdateProfileSchema = z.object({
@@ -27,6 +28,49 @@ async function requireAdmin(callerSupabase: SupabaseClient<Database>, userId: st
 
   if (error) throw new Error("Could not verify admin access");
   if (!data) throw new Error("Forbidden: admin access required");
+}
+
+type ServiceRoleOperations = {
+  getUserById: (userId: string) => Promise<{
+    data: { user: { email?: string | null } | null };
+    error: unknown;
+  }>;
+  upsertRole: (userId: string, role: AppRole) => PromiseLike<{ error: unknown }>;
+};
+
+const defaultServiceRoleOperations: ServiceRoleOperations = {
+  getUserById: (userId) => supabaseAdmin.auth.admin.getUserById(userId),
+  upsertRole: (userId, role) =>
+    supabaseAdmin.from("user_roles").upsert({ user_id: userId, role }, { onConflict: "user_id" }),
+};
+
+export async function setManagedUserRoleForAdmin({
+  callerSupabase,
+  callerUserId,
+  targetUserId,
+  requestedRole,
+  serviceRoleOperations = defaultServiceRoleOperations,
+}: {
+  callerSupabase: SupabaseClient<Database>;
+  callerUserId: string;
+  targetUserId: string;
+  requestedRole: AppRole;
+  serviceRoleOperations?: ServiceRoleOperations;
+}) {
+  await requireAdmin(callerSupabase, callerUserId);
+
+  const { data: targetUserData, error: targetUserError } =
+    await serviceRoleOperations.getUserById(targetUserId);
+
+  if (targetUserError || !targetUserData.user) {
+    throw new Error("Could not load target user");
+  }
+
+  const role = resolveManagedRole(targetUserData.user.email, requestedRole);
+  const { error } = await serviceRoleOperations.upsertRole(targetUserId, role);
+
+  if (error) throw new Error("Could not update user role");
+  return { ok: true };
 }
 
 export const listManagedUsers = createServerFn({ method: "GET" })
@@ -72,23 +116,11 @@ export const updateManagedUserProfile = createServerFn({ method: "POST" })
 export const setManagedUserRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SetRoleSchema.parse(input))
-  .handler(async ({ context, data }) => {
-    await requireAdmin(context.supabase, context.userId);
-
-    const { data: targetUserData, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(
-      data.userId,
-    );
-
-    if (targetUserError || !targetUserData.user) {
-      throw new Error("Could not load target user");
-    }
-
-    const role = resolveManagedRole(targetUserData.user.email, data.role);
-
-    const { error } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({ user_id: data.userId, role }, { onConflict: "user_id" });
-
-    if (error) throw new Error("Could not update user role");
-    return { ok: true };
-  });
+  .handler(({ context, data }) =>
+    setManagedUserRoleForAdmin({
+      callerSupabase: context.supabase,
+      callerUserId: context.userId,
+      targetUserId: data.userId,
+      requestedRole: data.role,
+    }),
+  );

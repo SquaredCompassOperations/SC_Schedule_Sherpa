@@ -1,7 +1,9 @@
 BEGIN;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP TRIGGER IF EXISTS on_auth_user_email_updated ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP FUNCTION IF EXISTS public.handle_user_email_change();
 DROP FUNCTION IF EXISTS public.is_admin();
 DROP FUNCTION IF EXISTS public.has_role(UUID, public.app_role);
 DROP FUNCTION IF EXISTS public.role_for_email(TEXT);
@@ -53,11 +55,12 @@ AS $$
     END
 $$;
 
--- Existing roles follow the same email-only rule as newly created users.
-UPDATE public.user_roles ur
-SET role = public.role_for_email(au.email)
+-- Every Auth user has one email-derived role, including users created before this migration.
+INSERT INTO public.user_roles (user_id, role)
+SELECT au.id, public.role_for_email(au.email)
 FROM auth.users au
-WHERE au.id = ur.user_id;
+ON CONFLICT (user_id) DO UPDATE
+SET role = EXCLUDED.role;
 
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
 RETURNS BOOLEAN
@@ -115,6 +118,28 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+CREATE OR REPLACE FUNCTION public.handle_user_email_change()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.user_roles (user_id, role)
+  VALUES (NEW.id, public.role_for_email(NEW.email))
+  ON CONFLICT (user_id) DO UPDATE
+  SET role = EXCLUDED.role;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER on_auth_user_email_updated
+  AFTER UPDATE OF email ON auth.users
+  FOR EACH ROW
+  WHEN (OLD.email IS DISTINCT FROM NEW.email)
+  EXECUTE FUNCTION public.handle_user_email_change();
+
 DROP POLICY IF EXISTS "Users view own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users insert own profile" ON public.profiles;
@@ -164,6 +189,7 @@ CREATE POLICY "Admins view all roles"
 REVOKE EXECUTE ON FUNCTION public.role_for_email(TEXT) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.has_role(UUID, public.app_role) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_user_email_change() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 
