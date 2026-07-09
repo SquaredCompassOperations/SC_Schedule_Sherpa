@@ -6,14 +6,13 @@ DROP FUNCTION IF EXISTS public.is_admin();
 DROP FUNCTION IF EXISTS public.has_role(UUID, public.app_role);
 DROP FUNCTION IF EXISTS public.role_for_email(TEXT);
 
--- Keep the highest-trust existing role per user before switching to one role per user.
+-- Reduce legacy assignments to one row per user before enforcing the new constraint.
 WITH ranked_roles AS (
   SELECT
     id,
     row_number() OVER (
       PARTITION BY user_id
       ORDER BY
-        CASE WHEN role::text = 'team' THEN 0 ELSE 1 END,
         created_at ASC,
         id ASC
     ) AS role_rank
@@ -31,13 +30,7 @@ ALTER TABLE public.user_roles
 
 ALTER TABLE public.user_roles
   ALTER COLUMN role TYPE public.app_role_new
-  USING (
-    CASE
-      WHEN role::text = 'team' THEN 'admin'
-      WHEN role::text = 'admin' THEN 'admin'
-      ELSE 'client'
-    END
-  )::public.app_role_new;
+  USING 'client'::public.app_role_new;
 
 DROP TYPE public.app_role;
 ALTER TYPE public.app_role_new RENAME TO app_role;
@@ -59,6 +52,12 @@ AS $$
       ELSE 'client'::public.app_role
     END
 $$;
+
+-- Existing roles follow the same email-only rule as newly created users.
+UPDATE public.user_roles ur
+SET role = public.role_for_email(au.email)
+FROM auth.users au
+WHERE au.id = ur.user_id;
 
 CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role public.app_role)
 RETURNS BOOLEAN
