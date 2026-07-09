@@ -119,3 +119,9 @@ Manual verification after deployment:
 - Supabase User Management: https://supabase.com/docs/guides/auth/managing-user-data
 - Supabase Row Level Security: https://supabase.com/docs/guides/database/postgres/row-level-security
 - Supabase Admin Users API: https://supabase.com/docs/reference/javascript/auth-admin-listusers
+
+## Implementation Rollout Note
+
+The implementation branch adds the SQL migration, role wiring, and admin-only user-management server functions. Production rollout requires applying `supabase/migrations/20260709224000_admin_client_rbac.sql` to Supabase before relying on `admin` roles in production.
+
+The migration recomputes existing roles from `auth.users.email`, and new-user role assignment also derives from the authenticated email. Managed role updates derive the role from the target user's Supabase auth email and reject a conflicting requested role; legacy `team` assignments do not automatically become `admin`.
