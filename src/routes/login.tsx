@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { signInWithGoogle } from "@/lib/google-auth";
+import { isAdminRole } from "@/lib/rbac";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — ScheduleBuilder" }] }),
@@ -18,7 +19,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   if (user && role) {
-    navigate({ to: role === "client" ? "/client" : "/", replace: true });
+    navigate({ to: isAdminRole(role) ? "/" : "/client", replace: true });
   }
 
   const onSubmit = async (e: FormEvent) => {
