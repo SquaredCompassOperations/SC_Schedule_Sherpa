@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { clearGoogleProviderTokens, persistGoogleProviderTokens } from "@/lib/google-auth";
 
 export type AppRole = "team" | "client";
 
@@ -38,8 +39,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Synchronous listener first
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, s) => {
+    } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
+      if (event === "SIGNED_OUT") {
+        clearGoogleProviderTokens();
+      } else {
+        persistGoogleProviderTokens(s);
+      }
       if (s?.user) {
         // Defer profile fetch
         setTimeout(() => loadProfile(s.user.id), 0);
@@ -53,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Then existing session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      persistGoogleProviderTokens(data.session);
       if (data.session?.user) {
         loadProfile(data.session.user.id).finally(() => setLoading(false));
       } else {

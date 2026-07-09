@@ -147,7 +147,7 @@ function WorkspacePage() {
             </div>
           </div>
 
-          <Panel title="Labor Category Matrix Preview" trailing={<Link to="/pricing" className="text-[10px] text-primary font-bold uppercase tracking-tight">Open Workbook →</Link>}>
+          <Panel title="Labor Category Matrix Preview" trailing={<Link to="/pricing-workbook" className="text-[10px] text-primary font-bold uppercase tracking-tight">Open Workbook →</Link>}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {LABOR_CATEGORIES.slice(0, 4).map((l) => (
                 <div key={l.code} className="p-3 border border-border rounded-sm bg-surface">
