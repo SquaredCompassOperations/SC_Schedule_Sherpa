@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth-context";
+import { signInWithGoogle } from "@/lib/google-auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — ScheduleBuilder" }] }),
@@ -32,10 +32,10 @@ function LoginPage() {
 
   const onGoogle = async () => {
     setErr(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) setErr(result.error.message ?? "Google sign-in failed");
+    setLoading(true);
+    const { error } = await signInWithGoogle(window.location.origin);
+    setLoading(false);
+    if (error) setErr(error.message ?? "Google sign-in failed");
   };
 
   return (
@@ -45,9 +45,7 @@ function LoginPage() {
           ScheduleBuilder
         </div>
         <h1 className="text-2xl font-bold text-foreground mt-1">Sign in</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          Team or client portal access.
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">Team or client portal access.</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-3">
           <div>
@@ -61,7 +59,9 @@ function LoginPage() {
             />
           </div>
           <div>
-            <label className="text-[10px] font-mono uppercase text-muted-foreground">Password</label>
+            <label className="text-[10px] font-mono uppercase text-muted-foreground">
+              Password
+            </label>
             <input
               type="password"
               required

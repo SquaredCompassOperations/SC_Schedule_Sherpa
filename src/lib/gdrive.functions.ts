@@ -1,15 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_drive/drive/v3";
+const DRIVE_API_URL = "https://www.googleapis.com/drive/v3";
 
-function authHeaders() {
-  const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-  const GOOGLE_DRIVE_API_KEY = process.env.GOOGLE_DRIVE_API_KEY;
-  if (!GOOGLE_DRIVE_API_KEY) throw new Error("GOOGLE_DRIVE_API_KEY is not configured");
+function authHeaders(accessToken: string) {
+  if (!accessToken) {
+    throw new Error("Google Drive is not connected. Sign in with Google again, then retry.");
+  }
+
   return {
-    Authorization: `Bearer ${LOVABLE_API_KEY}`,
-    "X-Connection-Api-Key": GOOGLE_DRIVE_API_KEY,
+    Authorization: `Bearer ${accessToken}`,
   };
 }
 
@@ -22,28 +21,6 @@ export type GDriveFile = {
   iconLink?: string;
 };
 
-export const listDriveFiles = createServerFn({ method: "POST" })
-  .inputValidator((input: { query?: string; pageToken?: string }) => input)
-  .handler(async ({ data }) => {
-    const params = new URLSearchParams({
-      pageSize: "25",
-      fields: "nextPageToken,files(id,name,mimeType,size,modifiedTime,iconLink)",
-      orderBy: "modifiedTime desc",
-      q: data.query
-        ? `name contains '${data.query.replace(/'/g, "\\'")}' and trashed=false`
-        : "trashed=false",
-    });
-    if (data.pageToken) params.set("pageToken", data.pageToken);
-
-    const res = await fetch(`${GATEWAY_URL}/files?${params}`, { headers: authHeaders() });
-    const body = await res.json();
-    if (!res.ok) throw new Error(`Drive list failed [${res.status}]: ${JSON.stringify(body)}`);
-    return {
-      files: (body.files ?? []) as GDriveFile[],
-      nextPageToken: (body.nextPageToken ?? null) as string | null,
-    };
-  });
-
 const GOOGLE_EXPORT_MIME: Record<string, string> = {
   "application/vnd.google-apps.document": "application/pdf",
   "application/vnd.google-apps.spreadsheet": "application/pdf",
@@ -51,12 +28,11 @@ const GOOGLE_EXPORT_MIME: Record<string, string> = {
 };
 
 export const fetchDriveFile = createServerFn({ method: "POST" })
-  .inputValidator((input: { fileId: string }) => input)
+  .inputValidator((input: { fileId: string; accessToken: string }) => input)
   .handler(async ({ data }) => {
-    // Get metadata
     const metaRes = await fetch(
-      `${GATEWAY_URL}/files/${data.fileId}?fields=id,name,mimeType,size`,
-      { headers: authHeaders() },
+      `${DRIVE_API_URL}/files/${data.fileId}?fields=id,name,mimeType,size`,
+      { headers: authHeaders(data.accessToken) },
     );
     const meta = await metaRes.json();
     if (!metaRes.ok) {
@@ -64,13 +40,15 @@ export const fetchDriveFile = createServerFn({ method: "POST" })
     }
 
     const isGoogleDoc = (meta.mimeType as string)?.startsWith("application/vnd.google-apps.");
-    const exportMime = isGoogleDoc ? GOOGLE_EXPORT_MIME[meta.mimeType] ?? "application/pdf" : null;
+    const exportMime = isGoogleDoc
+      ? (GOOGLE_EXPORT_MIME[meta.mimeType] ?? "application/pdf")
+      : null;
 
     const downloadUrl = isGoogleDoc
-      ? `${GATEWAY_URL}/files/${data.fileId}/export?mimeType=${encodeURIComponent(exportMime!)}`
-      : `${GATEWAY_URL}/files/${data.fileId}?alt=media`;
+      ? `${DRIVE_API_URL}/files/${data.fileId}/export?mimeType=${encodeURIComponent(exportMime!)}`
+      : `${DRIVE_API_URL}/files/${data.fileId}?alt=media`;
 
-    const fileRes = await fetch(downloadUrl, { headers: authHeaders() });
+    const fileRes = await fetch(downloadUrl, { headers: authHeaders(data.accessToken) });
     if (!fileRes.ok) {
       const text = await fileRes.text();
       throw new Error(`Drive download failed [${fileRes.status}]: ${text.slice(0, 200)}`);

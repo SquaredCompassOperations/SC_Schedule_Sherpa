@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { SaveAndContinue } from "@/components/save-and-continue";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { extractBusinessIdentity } from "@/lib/intake-extract.functions";
-import { fetchDriveFile, listDriveFiles, type GDriveFile } from "@/lib/gdrive.functions";
+import { fetchDriveFile, type GDriveFile } from "@/lib/gdrive.functions";
 import { detectPnlLoss } from "@/lib/financials-check.functions";
 import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
+import { getStoredGoogleProviderToken } from "@/lib/google-auth";
+import { openGoogleDrivePicker } from "@/lib/google-drive-picker";
 import { setPriceListLcats } from "@/lib/automation-store";
 import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
 import {
@@ -43,6 +45,16 @@ const STEPS = [
   { id: 2, label: "Authorized Negotiators" },
   { id: 3, label: "Socioeconomic Status" },
 ];
+
+function requireGoogleDriveAccessToken() {
+  const accessToken = getStoredGoogleProviderToken();
+  if (!accessToken) {
+    throw new Error(
+      "Google Drive is not connected. Sign out and sign back in with Google, then retry.",
+    );
+  }
+  return accessToken;
+}
 
 function IntakePage() {
   const [step, setStep] = useState(0);
@@ -357,7 +369,9 @@ function SamProfileExtractor() {
     setShowDrive(false);
     setStatus({ kind: "working", name: file.name });
     try {
-      const payload = await fetchDrive({ data: { fileId: file.id } });
+      const payload = await fetchDrive({
+        data: { fileId: file.id, accessToken: requireGoogleDriveAccessToken() },
+      });
       await runExtraction(payload);
     } catch (err) {
       setStatus({
@@ -375,8 +389,8 @@ function SamProfileExtractor() {
             Upload SAM.gov Profile
           </div>
           <div className="text-[11px] text-muted-foreground mt-1">
-            Upload the client's SAM.gov entity registration printout to auto-fill
-            Company Details, addresses, and SAM status.
+            Upload the client's SAM.gov entity registration printout to auto-fill Company Details,
+            addresses, and SAM status.
           </div>
           <div className="text-[10px] font-mono text-muted-foreground mt-1">
             PDF · DOC/DOCX · TXT · RTF · PNG · JPG · TIF · max 12 MB
@@ -453,9 +467,8 @@ function CorporateDocumentsStep({ intake }: { intake: ReturnType<typeof useIntak
   return (
     <div className="space-y-2">
       <div className="text-[11px] text-muted-foreground mb-3">
-        Check off each item; upload the corresponding file. Uploads feed the master
-        record and become source artifacts for the compliance matrix and eOffer
-        package.
+        Check off each item; upload the corresponding file. Uploads feed the master record and
+        become source artifacts for the compliance matrix and eOffer package.
       </div>
       {DOC_ORDER.map((k) => (
         <DocRow key={k} docKey={k} entry={intake.documents[k]} />
@@ -471,9 +484,7 @@ function PastPerformanceSection({
   entries: ReturnType<typeof useIntake>["pastPerformance"];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [category, setCategory] = useState<PastPerformanceCategory>(
-    PAST_PERFORMANCE_CATEGORIES[0],
-  );
+  const [category, setCategory] = useState<PastPerformanceCategory>(PAST_PERFORMANCE_CATEGORIES[0]);
   const [showDrive, setShowDrive] = useState(false);
 
   const handle = (files: FileList | null) => {
@@ -511,8 +522,8 @@ function PastPerformanceSection({
         <div className="flex-1 min-w-0">
           <div className="text-sm text-foreground">Past Performance Information</div>
           <div className="text-[10px] font-mono text-muted-foreground">
-            Capability Statement(s), Case Studies, References, Project Experience, CPARS.
-            Multiple files allowed.
+            Capability Statement(s), Case Studies, References, Project Experience, CPARS. Multiple
+            files allowed.
           </div>
         </div>
       </div>
@@ -609,7 +620,11 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
     }
   };
 
-  const extractLcats = async (payload: { filename: string; mediaType: string; dataBase64: string }) => {
+  const extractLcats = async (payload: {
+    filename: string;
+    mediaType: string;
+    dataBase64: string;
+  }) => {
     try {
       const res = await extractPl({ data: payload });
       setPriceListLcats(res.lcats, payload.filename);
@@ -662,7 +677,9 @@ function DocRow({ docKey, entry }: { docKey: DocKey; entry?: DocEntry }) {
     if (isPnl || isPriceList) {
       setAnalyzing(true);
       try {
-        const payload = await fetchDrive({ data: { fileId: file.id } });
+        const payload = await fetchDrive({
+          data: { fileId: file.id, accessToken: requireGoogleDriveAccessToken() },
+        });
         next.filename = payload.filename;
         if (isPnl) next.loss = await analyzeLoss(payload);
         if (isPriceList) await extractLcats(payload);
@@ -748,8 +765,8 @@ function NegotiatorsStep({ intake }: { intake: ReturnType<typeof useIntake> }) {
   return (
     <div className="space-y-5">
       <div className="text-[11px] text-muted-foreground">
-        Add up to four authorized negotiators. The first negotiator is the Primary
-        contact. Either US Phone (XXX-XXX-XXXX) or International Phone is required.
+        Add up to four authorized negotiators. The first negotiator is the Primary contact. Either
+        US Phone (XXX-XXX-XXXX) or International Phone is required.
       </div>
       {intake.negotiators.map((n, i) => (
         <NegotiatorCard
@@ -800,9 +817,7 @@ function NegotiatorCard({
     <div className="border border-border rounded-sm p-4 bg-card">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="text-xs font-bold uppercase tracking-widest">
-            Negotiator {index + 1}
-          </div>
+          <div className="text-xs font-bold uppercase tracking-widest">Negotiator {index + 1}</div>
           {primary ? (
             <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 bg-primary/10 text-primary border border-primary/30 rounded-sm">
               Primary
@@ -851,7 +866,9 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
   const fetchDrive = useServerFn(fetchDriveFile);
   const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
-    { kind: "idle" } | { kind: "working"; via: "scan" | "image" } | { kind: "error"; message: string }
+    | { kind: "idle" }
+    | { kind: "working"; via: "scan" | "image" }
+    | { kind: "error"; message: string }
   >({ kind: "idle" });
 
   const run = async () => {
@@ -881,8 +898,7 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       } else if (res.certs.length === 0) {
         setStatus({
           kind: "error",
-          message:
-            "SBA profile returned no active certifications for this UEI/CAGE.",
+          message: "SBA profile returned no active certifications for this UEI/CAGE.",
         });
       } else {
         setStatus({ kind: "idle" });
@@ -933,7 +949,9 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
     setShowDrive(false);
     setStatus({ kind: "working", via: "image" });
     try {
-      const payload = await fetchDrive({ data: { fileId: file.id } });
+      const payload = await fetchDrive({
+        data: { fileId: file.id, accessToken: requireGoogleDriveAccessToken() },
+      });
       await runExtract(payload);
     } catch (err) {
       setStatus({
@@ -942,8 +960,6 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
       });
     }
   };
-
-
 
   return (
     <div className="space-y-5">
@@ -1016,12 +1032,7 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
         </div>
       </div>
 
-      {showDrive ? (
-        <DrivePicker onPick={onDrivePick} onClose={() => setShowDrive(false)} />
-      ) : null}
-
-
-
+      {showDrive ? <DrivePicker onPick={onDrivePick} onClose={() => setShowDrive(false)} /> : null}
 
       <div>
         <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-3">
@@ -1107,31 +1118,29 @@ function DrivePicker({
   onPick: (file: GDriveFile) => void;
   onClose: () => void;
 }) {
-  const listFiles = useServerFn(listDriveFiles);
-  const [query, setQuery] = useState("");
-  const [files, setFiles] = useState<GDriveFile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [opening, setOpening] = useState(true);
+  const started = useRef(false);
+
+  const openPicker = useCallback(async () => {
+    setErr(null);
+    setOpening(true);
+    try {
+      const file = await openGoogleDrivePicker();
+      if (file) onPick(file);
+      else onClose();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to open Google Drive");
+    } finally {
+      setOpening(false);
+    }
+  }, [onClose, onPick]);
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setErr(null);
-    const t = setTimeout(async () => {
-      try {
-        const res = await listFiles({ data: { query: query || undefined } });
-        if (!cancelled) setFiles(res.files);
-      } catch (e) {
-        if (!cancelled) setErr(e instanceof Error ? e.message : "Failed to load Drive");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 250);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [query, listFiles]);
+    if (started.current) return;
+    started.current = true;
+    void openPicker();
+  }, [openPicker]);
 
   return (
     <div
@@ -1140,59 +1149,39 @@ function DrivePicker({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-background border border-border rounded-sm w-full max-w-2xl max-h-[80vh] flex flex-col shadow-xl"
+        className="bg-background border border-border rounded-sm w-full max-w-md flex flex-col shadow-xl"
       >
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
           <div className="text-xs font-bold uppercase tracking-widest">
             Import from Google Drive
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground text-sm"
-          >
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-sm">
             ✕
           </button>
         </div>
-        <div className="px-4 py-3 border-b border-border">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search files by name…"
-            className="w-full px-3 py-2 text-sm border border-border bg-background rounded-sm focus:outline-none focus:ring-1 focus:ring-primary font-mono"
-          />
-        </div>
-        <div className="flex-1 overflow-auto">
-          {loading ? (
-            <div className="p-6 text-[11px] font-mono text-muted-foreground text-center">
-              Loading…
-            </div>
-          ) : err ? (
-            <div className="p-6 text-[11px] font-mono text-destructive text-center">{err}</div>
-          ) : files.length === 0 ? (
-            <div className="p-6 text-[11px] font-mono text-muted-foreground text-center">
-              No files found.
-            </div>
+        <div className="p-6 space-y-4">
+          {err ? (
+            <>
+              <div className="text-[11px] font-mono text-destructive">{err}</div>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={onClose}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 border border-border rounded-sm hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => void openPicker()}
+                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
+                >
+                  Try Again
+                </button>
+              </div>
+            </>
           ) : (
-            <ul className="divide-y divide-border">
-              {files.map((f) => (
-                <li key={f.id}>
-                  <button
-                    onClick={() => onPick(f)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-muted/50 flex items-center gap-3"
-                  >
-                    {f.iconLink ? (
-                      <img src={f.iconLink} alt="" className="w-4 h-4 shrink-0" />
-                    ) : (
-                      <span className="w-4 h-4 shrink-0" />
-                    )}
-                    <span className="text-xs font-mono truncate flex-1">{f.name}</span>
-                    <span className="text-[9px] font-mono text-muted-foreground shrink-0">
-                      {f.modifiedTime?.slice(0, 10) ?? ""}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="p-2 text-[11px] font-mono text-muted-foreground text-center">
+              {opening ? "Opening Google Drive…" : "Waiting for Google Drive…"}
+            </div>
           )}
         </div>
       </div>

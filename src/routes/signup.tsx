@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { signInWithGoogle } from "@/lib/google-auth";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Sign up — ScheduleBuilder" }] }),
@@ -35,10 +35,11 @@ function SignupPage() {
   };
 
   const onGoogle = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) setErr(result.error.message ?? "Google sign-in failed");
+    setErr(null);
+    setLoading(true);
+    const { error } = await signInWithGoogle(window.location.origin);
+    setLoading(false);
+    if (error) setErr(error.message ?? "Google sign-in failed");
   };
 
   return (
@@ -66,7 +67,13 @@ function SignupPage() {
               <Field label="Full name" value={fullName} onChange={setFullName} required />
               <Field label="Company" value={company} onChange={setCompany} />
               <Field label="Email" type="email" value={email} onChange={setEmail} required />
-              <Field label="Password" type="password" value={password} onChange={setPassword} required />
+              <Field
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                required
+              />
               {err && (
                 <div className="text-xs text-destructive border border-destructive/40 bg-destructive/10 rounded-sm px-2 py-1">
                   {err}
