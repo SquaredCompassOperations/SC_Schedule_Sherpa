@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { mergeUsersWithProfiles, parseManagedRole } from "./user-management";
+import {
+  mergeUsersWithProfiles,
+  parseManagedRole,
+  resolveManagedRole,
+} from "./user-management";
 
 describe("parseManagedRole", () => {
   it("accepts admin and client", () => {
@@ -10,6 +14,25 @@ describe("parseManagedRole", () => {
   it("rejects legacy and unknown roles", () => {
     expect(() => parseManagedRole("team")).toThrow("Invalid role");
     expect(() => parseManagedRole("owner")).toThrow("Invalid role");
+  });
+});
+
+describe("resolveManagedRole", () => {
+  it("derives admin for squaredcompass.com users", () => {
+    expect(resolveManagedRole("ops@squaredcompass.com", "admin")).toBe("admin");
+  });
+
+  it("derives client for external users", () => {
+    expect(resolveManagedRole("client@example.com", "client")).toBe("client");
+  });
+
+  it("rejects requested roles that conflict with the target email", () => {
+    expect(() => resolveManagedRole("ops@squaredcompass.com", "client")).toThrow(
+      "Requested role does not match user email",
+    );
+    expect(() => resolveManagedRole("client@example.com", "admin")).toThrow(
+      "Requested role does not match user email",
+    );
   });
 });
 

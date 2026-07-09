@@ -1,4 +1,4 @@
-import { normalizeAppRole, type AppRole } from "./rbac";
+import { normalizeAppRole, roleForEmail, type AppRole } from "./rbac";
 
 export type AuthUserSummary = {
   id: string;
@@ -31,6 +31,19 @@ export type ManagedUser = {
 export function parseManagedRole(role: unknown): AppRole {
   if (role === "admin" || role === "client") return role;
   throw new Error("Invalid role");
+}
+
+export function resolveManagedRole(
+  email: string | null | undefined,
+  requestedRole: unknown,
+): AppRole {
+  const derivedRole = roleForEmail(email);
+
+  if (parseManagedRole(requestedRole) !== derivedRole) {
+    throw new Error("Requested role does not match user email");
+  }
+
+  return derivedRole;
 }
 
 export function mergeUsersWithProfiles(

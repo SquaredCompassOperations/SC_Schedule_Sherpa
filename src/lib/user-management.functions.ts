@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Database } from "@/integrations/supabase/types";
-import { mergeUsersWithProfiles, parseManagedRole, type ManagedUser } from "./user-management";
+import { mergeUsersWithProfiles, resolveManagedRole, type ManagedUser } from "./user-management";
 
 const UpdateProfileSchema = z.object({
   userId: z.string().uuid(),
@@ -74,7 +74,16 @@ export const setManagedUserRole = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => SetRoleSchema.parse(input))
   .handler(async ({ context, data }) => {
     await requireAdmin(context.supabase, context.userId);
-    const role = parseManagedRole(data.role);
+
+    const { data: targetUserData, error: targetUserError } = await supabaseAdmin.auth.admin.getUserById(
+      data.userId,
+    );
+
+    if (targetUserError || !targetUserData.user) {
+      throw new Error("Could not load target user");
+    }
+
+    const role = resolveManagedRole(targetUserData.user.email, data.role);
 
     const { error } = await supabaseAdmin
       .from("user_roles")
