@@ -1,5 +1,11 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import {
+  canUseClientPreview,
+  getAdminViewModeForPath,
+  getAdminViewModeTarget,
+  type AdminViewMode,
+} from "@/lib/client-preview-mode";
 import { clearAllPersisted } from "@/lib/persist";
 import squaredCompassLogo from "@/assets/squared-compass-logo.png";
 
@@ -20,6 +26,9 @@ function resetLocalDrafts() {
 
 export function TopBar() {
   const { user, fullName, signOut, role } = useAuth();
+  const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const viewMode = getAdminViewModeForPath(pathname);
+  const showPreviewSwitch = canUseClientPreview(role);
   const initials = (fullName || user?.email || "U")
     .split(/\s+/)
     .map((s) => s[0])
@@ -49,15 +58,7 @@ export function TopBar() {
       <div className="flex items-center gap-3">
         {user ? (
           <>
-            <div className="hidden items-center rounded-sm border border-border bg-surface p-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:flex">
-              <span className="px-2 py-1">Use</span>
-              <span className="rounded-[2px] bg-primary px-2 py-1 text-primary-foreground">
-                Admin
-              </span>
-              <Link to="/client" className="px-2 py-1 hover:text-foreground">
-                Client
-              </Link>
-            </div>
+            {showPreviewSwitch ? <AdminClientPreviewSwitch activeMode={viewMode} /> : null}
             <div className="text-[10px] font-mono text-muted-foreground hidden md:block">
               {fullName || user.email} · {role}
             </div>
@@ -88,5 +89,35 @@ export function TopBar() {
         )}
       </div>
     </header>
+  );
+}
+
+function AdminClientPreviewSwitch({ activeMode }: { activeMode: AdminViewMode }) {
+  const options: Array<{ mode: AdminViewMode; label: string }> = [
+    { mode: "admin", label: "Admin" },
+    { mode: "client-preview", label: "Client Preview" },
+  ];
+
+  return (
+    <div
+      aria-label="Admin view mode"
+      className="hidden items-center rounded-sm border border-border bg-surface p-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:flex"
+    >
+      {options.map((option) => {
+        const active = activeMode === option.mode;
+        return (
+          <Link
+            key={option.mode}
+            to={getAdminViewModeTarget(option.mode)}
+            className={`rounded-[2px] px-2 py-1 transition ${
+              active ? "bg-primary text-primary-foreground" : "hover:text-foreground"
+            }`}
+            aria-current={active ? "page" : undefined}
+          >
+            {option.label}
+          </Link>
+        );
+      })}
+    </div>
   );
 }

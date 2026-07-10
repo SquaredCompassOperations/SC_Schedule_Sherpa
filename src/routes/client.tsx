@@ -1,6 +1,8 @@
 import { createFileRoute, Outlet, Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { canUseClientPreview } from "@/lib/client-preview-mode";
 import { CLIENT } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/client")({
@@ -18,9 +20,10 @@ const TABS = [
 ] as const;
 
 function ClientLayout() {
-  const { user, loading, signOut, fullName, company } = useAuth();
+  const { user, loading, signOut, fullName, company, role } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const isAdminPreview = canUseClientPreview(role);
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", replace: true });
@@ -33,12 +36,23 @@ function ClientLayout() {
       <header className="h-14 border-b border-border bg-card flex items-center justify-between px-6">
         <div>
           <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            Client Portal
+            {isAdminPreview ? "Client Preview" : "Client Portal"}
           </div>
           <div className="text-sm font-bold">{company || CLIENT.name}</div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="text-xs text-muted-foreground hidden sm:block">{fullName || user.email}</div>
+          {isAdminPreview ? (
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest hover:bg-muted"
+            >
+              <ArrowLeft className="size-3" />
+              Return to Admin
+            </Link>
+          ) : null}
+          <div className="text-xs text-muted-foreground hidden sm:block">
+            {fullName || user.email}
+          </div>
           <button
             onClick={() => signOut()}
             className="text-[10px] font-bold uppercase tracking-widest border border-border px-3 py-1.5 rounded-sm hover:bg-muted"
@@ -47,6 +61,14 @@ function ClientLayout() {
           </button>
         </div>
       </header>
+      {isAdminPreview ? (
+        <div className="border-b border-warning/40 bg-warning/10 px-6 py-2 text-xs text-foreground">
+          <div className="mx-auto max-w-4xl">
+            Previewing the client-facing portal. Use this view to confirm updates before notifying
+            the client.
+          </div>
+        </div>
+      ) : null}
       <div className="border-b border-border bg-background">
         <div className="max-w-4xl mx-auto flex gap-1 px-6">
           {TABS.map((t) => {
