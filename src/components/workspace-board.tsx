@@ -97,6 +97,7 @@ export function WorkspaceBoard() {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            aria-label="Search workspaces"
             placeholder="Search client, offer, solicitation, or type"
             className="h-10 w-full rounded-sm border border-border bg-card pl-9 pr-3 text-sm outline-none focus:border-primary"
           />
@@ -104,6 +105,7 @@ export function WorkspaceBoard() {
         <select
           value={stage}
           onChange={(event) => setStage(event.target.value as OfferStage | "all")}
+          aria-label="Filter workspaces by stage"
           className="h-10 rounded-sm border border-border bg-card px-3 text-sm"
         >
           <option value="all">All stages</option>
