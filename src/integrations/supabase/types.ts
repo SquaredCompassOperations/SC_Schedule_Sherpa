@@ -295,6 +295,16 @@ export type Database = {
           organization_id: string
         }[]
       }
+      log_offer_activity: {
+        Args: {
+          p_action: string
+          p_module: string
+          p_offer_id: string
+          p_target?: string | null
+          p_visibility?: Database["public"]["Enums"]["offer_activity_visibility"]
+        }
+        Returns: string
+      }
       is_offer_member: {
         Args: {
           _offer_id: string

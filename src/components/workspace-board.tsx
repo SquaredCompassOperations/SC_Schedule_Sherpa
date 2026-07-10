@@ -110,6 +110,7 @@ export function WorkspaceBoard() {
           busy={createMutation.isPending}
           error={createMutation.error ? (createMutation.error as Error).message : null}
           organizationError={organizations.isError ? (organizations.error as Error).message : null}
+          organizationsLoading={organizations.isPending}
           organizations={organizations.data ?? []}
           onCancel={() => setCreateOpen(false)}
           onSubmit={(values) => createMutation.mutate(values)}
@@ -194,6 +195,7 @@ function CreateWorkspaceForm({
   busy,
   error,
   organizationError,
+  organizationsLoading,
   organizations,
   onCancel,
   onSubmit,
@@ -201,6 +203,7 @@ function CreateWorkspaceForm({
   busy: boolean;
   error: string | null;
   organizationError: string | null;
+  organizationsLoading: boolean;
   organizations: OrganizationOption[];
   onCancel: () => void;
   onSubmit: (values: CreateOfferWorkspaceInput) => void;
@@ -295,6 +298,11 @@ function CreateWorkspaceForm({
           Could not load existing organizations. Try again before creating a workspace. {organizationError}
         </div>
       ) : null}
+      {organizationsLoading ? (
+        <div role="status" className="mt-3 text-sm text-muted-foreground">
+          Loading existing organizations before workspace creation...
+        </div>
+      ) : null}
       {error ? <div role="alert" className="mt-3 text-sm text-destructive">{error}</div> : null}
       <div className="mt-4 flex justify-end gap-2">
         <button
@@ -306,10 +314,10 @@ function CreateWorkspaceForm({
         </button>
         <button
           type="submit"
-          disabled={busy || Boolean(organizationError)}
+          disabled={busy || organizationsLoading || Boolean(organizationError)}
           className="rounded-sm bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
         >
-          {busy ? "Creating..." : "Create workspace"}
+          {busy ? "Creating..." : organizationsLoading ? "Loading organizations..." : "Create workspace"}
         </button>
       </div>
     </form>

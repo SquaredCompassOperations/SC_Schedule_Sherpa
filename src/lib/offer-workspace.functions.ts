@@ -145,7 +145,6 @@ export async function createOfferWorkspace(
 export async function logOfferActivity(
   input: {
     offerId: string;
-    actorUserId?: string | null;
     module: string;
     action: string;
     target?: string | null;
@@ -153,13 +152,12 @@ export async function logOfferActivity(
   },
   client: WorkspaceClient = supabase,
 ) {
-  const { error } = await client.from("offer_activity").insert({
-    offer_id: input.offerId,
-    actor_user_id: input.actorUserId ?? null,
-    module: input.module,
-    action: input.action,
-    target: input.target ?? null,
-    visibility: input.visibility ?? "admin",
+  const { error } = await client.rpc("log_offer_activity", {
+    p_offer_id: input.offerId,
+    p_module: input.module,
+    p_action: input.action,
+    p_target: input.target ?? null,
+    p_visibility: input.visibility ?? "admin",
   });
 
   if (error) {

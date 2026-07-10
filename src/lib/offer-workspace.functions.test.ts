@@ -202,16 +202,13 @@ describe("listOrganizations", () => {
 });
 
 describe("logOfferActivity", () => {
-  it("inserts a client-visible activity row", async () => {
-    const inserts: unknown[] = [];
+  it("calls the controlled activity RPC with normalized defaults", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
     const client = {
-      from: (table: string) => ({
-        insert: async (payload: unknown) => {
-          expect(table).toBe("offer_activity");
-          inserts.push(payload);
-          return { error: null };
-        },
-      }),
+      rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return { data: "activity-1", error: null };
+      },
     };
 
     await logOfferActivity(
@@ -224,15 +221,30 @@ describe("logOfferActivity", () => {
       client as never,
     );
 
-    expect(inserts).toEqual([
+    expect(calls).toEqual([
       {
-        offer_id: "offer-1",
-        actor_user_id: null,
-        module: "Workspace",
-        action: "created workspace",
-        target: null,
-        visibility: "client",
+        name: "log_offer_activity",
+        args: {
+          p_offer_id: "offer-1",
+          p_module: "Workspace",
+          p_action: "created workspace",
+          p_target: null,
+          p_visibility: "client",
+        },
       },
     ]);
+  });
+
+  it("surfaces controlled activity RPC failures", async () => {
+    const client = {
+      rpc: async () => ({ data: null, error: new Error("permission denied") }),
+      from: () => {
+        throw new Error("direct activity inserts must not occur");
+      },
+    };
+
+    await expect(
+      logOfferActivity({ offerId: "offer-1", module: "Workspace", action: "updated" }, client as never),
+    ).rejects.toThrow("Could not log offer activity: permission denied");
   });
 });

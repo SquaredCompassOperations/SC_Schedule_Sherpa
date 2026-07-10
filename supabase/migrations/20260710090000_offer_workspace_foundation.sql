@@ -268,6 +268,62 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.log_offer_activity(
+  p_offer_id UUID,
+  p_module TEXT,
+  p_action TEXT,
+  p_target TEXT DEFAULT NULL,
+  p_visibility public.offer_activity_visibility DEFAULT 'admin'
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_activity_id UUID;
+  v_module TEXT;
+  v_action TEXT;
+  v_target TEXT;
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Only admins can log offer activity' USING ERRCODE = '42501';
+  END IF;
+
+  v_module := NULLIF(btrim(p_module), '');
+  v_action := NULLIF(btrim(p_action), '');
+  v_target := NULLIF(btrim(p_target), '');
+
+  IF v_module IS NULL THEN
+    RAISE EXCEPTION 'Activity module is required';
+  END IF;
+
+  IF v_action IS NULL THEN
+    RAISE EXCEPTION 'Activity action is required';
+  END IF;
+
+  INSERT INTO public.offer_activity (
+    offer_id,
+    actor_user_id,
+    module,
+    action,
+    target,
+    visibility
+  )
+  VALUES (
+    p_offer_id,
+    auth.uid(),
+    v_module,
+    v_action,
+    v_target,
+    COALESCE(p_visibility, 'admin'::public.offer_activity_visibility)
+  )
+  RETURNING id INTO v_activity_id;
+
+  RETURN v_activity_id;
+END;
+$$;
+
 REVOKE INSERT ON public.organizations, public.offers, public.offer_members, public.offer_activity FROM authenticated;
 GRANT SELECT, UPDATE, DELETE ON public.organizations TO authenticated;
 GRANT SELECT, UPDATE, DELETE ON public.offers TO authenticated;
@@ -346,9 +402,11 @@ REVOKE EXECUTE ON FUNCTION public.is_offer_member(UUID) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.can_access_offer(UUID) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.can_access_organization(UUID) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.create_offer_workspace(TEXT, TEXT, TEXT, TEXT, UUID) FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.log_offer_activity(UUID, TEXT, TEXT, TEXT, public.offer_activity_visibility) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_offer_member(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_access_offer(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.can_access_organization(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_offer_workspace(TEXT, TEXT, TEXT, TEXT, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.log_offer_activity(UUID, TEXT, TEXT, TEXT, public.offer_activity_visibility) TO authenticated;
 
 COMMIT;

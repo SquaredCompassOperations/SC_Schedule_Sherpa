@@ -15,8 +15,10 @@ describe("offer workspace re-review boundaries", () => {
     const board = projectFile("src/components/workspace-board.tsx");
 
     expect(board).toContain("organizationError={organizations.isError");
+    expect(board).toContain("organizationsLoading={organizations.isPending}");
     expect(board).toContain("Could not load existing organizations. Try again before creating a workspace.");
-    expect(board).toContain("disabled={busy || Boolean(organizationError)}");
+    expect(board).toContain("Loading existing organizations before workspace creation...");
+    expect(board).toContain("disabled={busy || organizationsLoading || Boolean(organizationError)}");
   });
 
   it("reserves workspace-creation inserts for the security-definer RPC", () => {
@@ -34,9 +36,13 @@ describe("offer workspace re-review boundaries", () => {
     expect(migration).not.toContain('CREATE POLICY "Admins create offer members"');
     expect(migration).not.toContain('CREATE POLICY "Admins create offer activity"');
     expect(migration).toContain("CREATE OR REPLACE FUNCTION public.create_offer_workspace(");
+    expect(migration).toContain("CREATE OR REPLACE FUNCTION public.log_offer_activity(");
     expect(migration).toContain("SECURITY DEFINER");
     expect(migration).toContain(
       "GRANT EXECUTE ON FUNCTION public.create_offer_workspace(TEXT, TEXT, TEXT, TEXT, UUID) TO authenticated;",
+    );
+    expect(migration).toContain(
+      "GRANT EXECUTE ON FUNCTION public.log_offer_activity(UUID, TEXT, TEXT, TEXT, public.offer_activity_visibility) TO authenticated;",
     );
   });
 });
