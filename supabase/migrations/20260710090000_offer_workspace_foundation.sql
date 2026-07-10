@@ -268,10 +268,11 @@ BEGIN
 END;
 $$;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.organizations TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.offers TO authenticated;
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.offer_members TO authenticated;
-GRANT SELECT, INSERT ON public.offer_activity TO authenticated;
+REVOKE INSERT ON public.organizations, public.offers, public.offer_members, public.offer_activity FROM authenticated;
+GRANT SELECT, UPDATE, DELETE ON public.organizations TO authenticated;
+GRANT SELECT, UPDATE, DELETE ON public.offers TO authenticated;
+GRANT SELECT, UPDATE, DELETE ON public.offer_members TO authenticated;
+GRANT SELECT ON public.offer_activity TO authenticated;
 GRANT ALL ON public.organizations TO service_role;
 GRANT ALL ON public.offers TO service_role;
 GRANT ALL ON public.offer_members TO service_role;
@@ -281,11 +282,6 @@ ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offer_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.offer_activity ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins create organizations"
-  ON public.organizations FOR INSERT
-  TO authenticated
-  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Users view accessible organizations"
   ON public.organizations FOR SELECT
@@ -303,11 +299,6 @@ CREATE POLICY "Admins delete organizations"
   TO authenticated
   USING (public.is_admin());
 
-CREATE POLICY "Admins create offers"
-  ON public.offers FOR INSERT
-  TO authenticated
-  WITH CHECK (public.is_admin());
-
 CREATE POLICY "Users view accessible offers"
   ON public.offers FOR SELECT
   TO authenticated
@@ -324,11 +315,6 @@ CREATE POLICY "Admins delete offers"
   TO authenticated
   USING (public.is_admin());
 
-CREATE POLICY "Admins create offer members"
-  ON public.offer_members FOR INSERT
-  TO authenticated
-  WITH CHECK (public.is_admin());
-
 CREATE POLICY "Users view accessible offer members"
   ON public.offer_members FOR SELECT
   TO authenticated
@@ -344,11 +330,6 @@ CREATE POLICY "Admins delete offer members"
   ON public.offer_members FOR DELETE
   TO authenticated
   USING (public.is_admin());
-
-CREATE POLICY "Admins create offer activity"
-  ON public.offer_activity FOR INSERT
-  TO authenticated
-  WITH CHECK (public.is_admin());
 
 CREATE POLICY "Users view accessible offer activity"
   ON public.offer_activity FOR SELECT

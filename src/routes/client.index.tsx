@@ -90,12 +90,16 @@ function ClientOverview() {
         ? "in_progress"
         : "not_started";
 
-  // On first visit (nothing started), nudge into MAS Readiness.
+  // Only nudge unassigned clients after their workspace list has resolved.
   useEffect(() => {
-    if (readinessState === "not_started" && uploadedCount === 0) {
+    if (
+      workspaces.isSuccess && (workspaces.data ?? []).length === 0 &&
+      readinessState === "not_started" &&
+      uploadedCount === 0
+    ) {
       navigate({ to: "/client/readiness", replace: true });
     }
-  }, [readinessState, uploadedCount, navigate]);
+  }, [workspaces.isSuccess, workspaces.data, readinessState, uploadedCount, navigate]);
 
   return (
     <div className="space-y-6">

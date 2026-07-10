@@ -109,6 +109,7 @@ export function WorkspaceBoard() {
         <CreateWorkspaceForm
           busy={createMutation.isPending}
           error={createMutation.error ? (createMutation.error as Error).message : null}
+          organizationError={organizations.isError ? (organizations.error as Error).message : null}
           organizations={organizations.data ?? []}
           onCancel={() => setCreateOpen(false)}
           onSubmit={(values) => createMutation.mutate(values)}
@@ -192,12 +193,14 @@ export function WorkspaceBoard() {
 function CreateWorkspaceForm({
   busy,
   error,
+  organizationError,
   organizations,
   onCancel,
   onSubmit,
 }: {
   busy: boolean;
   error: string | null;
+  organizationError: string | null;
   organizations: OrganizationOption[];
   onCancel: () => void;
   onSubmit: (values: CreateOfferWorkspaceInput) => void;
@@ -287,6 +290,11 @@ function CreateWorkspaceForm({
           />
         </label>
       </div>
+      {organizationError ? (
+        <div role="alert" className="mt-3 text-sm text-destructive">
+          Could not load existing organizations. Try again before creating a workspace. {organizationError}
+        </div>
+      ) : null}
       {error ? <div role="alert" className="mt-3 text-sm text-destructive">{error}</div> : null}
       <div className="mt-4 flex justify-end gap-2">
         <button
@@ -298,7 +306,7 @@ function CreateWorkspaceForm({
         </button>
         <button
           type="submit"
-          disabled={busy}
+          disabled={busy || Boolean(organizationError)}
           className="rounded-sm bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
         >
           {busy ? "Creating..." : "Create workspace"}
