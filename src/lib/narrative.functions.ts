@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromPrompt } from "./openai-service";
+import { generateTextFromPrompt } from "./gemini-service";
 
 const NARRATIVE_PROMPTS: Record<string, string> = {
   "corporate-experience":

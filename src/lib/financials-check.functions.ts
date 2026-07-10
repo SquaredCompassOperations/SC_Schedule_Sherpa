@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromDocument } from "./openai-service";
+import { generateTextFromDocument } from "./gemini-service";
 
 // Inspects a P&L document and reports whether the period showed a net loss.
 export const detectPnlLoss = createServerFn({ method: "POST" })

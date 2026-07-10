@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ExtractedLcat } from "./price-list-extract.functions";
-import { generateTextFromPrompt } from "./openai-service";
+import { generateTextFromPrompt } from "./gemini-service";
 
 const InputSchema = z.object({ url: z.string().url().max(500) });
 

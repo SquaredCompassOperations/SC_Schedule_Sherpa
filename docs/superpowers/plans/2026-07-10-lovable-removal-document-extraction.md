@@ -2,18 +2,18 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace Lovable AI/runtime dependencies with app-owned OpenAI document extraction and direct Vite/TanStack config.
+**Goal:** Replace Lovable AI/runtime dependencies with app-owned Gemini document extraction and direct Vite/TanStack config.
 
-**Architecture:** Add a local document extraction helper and a single OpenAI service wrapper. Existing server functions keep their names but swap Lovable calls for the new helper. Build config uses official plugins directly.
+**Architecture:** Add a local document extraction helper and a single Gemini service wrapper. Existing server functions keep their names but swap Lovable calls for the new helper. Build config uses official plugins directly.
 
-**Tech Stack:** TanStack Start server functions, React, Vite, Nitro Vercel preset, OpenAI Responses API via `fetch`, JSZip, XLSX, Vitest, TypeScript.
+**Tech Stack:** TanStack Start server functions, React, Vite, Nitro Vercel preset, Gemini Interactions API via `fetch`, JSZip, XLSX, Vitest, TypeScript.
 
 ## Global Constraints
 
 - No `LOVABLE_API_KEY` runtime dependency remains.
 - No user-facing error text mentions Lovable.
-- `OPENAI_API_KEY` is server-only and never exposed with `VITE_`.
-- OpenAI requests set `store: false`.
+- `GEMINI_API_KEY` is server-only and never exposed with `VITE_`.
+- Gemini model is configurable through `GEMINI_MODEL`.
 - File uploads keep the existing 12 MB UI limit.
 - Manual entry remains available when extraction fails.
 
@@ -26,7 +26,7 @@
 - Create: `docs/superpowers/plans/2026-07-10-lovable-removal-document-extraction.md`
 
 **Interfaces:**
-- Consumes: approved user direction to use OpenAI
+- Consumes: approved user direction to use Gemini
 - Produces: implementation reference for the cleanup
 
 - [ ] **Step 1: Write the design and plan files.**
@@ -48,10 +48,10 @@
 - [ ] **Step 3: Implement local extraction using JSZip and XLSX.**
 - [ ] **Step 4: Run `npm test -- src/lib/file-extraction.test.ts` and confirm it passes.**
 
-### Task 3: Add OpenAI Service
+### Task 3: Add Gemini Service
 
 **Files:**
-- Create: `src/lib/openai-service.ts`
+- Create: `src/lib/gemini-service.ts`
 - Delete: `src/lib/ai-gateway.ts`
 
 **Interfaces:**
@@ -60,10 +60,10 @@
 - Produces: `generateTextFromDocument`
 - Produces: `generateTextFromImage`
 
-- [ ] **Step 1: Implement an OpenAI Responses API wrapper using `fetch`.**
-- [ ] **Step 2: Use `OPENAI_API_KEY`, optional `OPENAI_MODEL`, and `store: false`.**
+- [ ] **Step 1: Implement a Gemini Interactions API wrapper using `fetch`.**
+- [ ] **Step 2: Use `GEMINI_API_KEY` and optional `GEMINI_MODEL`.**
 - [ ] **Step 3: Return `output_text` or reconstructed output text.**
-- [ ] **Step 4: Throw a clear `OPENAI_API_KEY` configuration message when missing.**
+- [ ] **Step 4: Throw a clear `GEMINI_API_KEY` configuration message when missing.**
 
 ### Task 4: Replace Lovable AI Calls
 
@@ -79,7 +79,7 @@
 - Modify: `src/lib/price-list-crawl.functions.ts`
 
 **Interfaces:**
-- Consumes: OpenAI service helpers
+- Consumes: Gemini service helpers
 - Produces: unchanged server function exports used by routes
 
 - [ ] **Step 1: Replace document upload extraction with `generateTextFromDocument`.**

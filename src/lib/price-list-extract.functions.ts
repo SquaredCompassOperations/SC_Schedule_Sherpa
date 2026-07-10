@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromDocument } from "./openai-service";
+import { generateTextFromDocument } from "./gemini-service";
 
 export type ExtractedLcat = {
   title: string;
