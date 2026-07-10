@@ -12,6 +12,8 @@ import { openGoogleDrivePicker } from "@/lib/google-drive-picker";
 import { setPriceListLcats } from "@/lib/automation-store";
 import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
 import { useSelectedOfferId } from "@/lib/offer-workspace";
+import { isIntakeReadyForCompletion } from "@/lib/intake-readiness";
+import { markModuleComplete } from "@/lib/module-status-store";
 import {
   DOC_LABELS,
   PAST_PERFORMANCE_CATEGORIES,
@@ -62,6 +64,15 @@ function IntakePage() {
   const intake = useIntake();
   const navigate = useNavigate();
   const isLast = step === STEPS.length - 1;
+
+  const handleNext = useCallback(() => {
+    if (isLast) {
+      if (isIntakeReadyForCompletion(intake)) markModuleComplete("/intake");
+      navigate({ to: "/readiness" });
+      return;
+    }
+    setStep(Math.min(STEPS.length - 1, step + 1));
+  }, [intake, isLast, navigate, step]);
 
   return (
     <>
@@ -125,11 +136,7 @@ function IntakePage() {
                 Step {step + 1} of {STEPS.length}
               </div>
               <button
-                onClick={() =>
-                  isLast
-                    ? navigate({ to: "/readiness" })
-                    : setStep(Math.min(STEPS.length - 1, step + 1))
-                }
+                onClick={handleNext}
                 className="text-xs font-bold uppercase tracking-widest px-4 py-2 bg-primary text-primary-foreground rounded-sm hover:bg-primary/90"
               >
                 {isLast ? "Finish & Go to Readiness →" : "Save & Continue →"}
