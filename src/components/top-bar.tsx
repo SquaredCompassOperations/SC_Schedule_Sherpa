@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { clearAllPersisted } from "@/lib/persist";
+import squaredCompassLogo from "@/assets/squared-compass-logo.png";
 
 function resetLocalDrafts() {
   if (typeof window === "undefined") return;
@@ -27,20 +28,36 @@ export function TopBar() {
     .toUpperCase();
 
   return (
-    <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0 bg-card sticky top-0 z-20">
-      <div className="flex items-center gap-6">
-        <Link to="/" className="font-bold tracking-tighter text-lg uppercase text-foreground">
-          Offer Automation <span className="text-primary">Workspace</span>
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+      <div className="flex min-w-0 items-center gap-5">
+        <Link to="/" className="flex min-w-0 items-center gap-3">
+          <img
+            src={squaredCompassLogo}
+            alt="Squared Compass"
+            className="h-8 w-28 shrink-0 object-contain object-left"
+          />
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-extrabold tracking-tight text-foreground">
+              Schedule Sherpa
+            </span>
+            <span className="truncate text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Offer Automation Workspace
+            </span>
+          </span>
         </Link>
-        <nav className="flex gap-4 text-xs font-medium text-muted-foreground">
-          <Link to="/" className="text-foreground border-b-2 border-primary h-12 flex items-center px-1">
-            Board
-          </Link>
-        </nav>
       </div>
       <div className="flex items-center gap-3">
         {user ? (
           <>
+            <div className="hidden items-center rounded-sm border border-border bg-surface p-0.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:flex">
+              <span className="px-2 py-1">Use</span>
+              <span className="rounded-[2px] bg-primary px-2 py-1 text-primary-foreground">
+                Admin
+              </span>
+              <Link to="/client" className="px-2 py-1 hover:text-foreground">
+                Client
+              </Link>
+            </div>
             <div className="text-[10px] font-mono text-muted-foreground hidden md:block">
               {fullName || user.email} · {role}
             </div>
@@ -49,7 +66,7 @@ export function TopBar() {
               title="Clear browser-only draft data from older modules"
               className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
             >
-              Clear drafts
+              Reset
             </button>
             <button
               onClick={() => signOut()}
