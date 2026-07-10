@@ -2,8 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { clearGoogleProviderTokens, persistGoogleProviderTokens } from "@/lib/google-auth";
-
-export type AppRole = "team" | "client";
+import { normalizeAppRole, type AppRole } from "@/lib/rbac";
 
 export type AuthState = {
   session: Session | null;
@@ -30,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
       supabase.from("profiles").select("full_name, company").eq("id", uid).maybeSingle(),
     ]);
-    setRole((roleRow?.role as AppRole | undefined) ?? "client");
+    setRole(normalizeAppRole(roleRow?.role));
     setFullName(profileRow?.full_name ?? null);
     setCompany(profileRow?.company ?? null);
   };

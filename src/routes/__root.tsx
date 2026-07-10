@@ -16,6 +16,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
 import { GsaRefreshBanner } from "@/components/gsa-refresh-banner";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { isAdminRole } from "@/lib/rbac";
 
 function NotFoundComponent() {
   return (
@@ -122,6 +123,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   const isPublic = PUBLIC_ROUTES.includes(pathname);
   const isClientRoute = pathname === "/client" || pathname.startsWith("/client/");
+  const isAdmin = isAdminRole(role);
 
   useEffect(() => {
     if (loading) return;
@@ -129,10 +131,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       navigate({ to: "/login", replace: true });
       return;
     }
-    if (user && role === "client" && !isClientRoute && !isPublic) {
+    if (user && !isAdmin && !isClientRoute && !isPublic) {
       navigate({ to: "/client", replace: true });
     }
-  }, [loading, user, role, isPublic, isClientRoute, pathname, navigate]);
+  }, [loading, user, isAdmin, isPublic, isClientRoute, pathname, navigate]);
 
   if (loading) {
     return (
@@ -149,7 +151,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (isClientRoute && user) return <>{children}</>;
 
   // While redirecting client→/client or unauth→/login
-  if (!user || (role === "client" && !isClientRoute)) return null;
+  if (!user || (!isAdmin && !isClientRoute)) return null;
 
   // Team workspace shell
   return (
