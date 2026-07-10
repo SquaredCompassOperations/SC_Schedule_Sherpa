@@ -75,7 +75,11 @@ export function useSelectedOfferId(): string | null {
 export function selectOffer(id: string) {
   selectedOfferId = id;
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(SELECTED_OFFER_KEY, id);
+    try {
+      window.localStorage.setItem(SELECTED_OFFER_KEY, id);
+    } catch {
+      // Persistence is best effort; the in-memory selection still applies.
+    }
   }
   emitSelectedOffer();
 }
@@ -83,7 +87,11 @@ export function selectOffer(id: string) {
 export function clearSelectedOffer() {
   selectedOfferId = null;
   if (typeof window !== "undefined") {
-    window.localStorage.removeItem(SELECTED_OFFER_KEY);
+    try {
+      window.localStorage.removeItem(SELECTED_OFFER_KEY);
+    } catch {
+      // Persistence is best effort; the in-memory selection still applies.
+    }
   }
   emitSelectedOffer();
 }

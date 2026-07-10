@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   clearSelectedOffer,
   deriveOfferWorkspaceCard,
@@ -110,12 +110,34 @@ describe("filterOfferWorkspaceCards", () => {
 });
 
 describe("selected offer helpers", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("stores and clears the selected offer ID", () => {
     clearSelectedOffer();
     expect(getSelectedOfferId()).toBe(null);
     selectOffer("offer-1");
     expect(getSelectedOfferId()).toBe("offer-1");
     clearSelectedOffer();
+    expect(getSelectedOfferId()).toBe(null);
+  });
+
+  it("keeps selection changes working when storage is unavailable", () => {
+    vi.stubGlobal("window", {
+      localStorage: {
+        setItem: () => {
+          throw new Error("storage unavailable");
+        },
+        removeItem: () => {
+          throw new Error("storage unavailable");
+        },
+      },
+    });
+
+    expect(() => selectOffer("offer-2")).not.toThrow();
+    expect(getSelectedOfferId()).toBe("offer-2");
+    expect(() => clearSelectedOffer()).not.toThrow();
     expect(getSelectedOfferId()).toBe(null);
   });
 });
