@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { runMarketValidation } from "@/lib/market-validation.functions";
 import { useAutomation, setMarketRows, type MarketRow } from "@/lib/automation-store";
+import { useSelectedOfferId } from "@/lib/offer-workspace";
 
 export const Route = createFileRoute("/market-validation")({
   head: () => ({ meta: [{ title: "Market Validation — ScheduleBuilder" }] }),
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/market-validation")({
 function MarketPage() {
   const fn = useServerFn(runMarketValidation);
   const automation = useAutomation();
+  const selectedOfferId = useSelectedOfferId();
   const [running, setRunning] = useState(false);
   const [activeSin, setActiveSin] = useState<string>(automation.selectedSins[0]?.code || "");
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,9 @@ function MarketPage() {
       return;
     }
     if (benchmarkLcats.length === 0) {
-      setError("No LCATs available. Upload the client's price list on the SIN Recommendation Engine first.");
+      setError(
+        "No LCATs available. Upload the client's price list on the SIN Recommendation Engine first.",
+      );
       return;
     }
     setRunning(true);
@@ -40,12 +44,15 @@ function MarketPage() {
     try {
       const res = await fn({
         data: {
+          offerId: selectedOfferId ?? undefined,
           sin: activeSin,
           lcats: benchmarkLcats.slice(0, 50),
         },
       });
       if (res.error) setError(res.error);
-      setNotes(res.notes);
+      setNotes(
+        res.runId ? [`Run saved to workspace audit log: ${res.runId}`, ...res.notes] : res.notes,
+      );
       setMarketRows(res.rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Run failed");
@@ -54,13 +61,30 @@ function MarketPage() {
     }
   };
 
-
   const exportCsv = () => {
-    const header = ["Client LCAT", "SIN", "Competitor Labor Category", "Unit of Issue", "GSA Net Price (incl. IFF)", "Contractor", "Contract #", "Source"];
+    const header = [
+      "Client LCAT",
+      "SIN",
+      "Competitor Labor Category",
+      "Unit of Issue",
+      "GSA Net Price (incl. IFF)",
+      "Contractor",
+      "Contract #",
+      "Source",
+    ];
     const lines = [header.join(",")];
     for (const r of rows) {
       lines.push(
-        [r.clientLcat || "", r.sin, r.laborCategory, r.unitOfIssue, r.netPrice, r.contractor, r.contractNumber, r.sourceUrl]
+        [
+          r.clientLcat || "",
+          r.sin,
+          r.laborCategory,
+          r.unitOfIssue,
+          r.netPrice,
+          r.contractor,
+          r.contractNumber,
+          r.sourceUrl,
+        ]
           .map((v) => `"${String(v).replace(/"/g, '""')}"`)
           .join(","),
       );
@@ -90,7 +114,9 @@ function MarketPage() {
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Rows</div>
-            <div className="text-2xl font-mono font-bold text-primary leading-none">{rows.length}</div>
+            <div className="text-2xl font-mono font-bold text-primary leading-none">
+              {rows.length}
+            </div>
           </div>
         }
       />
@@ -158,12 +184,21 @@ function MarketPage() {
               .filter((n) => !isNaN(n) && n > 0);
             const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
             return (
-              <div key={clientLcat} className="border border-border rounded-sm bg-card overflow-hidden">
+              <div
+                key={clientLcat}
+                className="border border-border rounded-sm bg-card overflow-hidden"
+              >
                 <div className="flex items-baseline justify-between px-3 py-2 bg-muted/40 border-b border-border">
                   <div className="text-xs font-bold uppercase tracking-widest">{clientLcat}</div>
                   <div className="text-[10px] font-mono text-muted-foreground">
                     {groupRows.length} comparable row{groupRows.length === 1 ? "" : "s"}
-                    {avg !== null && <> • avg GSA net <span className="text-primary font-bold">${avg.toFixed(2)}</span></>}
+                    {avg !== null && (
+                      <>
+                        {" "}
+                        • avg GSA net{" "}
+                        <span className="text-primary font-bold">${avg.toFixed(2)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -183,14 +218,23 @@ function MarketPage() {
                           <td className="px-3 py-2">
                             {r.laborCategory}
                             {r.needsReview && (
-                              <span className="ml-2 text-[9px] font-mono uppercase text-warning">review</span>
+                              <span className="ml-2 text-[9px] font-mono uppercase text-warning">
+                                review
+                              </span>
                             )}
                           </td>
                           <td className="px-3 py-2">{r.unitOfIssue}</td>
                           <td className="px-3 py-2 font-mono font-bold">{r.netPrice}</td>
-                          <td className="px-3 py-2 truncate max-w-[180px]" title={r.contractor}>{r.contractor}</td>
+                          <td className="px-3 py-2 truncate max-w-[180px]" title={r.contractor}>
+                            {r.contractor}
+                          </td>
                           <td className="px-3 py-2">
-                            <a href={r.sourceUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline text-[10px] font-mono uppercase">
+                            <a
+                              href={r.sourceUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-primary hover:underline text-[10px] font-mono uppercase"
+                            >
                               open ↗
                             </a>
                           </td>

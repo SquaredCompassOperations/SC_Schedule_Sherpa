@@ -1,7 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import {
+  completeAutomationRun,
+  failAutomationRun,
+  requireAutomationAdminAccess,
+  saveMarketValidationResults,
+  startAutomationRun,
+} from "./automation-runs";
 
 const InputSchema = z.object({
+  offerId: z.string().min(1).optional(),
   sin: z.string().min(1).max(20),
   lcats: z.array(z.string().min(1).max(200)).min(1).max(50),
 });
@@ -22,6 +31,7 @@ type Result = {
   rows: Row[];
   contractorsScanned: number;
   notes: string[];
+  runId?: string;
   error?: string;
 };
 
@@ -77,7 +87,24 @@ function parseJson<T>(text: string, fallback: T): T {
   }
 }
 
-async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Promise<{ rows: Row[]; scanned: number }> {
+async function benchmarkOneLcat(
+  sin: string,
+  lcat: string,
+  notes: string[],
+): Promise<{ rows: Row[]; scanned: number; sourceUrls: string[]; eLibraryScanned: number }> {
+  const sourceUrls: string[] = [];
+  const libraryQuery = `site:gsaelibrary.gsa.gov ${sin} "${lcat}"`;
+  let libraryResults: Array<{ url: string; title?: string; description?: string }> = [];
+  try {
+    libraryResults = await firecrawlSearch(libraryQuery, 5);
+    sourceUrls.push(...libraryResults.map((result) => result.url).filter(Boolean));
+    notes.push(`[${lcat}] GSA eLibrary sources found: ${libraryResults.length}.`);
+  } catch (e) {
+    notes.push(
+      `[${lcat}] GSA eLibrary search failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
   // Build a targeted query for this single LCAT. Restrict to ACTIVE contracts only —
   // GSA Advantage lists both current and expired vendors; expired pricing is not a
   // valid benchmark for a new offer.
@@ -87,7 +114,7 @@ async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Pro
     search = await firecrawlSearch(query, 6);
   } catch (e) {
     notes.push(`[${lcat}] search failed: ${e instanceof Error ? e.message : String(e)}`);
-    return { rows: [], scanned: 0 };
+    return { rows: [], scanned: 0, sourceUrls, eLibraryScanned: libraryResults.length };
   }
 
   const pdfLinks = search
@@ -96,9 +123,9 @@ async function benchmarkOneLcat(sin: string, lcat: string, notes: string[]): Pro
 
   if (pdfLinks.length === 0) {
     notes.push(`[${lcat}] no GSA Advantage results matched.`);
-    return { rows: [], scanned: 0 };
+    return { rows: [], scanned: 0, sourceUrls, eLibraryScanned: libraryResults.length };
   }
-
+  sourceUrls.push(...pdfLinks.map((link) => link.url).filter(Boolean));
 
   const rows: Row[] = [];
   for (const link of pdfLinks) {
@@ -120,10 +147,14 @@ ${markdown}`;
     try {
       text = await aiCall(prompt);
     } catch (e) {
-      notes.push(`[${lcat}] extract failed for ${link.url}: ${e instanceof Error ? e.message : String(e)}`);
+      notes.push(
+        `[${lcat}] extract failed for ${link.url}: ${e instanceof Error ? e.message : String(e)}`,
+      );
       continue;
     }
-    const extracted = parseJson<Array<{ laborCategory: string; unitOfIssue: string; netPrice: string }>>(text, []);
+    const extracted = parseJson<
+      Array<{ laborCategory: string; unitOfIssue: string; netPrice: string }>
+    >(text, []);
     if (extracted.length === 0) {
       notes.push(`[${lcat}] ${link.url} skipped — no active-contract matches.`);
     }
@@ -142,32 +173,97 @@ ${markdown}`;
     }
   }
 
-
   if (rows.length === 0) {
     notes.push(`[${lcat}] ${pdfLinks.length} PDF(s) scanned but no comparable rows extracted.`);
+  } else if (pdfLinks.length < 5) {
+    notes.push(
+      `[${lcat}] only ${pdfLinks.length} comparable source document(s) scanned; review before relying on the benchmark.`,
+    );
   }
 
-  return { rows, scanned: pdfLinks.length };
+  return {
+    rows,
+    scanned: pdfLinks.length,
+    sourceUrls: Array.from(new Set(sourceUrls)),
+    eLibraryScanned: libraryResults.length,
+  };
 }
 
 export const runMarketValidation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
-  .handler(async ({ data }): Promise<Result> => {
+  .handler(async ({ context, data }): Promise<Result> => {
     const notes: string[] = [];
+    let run: { id: string } | null = null;
     try {
+      if (data.offerId) {
+        await requireAutomationAdminAccess(context.supabase, data.offerId);
+        try {
+          run = await startAutomationRun({
+            offerId: data.offerId,
+            module: "market_validation",
+            input: { sin: data.sin, lcats: data.lcats },
+            sourceUrls: ["https://www.gsaelibrary.gsa.gov/", "https://www.gsaadvantage.gov/"],
+          });
+        } catch (e) {
+          notes.push(
+            `Automation run logging unavailable: ${e instanceof Error ? e.message : String(e)}`,
+          );
+        }
+      }
       // Iterate per LCAT so each unique offering gets its own benchmark.
       // Run sequentially to stay polite to the upstream APIs.
       const all: Row[] = [];
       let totalScanned = 0;
+      let totalELibraryScanned = 0;
+      const discoveredSourceUrls: string[] = [];
       for (const lcat of data.lcats) {
-        const { rows, scanned } = await benchmarkOneLcat(data.sin, lcat, notes);
+        const { rows, scanned, sourceUrls, eLibraryScanned } = await benchmarkOneLcat(
+          data.sin,
+          lcat,
+          notes,
+        );
         all.push(...rows);
         totalScanned += scanned;
+        totalELibraryScanned += eLibraryScanned;
+        discoveredSourceUrls.push(...sourceUrls);
       }
-      return { rows: all, contractorsScanned: totalScanned, notes };
+      const sourceUrls = Array.from(
+        new Set([...discoveredSourceUrls, ...all.map((row) => row.sourceUrl).filter(Boolean)]),
+      );
+      if (run && data.offerId) {
+        await saveMarketValidationResults({ runId: run.id, offerId: data.offerId, rows: all });
+        await completeAutomationRun({
+          runId: run.id,
+          metrics: {
+            lcats: data.lcats.length,
+            rows: all.length,
+            contractorsScanned: totalScanned,
+            eLibrarySourcesFound: totalELibraryScanned,
+            notes: notes.length,
+          },
+          sourceUrls,
+          needsReview:
+            all.length === 0 ||
+            totalScanned < data.lcats.length * 5 ||
+            all.some((row) => row.needsReview),
+        });
+      }
+      return { rows: all, contractorsScanned: totalScanned, notes, runId: run?.id };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      if (run) {
+        try {
+          await failAutomationRun({ runId: run.id, error: e });
+        } catch (logError) {
+          notes.push(
+            `Automation run failure logging unavailable: ${
+              logError instanceof Error ? logError.message : String(logError)
+            }`,
+          );
+        }
+      }
       console.error("runMarketValidation error:", msg);
-      return { rows: [], contractorsScanned: 0, notes, error: msg };
+      return { rows: [], contractorsScanned: 0, notes, runId: run?.id, error: msg };
     }
   });

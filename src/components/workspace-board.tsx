@@ -22,6 +22,7 @@ import {
   listOfferWorkspaces,
   listOrganizations,
   type CreateOfferWorkspaceInput,
+  type CreateOfferWorkspaceResult,
   type OrganizationOption,
 } from "@/lib/offer-workspace.functions";
 import {
@@ -100,8 +101,8 @@ export function WorkspaceBoard() {
     enabled: Boolean(user?.id),
   });
 
-  const createMutation = useMutation({
-    mutationFn: createOfferWorkspace,
+  const createMutation = useMutation<CreateOfferWorkspaceResult, Error, CreateOfferWorkspaceInput>({
+    mutationFn: (input: CreateOfferWorkspaceInput) => createOfferWorkspace(input),
     onSuccess: async (result) => {
       selectOffer(result.offerId);
       if (user?.id) {

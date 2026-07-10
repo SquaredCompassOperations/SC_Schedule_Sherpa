@@ -7,6 +7,7 @@ import { generatePricingWorkbook } from "@/lib/pricing-workbook.functions";
 import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
 import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
+import { useSelectedOfferId } from "@/lib/offer-workspace";
 
 export const Route = createFileRoute("/pricing-workbook")({
   head: () => ({ meta: [{ title: "Pricing Workbook — ScheduleBuilder" }] }),
@@ -22,6 +23,8 @@ type Row = {
   minimumYearsExperience: string;
   unitOfMeasure: string;
   price: string;
+  scaLaborCategory: string;
+  wageDeterminationTable: string;
 };
 
 function emptyRow(sin = ""): Row {
@@ -34,19 +37,121 @@ function emptyRow(sin = ""): Row {
     minimumYearsExperience: "5",
     unitOfMeasure: "Hour",
     price: "",
+    scaLaborCategory: "",
+    wageDeterminationTable: "",
   };
 }
 
 const STOPWORDS = new Set([
-  "the","a","an","and","or","of","for","to","in","on","with","by","at","as","is","are","be","been",
-  "this","that","these","those","from","into","under","over","within","across","per","using","use",
-  "their","they","them","its","it","also","may","such","including","other","than","upon","via","each",
-  "any","all","not","but","if","when","while","will","shall","must","can","should","would","could",
-  "has","have","had","do","does","done","being","etc","e.g","i.e","level","levels","ensure","ensures",
-  "provide","provides","provided","perform","performs","performed","performing","support","supports",
-  "supported","supporting","work","works","working","worked","candidate","candidates","duties","duty",
-  "responsibilities","responsibility","experience","required","requires","requirement","requirements",
-  "year","years","minimum","preferred","plus","including","includes","included","tasks","task",
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "of",
+  "for",
+  "to",
+  "in",
+  "on",
+  "with",
+  "by",
+  "at",
+  "as",
+  "is",
+  "are",
+  "be",
+  "been",
+  "this",
+  "that",
+  "these",
+  "those",
+  "from",
+  "into",
+  "under",
+  "over",
+  "within",
+  "across",
+  "per",
+  "using",
+  "use",
+  "their",
+  "they",
+  "them",
+  "its",
+  "it",
+  "also",
+  "may",
+  "such",
+  "including",
+  "other",
+  "than",
+  "upon",
+  "via",
+  "each",
+  "any",
+  "all",
+  "not",
+  "but",
+  "if",
+  "when",
+  "while",
+  "will",
+  "shall",
+  "must",
+  "can",
+  "should",
+  "would",
+  "could",
+  "has",
+  "have",
+  "had",
+  "do",
+  "does",
+  "done",
+  "being",
+  "etc",
+  "e.g",
+  "i.e",
+  "level",
+  "levels",
+  "ensure",
+  "ensures",
+  "provide",
+  "provides",
+  "provided",
+  "perform",
+  "performs",
+  "performed",
+  "performing",
+  "support",
+  "supports",
+  "supported",
+  "supporting",
+  "work",
+  "works",
+  "working",
+  "worked",
+  "candidate",
+  "candidates",
+  "duties",
+  "duty",
+  "responsibilities",
+  "responsibility",
+  "experience",
+  "required",
+  "requires",
+  "requirement",
+  "requirements",
+  "year",
+  "years",
+  "minimum",
+  "preferred",
+  "plus",
+  "including",
+  "includes",
+  "included",
+  "tasks",
+  "task",
 ]);
 
 function deriveKeywords(description: string): string {
@@ -94,6 +199,7 @@ function PricingWorkbookPage() {
   const versionFn = useServerFn(checkGsaTemplateVersion);
   const automation = useAutomation();
   const intake = useIntake();
+  const selectedOfferId = useSelectedOfferId();
 
   const [template, setTemplateLocal] = useState<"fcp-product" | "fcp-services-plus">(
     automation.pricingTemplate || "fcp-services-plus",
@@ -101,7 +207,11 @@ function PricingWorkbookPage() {
   const [rows, setRows] = useState<Row[]>(() => {
     // hydrate from previously saved rows first
     if (automation.pricingRows && automation.pricingRows.length > 0) {
-      return automation.pricingRows.map((r) => ({ ...emptyRow(r.sin), ...r, keywords: r.keywords ?? "" }));
+      return automation.pricingRows.map((r) => ({
+        ...emptyRow(r.sin),
+        ...r,
+        keywords: r.keywords ?? "",
+      }));
     }
     const firstSin = automation.selectedSins[0]?.code || "";
     // Prefer the uploaded Commercial Price List as the basis for line items.
@@ -148,7 +258,9 @@ function PricingWorkbookPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    versionFn().then((v) => setVersion(v)).catch(() => {});
+    versionFn()
+      .then((v) => setVersion(v))
+      .catch(() => {});
   }, [versionFn]);
 
   const switchTemplate = (t: "fcp-product" | "fcp-services-plus") => {
@@ -185,6 +297,7 @@ function PricingWorkbookPage() {
     try {
       const res = await genFn({
         data: {
+          offerId: selectedOfferId ?? undefined,
           template,
           sins: Array.from(new Set(rows.map((r) => r.sin))),
           rows,
@@ -224,7 +337,9 @@ function PricingWorkbookPage() {
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Rows</div>
-            <div className="text-2xl font-mono font-bold text-primary leading-none">{rows.length}</div>
+            <div className="text-2xl font-mono font-bold text-primary leading-none">
+              {rows.length}
+            </div>
           </div>
         }
       />
@@ -268,20 +383,31 @@ function PricingWorkbookPage() {
                   onChange={(e) => setInteractAck(e.target.checked)}
                   className="size-3 accent-primary"
                 />
-                <span>I have reviewed the GSA Interact feed and confirm bundled templates are correct.</span>
+                <span>
+                  I have reviewed the GSA Interact feed and confirm bundled templates are correct.
+                </span>
               </label>
             </div>
           ) : null}
         </div>
       )}
 
-
       <Panel title="Template" className="mb-4">
         <div className="flex flex-wrap gap-2">
-          {([
-            { v: "fcp-services-plus", label: "FCP Services Plus", hint: "Labor categories, professional services" },
-            { v: "fcp-product", label: "FCP Product File", hint: "Manufactured goods, parts, supplies" },
-          ] as const).map((t) => (
+          {(
+            [
+              {
+                v: "fcp-services-plus",
+                label: "FCP Services Plus",
+                hint: "Labor categories, professional services",
+              },
+              {
+                v: "fcp-product",
+                label: "FCP Product File",
+                hint: "Manufactured goods, parts, supplies",
+              },
+            ] as const
+          ).map((t) => (
             <button
               key={t.v}
               onClick={() => switchTemplate(t.v)}
@@ -307,6 +433,8 @@ function PricingWorkbookPage() {
                 <th className="text-left py-2 px-1">Min Yrs</th>
                 <th className="text-left py-2 px-1">UoM</th>
                 <th className="text-left py-2 px-1">Price</th>
+                <th className="text-left py-2 px-1">SCA</th>
+                <th className="text-left py-2 px-1">WD Table</th>
                 <th></th>
               </tr>
             </thead>
@@ -314,32 +442,83 @@ function PricingWorkbookPage() {
               {rows.map((r, i) => (
                 <tr key={i} className="border-t border-border">
                   <td className="py-1 px-1">
-                    <input value={r.sin} onChange={(e) => update(i, { sin: e.target.value })} className="w-24 px-2 py-1 text-xs font-mono border border-border bg-background rounded-sm" placeholder="54151S" />
+                    <input
+                      value={r.sin}
+                      onChange={(e) => update(i, { sin: e.target.value })}
+                      className="w-24 px-2 py-1 text-xs font-mono border border-border bg-background rounded-sm"
+                      placeholder="54151S"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <input value={r.title} onChange={(e) => update(i, { title: e.target.value })} className="w-full px-2 py-1 text-xs border border-border bg-background rounded-sm" placeholder="Senior Systems Architect" />
+                    <input
+                      value={r.title}
+                      onChange={(e) => update(i, { title: e.target.value })}
+                      className="w-full px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                      placeholder="Senior Systems Architect"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <input value={r.minimumEducation} onChange={(e) => update(i, { minimumEducation: e.target.value })} className="w-28 px-2 py-1 text-xs border border-border bg-background rounded-sm" />
+                    <input
+                      value={r.minimumEducation}
+                      onChange={(e) => update(i, { minimumEducation: e.target.value })}
+                      className="w-28 px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <input value={r.minimumYearsExperience} onChange={(e) => update(i, { minimumYearsExperience: e.target.value })} className="w-12 px-2 py-1 text-xs border border-border bg-background rounded-sm" />
+                    <input
+                      value={r.minimumYearsExperience}
+                      onChange={(e) => update(i, { minimumYearsExperience: e.target.value })}
+                      className="w-12 px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <input value={r.unitOfMeasure} onChange={(e) => update(i, { unitOfMeasure: e.target.value })} className="w-16 px-2 py-1 text-xs border border-border bg-background rounded-sm" />
+                    <input
+                      value={r.unitOfMeasure}
+                      onChange={(e) => update(i, { unitOfMeasure: e.target.value })}
+                      className="w-16 px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <input value={r.price} onChange={(e) => update(i, { price: e.target.value })} className="w-24 px-2 py-1 text-xs font-mono border border-border bg-background rounded-sm" placeholder="185.50" />
+                    <input
+                      value={r.price}
+                      onChange={(e) => update(i, { price: e.target.value })}
+                      className="w-24 px-2 py-1 text-xs font-mono border border-border bg-background rounded-sm"
+                      placeholder="185.50"
+                    />
                   </td>
                   <td className="py-1 px-1">
-                    <button onClick={() => removeRow(i)} className="text-[10px] text-destructive hover:underline">remove</button>
+                    <input
+                      value={r.scaLaborCategory}
+                      onChange={(e) => update(i, { scaLaborCategory: e.target.value })}
+                      className="w-44 px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                      placeholder="Optional SCA LCAT"
+                    />
+                  </td>
+                  <td className="py-1 px-1">
+                    <input
+                      value={r.wageDeterminationTable}
+                      onChange={(e) => update(i, { wageDeterminationTable: e.target.value })}
+                      className="w-28 px-2 py-1 text-xs border border-border bg-background rounded-sm"
+                      placeholder="Table #"
+                    />
+                  </td>
+                  <td className="py-1 px-1">
+                    <button
+                      onClick={() => removeRow(i)}
+                      className="text-[10px] text-destructive hover:underline"
+                    >
+                      remove
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <button onClick={addRow} className="mt-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted">
+        <button
+          onClick={addRow}
+          className="mt-2 text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted"
+        >
           + Add row
         </button>
       </Panel>
@@ -354,7 +533,9 @@ function PricingWorkbookPage() {
         className="mb-4"
       >
         {rows.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Add a line item above to write a description.</p>
+          <p className="text-xs text-muted-foreground">
+            Add a line item above to write a description.
+          </p>
         ) : (
           <div className="space-y-3">
             {rows.map((r, i) => (
@@ -365,7 +546,8 @@ function PricingWorkbookPage() {
                     {r.title || <span className="text-muted-foreground italic">Untitled LCAT</span>}
                   </div>
                   <div className="text-[10px] font-mono text-muted-foreground">
-                    {r.minimumEducation || "—"} · {r.minimumYearsExperience || "0"} yrs · {r.unitOfMeasure || "Hour"}
+                    {r.minimumEducation || "—"} · {r.minimumYearsExperience || "0"} yrs ·{" "}
+                    {r.unitOfMeasure || "Hour"}
                   </div>
                 </div>
                 <textarea
@@ -395,21 +577,22 @@ function PricingWorkbookPage() {
                       : undefined
                   }
                 />
-
               </div>
             ))}
           </div>
         )}
       </Panel>
 
-
-
-
-
       <div className="flex justify-end gap-2 items-center">
         {error && <span className="text-xs text-destructive mr-auto">{error}</span>}
         <span className="text-[10px] font-mono uppercase tracking-widest mr-2 text-muted-foreground">
-          {dirty ? <span className="text-warning">Unsaved changes</span> : savedAt ? `Saved ${new Date(savedAt).toLocaleTimeString()}` : "Not saved"}
+          {dirty ? (
+            <span className="text-warning">Unsaved changes</span>
+          ) : savedAt ? (
+            `Saved ${new Date(savedAt).toLocaleTimeString()}`
+          ) : (
+            "Not saved"
+          )}
         </span>
         <button
           onClick={save}
@@ -443,7 +626,10 @@ function KeywordsBox({
   onChange: (v: string) => void;
   onSuggest?: () => void;
 }) {
-  const parts = value.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const count = parts.length;
   const overLimit = parts.filter((p) => p.length > 100);
   const tooMany = count > 5;
@@ -463,7 +649,9 @@ function KeywordsBox({
               Suggest from description
             </button>
           )}
-          <div className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}>
+          <div
+            className={`text-[10px] font-mono ${tooMany ? "text-destructive" : "text-muted-foreground"}`}
+          >
             {count}/5
           </div>
         </div>
@@ -478,7 +666,10 @@ function KeywordsBox({
         <div className="mt-1 text-[10px] text-destructive">
           {tooMany && <div>Maximum 5 keywords.</div>}
           {overLimit.length > 0 && (
-            <div>Each keyword must be ≤100 chars: {overLimit.map((p) => `"${p.slice(0, 30)}…"`).join(", ")}</div>
+            <div>
+              Each keyword must be ≤100 chars:{" "}
+              {overLimit.map((p) => `"${p.slice(0, 30)}…"`).join(", ")}
+            </div>
           )}
         </div>
       )}

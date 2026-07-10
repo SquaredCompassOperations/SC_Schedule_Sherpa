@@ -26,7 +26,6 @@ export type PriceListLcat = {
   sin?: string;
 };
 
-
 export type MarketRow = {
   sin: string;
   clientLcat?: string;
@@ -48,6 +47,8 @@ export type PricingRow = {
   minimumYearsExperience: string;
   unitOfMeasure: string;
   price: string;
+  scaLaborCategory?: string;
+  wageDeterminationTable?: string;
 };
 
 export type AutomationState = {
@@ -92,8 +93,10 @@ function defaultKeyTerms(): string {
   ].join("\n");
 }
 
-
-let state: AutomationState = { ...defaultState(), ...loadPersisted<Partial<AutomationState>>(PERSIST_KEY, {}) };
+let state: AutomationState = {
+  ...defaultState(),
+  ...loadPersisted<Partial<AutomationState>>(PERSIST_KEY, {}),
+};
 
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
@@ -142,7 +145,6 @@ export function setPricingTemplate(t: AutomationState["pricingTemplate"]) {
   state = { ...state, pricingTemplate: t };
   emit();
 }
-
 
 export function savePricingRows(rows: PricingRow[]) {
   state = { ...state, pricingRows: rows, pricingSavedAt: Date.now() };

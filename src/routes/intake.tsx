@@ -11,6 +11,7 @@ import { getStoredGoogleProviderToken } from "@/lib/google-auth";
 import { openGoogleDrivePicker } from "@/lib/google-drive-picker";
 import { setPriceListLcats } from "@/lib/automation-store";
 import { lookupSbaCertifications, extractSbaCertsFromImage } from "@/lib/sba-lookup.functions";
+import { useSelectedOfferId } from "@/lib/offer-workspace";
 import {
   DOC_LABELS,
   PAST_PERFORMANCE_CATEGORIES,
@@ -864,6 +865,7 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
   const lookup = useServerFn(lookupSbaCertifications);
   const extractImg = useServerFn(extractSbaCertsFromImage);
   const fetchDrive = useServerFn(fetchDriveFile);
+  const selectedOfferId = useSelectedOfferId();
   const [showDrive, setShowDrive] = useState(false);
   const [status, setStatus] = useState<
     | { kind: "idle" }
@@ -887,7 +889,11 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
     setStatus({ kind: "working", via: "scan" });
     try {
       const res = await lookup({
-        data: { uei: intake.corporate.uei, cageCode: intake.corporate.cageCode },
+        data: {
+          offerId: selectedOfferId ?? undefined,
+          uei: intake.corporate.uei,
+          cageCode: intake.corporate.cageCode,
+        },
       });
       setSbaCerts(res.certs);
       if (res.error) {
@@ -918,7 +924,14 @@ function SocioeconomicStep({ intake }: { intake: ReturnType<typeof useIntake> })
   }) => {
     setStatus({ kind: "working", via: "image" });
     try {
-      const res = await extractImg({ data: payload });
+      const res = await extractImg({
+        data: {
+          ...payload,
+          offerId: selectedOfferId ?? undefined,
+          uei: intake.corporate.uei || undefined,
+          cageCode: intake.corporate.cageCode || undefined,
+        },
+      });
       setSbaCerts(res.certs);
       if (res.error) setStatus({ kind: "error", message: res.error });
       else if (res.certs.length === 0)

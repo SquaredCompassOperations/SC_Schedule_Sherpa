@@ -6,6 +6,7 @@ import { PageHeader, Panel } from "@/components/ui-primitives";
 import { suggestScaLcats, SCA_DIRECTORY_URL } from "@/lib/sca-suggest.functions";
 import { useAutomation, setSelectedLcats, type SelectedLcat } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
+import { useSelectedOfferId } from "@/lib/offer-workspace";
 
 export const Route = createFileRoute("/sca")({
   head: () => ({ meta: [{ title: "LCAT Confirmation — ScheduleBuilder" }] }),
@@ -24,6 +25,7 @@ function ScaPage() {
   const fn = useServerFn(suggestScaLcats);
   const automation = useAutomation();
   const intake = useIntake();
+  const selectedOfferId = useSelectedOfferId();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [picked, setPicked] = useState<Set<string>>(
     () => new Set(automation.selectedLcats.map((l) => l.code)),
@@ -41,7 +43,14 @@ function ScaPage() {
     try {
       const res = await fn({
         data: {
+          offerId: selectedOfferId ?? undefined,
           sins: automation.selectedSins.map((s) => ({ code: s.code, title: s.title })),
+          lcats: automation.priceListLcats.map((l) => ({
+            title: l.title,
+            description: l.rate
+              ? `Commercial rate ${l.rate}${l.unit ? ` per ${l.unit}` : ""}`
+              : undefined,
+          })),
           businessSummary: intake.corporate.legalName
             ? `${intake.corporate.legalName} — ${intake.corporate.businessTypes || ""}. NAICS ${intake.corporate.naicsPrimary}.`
             : undefined,
@@ -79,7 +88,9 @@ function ScaPage() {
         actions={
           <div className="text-right">
             <div className="text-[10px] font-mono text-muted-foreground uppercase">Selected</div>
-            <div className="text-2xl font-mono font-bold text-primary leading-none">{picked.size}</div>
+            <div className="text-2xl font-mono font-bold text-primary leading-none">
+              {picked.size}
+            </div>
           </div>
         }
       />
@@ -87,7 +98,8 @@ function ScaPage() {
       <Panel title="Generate suggestions" className="mb-6">
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs text-muted-foreground">
-            Using {automation.selectedSins.length} selected SIN{automation.selectedSins.length === 1 ? "" : "s"}:{" "}
+            Using {automation.selectedSins.length} selected SIN
+            {automation.selectedSins.length === 1 ? "" : "s"}:{" "}
             {automation.selectedSins.map((s) => s.code).join(", ") || "(none — select SINs first)"}
           </div>
           <div className="flex gap-2">
