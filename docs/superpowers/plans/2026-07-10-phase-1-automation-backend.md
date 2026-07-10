@@ -6,7 +6,7 @@
 
 **Architecture:** Existing crawler and workbook server functions remain the execution layer. A new automation run model records each run, metrics, source URLs, and module-specific outputs against an `offer_id`, with admin-controlled visibility for client-facing review later.
 
-**Tech Stack:** TanStack Start server functions, React, Supabase Postgres/RLS, `@supabase/supabase-js`, Vitest, existing Firecrawl and Lovable AI gateway integrations.
+**Tech Stack:** TanStack Start server functions, React, Supabase Postgres/RLS, `@supabase/supabase-js`, Vitest, Firecrawl, and app-owned AI extraction integrations.
 
 ## Global Constraints
 

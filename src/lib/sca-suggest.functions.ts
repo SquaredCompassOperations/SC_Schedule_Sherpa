@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import scaData from "./sca-occupations.json";
+import { generateTextFromPrompt } from "./openai-service";
 import {
   completeAutomationRun,
   failAutomationRun,
@@ -45,19 +46,7 @@ type RawScaMatch = {
 };
 
 async function aiCall(prompt: string): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`AI gateway failed [${res.status}]: ${await res.text()}`);
-  const j: { choices?: Array<{ message?: { content?: string } }> } = await res.json();
-  return j.choices?.[0]?.message?.content ?? "";
+  return generateTextFromPrompt({ prompt });
 }
 
 function parseJson<T>(text: string, fallback: T): T {

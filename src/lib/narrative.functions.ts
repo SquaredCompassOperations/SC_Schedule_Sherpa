@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway";
+import { generateTextFromPrompt } from "./openai-service";
 
 const NARRATIVE_PROMPTS: Record<string, string> = {
   "corporate-experience":
@@ -30,18 +29,14 @@ export const generateNarrative = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY is not configured");
     const base = NARRATIVE_PROMPTS[data.kind];
     if (!base) throw new Error(`Unknown narrative kind: ${data.kind}`);
 
-    const gateway = createLovableAiGatewayProvider(key);
-    const model = gateway("google/gemini-3-flash-preview");
-    const { text } = await generateText({
-      model,
+    const text = await generateTextFromPrompt({
       system:
         "You are a senior GSA Federal Supply Schedule proposal writer. Output polished, ready-to-paste federal prose grounded ONLY in the supplied master intake context. STRICT ANTI-HALLUCINATION RULES: (1) Never invent company names, customer names, POC names/emails/phones, contract numbers, dollar values, dates, or project identifiers. (2) If a required field is missing from the supplied context, write `[TBD — to be supplied by Offeror]` in its place — do NOT guess or use plausible-sounding stand-ins. (3) Use generic placeholders for any role/process not explicitly described. (4) Use short labeled paragraphs (no markdown headings, no bullets) so each required element is clearly addressed in order. Maximum 650 words.",
       prompt: `${base}\n\nMaster intake context (use these fields where natural — do NOT introduce facts not present here):\n${data.context ?? "(no intake context provided — produce a placeholder draft and flag every missing field with [TBD] brackets)"}`,
+      maxOutputTokens: 2500,
     });
     return { text };
   });

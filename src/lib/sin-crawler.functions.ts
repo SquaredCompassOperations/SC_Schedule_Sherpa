@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { generateTextFromPrompt } from "./openai-service";
 
 const InputSchema = z.object({
   url: z.string().url().max(500),
@@ -20,6 +21,27 @@ type CrawlResult = {
   error?: string;
 };
 
+type FirecrawlScrapeResponse = {
+  data?: {
+    markdown?: unknown;
+    metadata?: { title?: unknown };
+  };
+  markdown?: unknown;
+  metadata?: { title?: unknown };
+};
+
+type FirecrawlSearchResult = {
+  url?: unknown;
+  title?: unknown;
+  description?: unknown;
+  snippet?: unknown;
+};
+
+type FirecrawlSearchResponse = {
+  data?: { web?: FirecrawlSearchResult[] } | FirecrawlSearchResult[];
+  web?: FirecrawlSearchResult[];
+};
+
 async function firecrawlScrape(url: string): Promise<{ markdown: string; title: string }> {
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) throw new Error("FIRECRAWL_API_KEY not configured");
@@ -29,12 +51,17 @@ async function firecrawlScrape(url: string): Promise<{ markdown: string; title: 
     body: JSON.stringify({ url, formats: ["markdown"], onlyMainContent: true }),
   });
   if (!res.ok) throw new Error(`Firecrawl scrape failed [${res.status}]: ${await res.text()}`);
-  const j: any = await res.json();
+  const j = (await res.json()) as FirecrawlScrapeResponse;
   const data = j.data ?? j;
-  return { markdown: (data.markdown || "").slice(0, 8000), title: data.metadata?.title || "" };
+  const markdown = typeof data.markdown === "string" ? data.markdown : "";
+  const title = typeof data.metadata?.title === "string" ? data.metadata.title : "";
+  return { markdown: markdown.slice(0, 8000), title };
 }
 
-async function firecrawlSearch(query: string, limit = 5): Promise<Array<{ url: string; title: string; description: string }>> {
+async function firecrawlSearch(
+  query: string,
+  limit = 5,
+): Promise<Array<{ url: string; title: string; description: string }>> {
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) throw new Error("FIRECRAWL_API_KEY not configured");
   const res = await fetch("https://api.firecrawl.dev/v2/search", {
@@ -43,27 +70,26 @@ async function firecrawlSearch(query: string, limit = 5): Promise<Array<{ url: s
     body: JSON.stringify({ query, limit }),
   });
   if (!res.ok) throw new Error(`Firecrawl search failed [${res.status}]: ${await res.text()}`);
-  const j: any = await res.json();
-  const results = j.data?.web ?? j.web ?? j.data ?? [];
+  const j = (await res.json()) as FirecrawlSearchResponse;
+  const results = Array.isArray(j.data) ? j.data : (j.data?.web ?? j.web ?? []);
   return Array.isArray(results)
-    ? results.map((r: any) => ({ url: r.url, title: r.title || "", description: r.description || r.snippet || "" }))
+    ? results
+        .filter((r) => typeof r.url === "string")
+        .map((r) => ({
+          url: String(r.url),
+          title: typeof r.title === "string" ? r.title : "",
+          description:
+            typeof r.description === "string"
+              ? r.description
+              : typeof r.snippet === "string"
+                ? r.snippet
+                : "",
+        }))
     : [];
 }
 
 async function aiCall(prompt: string): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`AI gateway failed [${res.status}]: ${await res.text()}`);
-  const j: any = await res.json();
-  return j.choices?.[0]?.message?.content ?? "";
+  return generateTextFromPrompt({ prompt });
 }
 
 function parseJson<T>(text: string, fallback: T): T {
@@ -100,7 +126,12 @@ ${markdown}`,
       });
 
       if (extracted.keywords.length === 0) {
-        return { keywords: [], summary: extracted.summary, candidates: [], error: "Could not extract keywords" };
+        return {
+          keywords: [],
+          summary: extracted.summary,
+          candidates: [],
+          error: "Could not extract keywords",
+        };
       }
 
       // 3. Search GSA eLibrary for SINs matching keywords

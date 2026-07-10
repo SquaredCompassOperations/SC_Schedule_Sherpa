@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ExtractedLcat } from "./price-list-extract.functions";
+import { generateTextFromPrompt } from "./openai-service";
 
 const InputSchema = z.object({ url: z.string().url().max(500) });
 
@@ -39,19 +40,7 @@ async function firecrawlScrape(url: string) {
 }
 
 async function aiCall(prompt: string): Promise<string> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("LOVABLE_API_KEY not configured");
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`AI gateway failed [${res.status}]`);
-  const j: { choices?: Array<{ message?: { content?: string } }> } = await res.json();
-  return j.choices?.[0]?.message?.content ?? "";
+  return generateTextFromPrompt({ prompt });
 }
 
 function parseLcats(text: string): ExtractedLcat[] {
@@ -118,7 +107,12 @@ export const crawlPriceListFromSite = createServerFn({ method: "POST" })
 
       const { markdown } = await firecrawlScrape(pick.url);
       if (!markdown.trim()) {
-        return { lcats: [], source: pick.url, notes, error: "Could not read the discovered price list." };
+        return {
+          lcats: [],
+          source: pick.url,
+          notes,
+          error: "Could not read the discovered price list.",
+        };
       }
 
       const prompt = `Extract every Labor Category (LCAT) / offering from the contractor commercial price list below. Return ONLY a JSON array — no prose, no markdown fences. Each element: {"title": "<exact LCAT or offering name including seniority>", "rate": "<commercial price as printed e.g. $160.00>", "unit": "<Hour|Each|...>", "sin": "<SIN if present>"}. Return every distinct row. Do NOT collapse seniority levels. Omit fields not present. If a row has no LCAT title, skip it.

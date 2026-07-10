@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "./ai-gateway";
+import { generateTextFromImage } from "./openai-service";
 import {
   completeAutomationRun,
   failAutomationRun,
@@ -72,7 +71,7 @@ export const lookupSbaCertifications = createServerFn({ method: "POST" })
         const res = await fetch(url, {
           headers: {
             Accept: "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; MAS-Pilot/1.0; +https://mas-pilot.lovable.app)",
+            "User-Agent": "Mozilla/5.0 (compatible; Schedule-Sherpa/1.0)",
           },
         });
         if (!res.ok) {
@@ -182,8 +181,6 @@ export const extractSbaCertsFromImage = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ context, data }): Promise<{ certs: SbaCert[]; error?: string }> => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) return { certs: [], error: "LOVABLE_API_KEY not configured" };
     let run: { id: string } | null = null;
     try {
       if (data.offerId) {
@@ -203,24 +200,11 @@ export const extractSbaCertsFromImage = createServerFn({ method: "POST" })
           console.warn("SBA screenshot automation run logging unavailable:", err);
         }
       }
-      const gateway = createLovableAiGatewayProvider(key);
-      const model = gateway("google/gemini-2.5-flash");
-      const bytes = Buffer.from(data.dataBase64, "base64");
-      const { text } = await generateText({
-        model,
+      const text = await generateTextFromImage({
         system: EXTRACT_SYSTEM,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: `Extract active SBA certifications visible in the image "${data.filename}". Each green/blue badge under "Active SBA certifications" / "Current SBA certifications" is one entry. Output strict JSON array only.`,
-              },
-              { type: "file", data: bytes, mediaType: data.mediaType },
-            ],
-          },
-        ],
+        prompt: `Extract active SBA certifications visible in the image "${data.filename}". Each green/blue badge under "Active SBA certifications" / "Current SBA certifications" is one entry. Output strict JSON array only.`,
+        file: data,
+        detail: "high",
       });
       const certs = safeParseCerts(text);
       if (run && data.offerId) {
