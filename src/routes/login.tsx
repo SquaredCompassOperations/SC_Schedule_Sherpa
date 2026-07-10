@@ -6,7 +6,7 @@ import { signInWithGoogle } from "@/lib/google-auth";
 import { isAdminRole } from "@/lib/rbac";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Sign in — ScheduleBuilder" }] }),
+  head: () => ({ meta: [{ title: "Sign in — Offer Automation Workspace" }] }),
   component: LoginPage,
 });
 
@@ -43,7 +43,7 @@ function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm border border-border rounded-sm bg-card p-6 shadow-sm">
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          ScheduleBuilder
+          Offer Automation Workspace
         </div>
         <h1 className="text-2xl font-bold text-foreground mt-1">Sign in</h1>
         <p className="text-xs text-muted-foreground mt-1">Team or client portal access.</p>

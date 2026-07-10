@@ -2,10 +2,10 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useResolvedModules } from "@/lib/module-status-store";
 
 const groups = [
-  { id: "Status", label: "Status Tracker" },
+  { id: "Status", label: "Workspace Status" },
   { id: "Intake", label: "Intake & Readiness" },
-  { id: "Engine", label: "Automation Engine" },
-  { id: "Final", label: "Finalization" },
+  { id: "Engine", label: "Automation" },
+  { id: "Final", label: "Review & Submission" },
 ];
 
 function statusDot(status: string) {
@@ -51,7 +51,7 @@ export function AppSidebar() {
           to="/export"
           className="mt-2 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-sm border border-primary"
         >
-          Export eOffer Package
+          Build eOffer Package
         </Link>
       </div>
     </aside>

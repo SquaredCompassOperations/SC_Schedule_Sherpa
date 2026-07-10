@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInWithGoogle } from "@/lib/google-auth";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Sign up — ScheduleBuilder" }] }),
+  head: () => ({ meta: [{ title: "Sign up — Offer Automation Workspace" }] }),
   component: SignupPage,
 });
 
@@ -46,7 +46,7 @@ function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm border border-border rounded-sm bg-card p-6">
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-          ScheduleBuilder
+          Offer Automation Workspace
         </div>
         <h1 className="text-2xl font-bold text-foreground mt-1">Create account</h1>
         <p className="text-xs text-muted-foreground mt-1">

@@ -16,6 +16,7 @@ dist-ssr
 .nitro
 .vercel/
 *.local
+.superpowers/
 
 # Wrangler / Cloudflare
 .wrangler/
