@@ -38,6 +38,201 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          created_at: string
+          dba: string | null
+          id: string
+          legal_name: string
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          dba?: string | null
+          id?: string
+          legal_name: string
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          dba?: string | null
+          id?: string
+          legal_name?: string
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      offers: {
+        Row: {
+          agency: string | null
+          archived_at: string | null
+          authorized_negotiator_email: string | null
+          authorized_negotiator_status: string
+          created_at: string
+          current_stage: Database["public"]["Enums"]["offer_stage"]
+          documents_in_review: number
+          id: string
+          name: string
+          offer_type: Database["public"]["Enums"]["offer_type"]
+          open_client_items: number
+          organization_id: string
+          owner_user_id: string | null
+          readiness_percent: number
+          selected_sins: Json
+          solicitation_number: string | null
+          status: Database["public"]["Enums"]["offer_status"]
+          submission_status: string
+          target_submission_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          agency?: string | null
+          archived_at?: string | null
+          authorized_negotiator_email?: string | null
+          authorized_negotiator_status?: string
+          created_at?: string
+          current_stage?: Database["public"]["Enums"]["offer_stage"]
+          documents_in_review?: number
+          id?: string
+          name: string
+          offer_type?: Database["public"]["Enums"]["offer_type"]
+          open_client_items?: number
+          organization_id: string
+          owner_user_id?: string | null
+          readiness_percent?: number
+          selected_sins?: Json
+          solicitation_number?: string | null
+          status?: Database["public"]["Enums"]["offer_status"]
+          submission_status?: string
+          target_submission_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          agency?: string | null
+          archived_at?: string | null
+          authorized_negotiator_email?: string | null
+          authorized_negotiator_status?: string
+          created_at?: string
+          current_stage?: Database["public"]["Enums"]["offer_stage"]
+          documents_in_review?: number
+          id?: string
+          name?: string
+          offer_type?: Database["public"]["Enums"]["offer_type"]
+          open_client_items?: number
+          organization_id?: string
+          owner_user_id?: string | null
+          readiness_percent?: number
+          selected_sins?: Json
+          solicitation_number?: string | null
+          status?: Database["public"]["Enums"]["offer_status"]
+          submission_status?: string
+          target_submission_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_members: {
+        Row: {
+          created_at: string
+          id: string
+          invitation_email: string | null
+          is_active: boolean
+          offer_id: string
+          role: Database["public"]["Enums"]["offer_member_role"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitation_email?: string | null
+          is_active?: boolean
+          offer_id: string
+          role?: Database["public"]["Enums"]["offer_member_role"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitation_email?: string | null
+          is_active?: boolean
+          offer_id?: string
+          role?: Database["public"]["Enums"]["offer_member_role"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_members_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_activity: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          id: string
+          module: string
+          offer_id: string
+          target: string | null
+          visibility: Database["public"]["Enums"]["offer_activity_visibility"]
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          module: string
+          offer_id: string
+          target?: string | null
+          visibility?: Database["public"]["Enums"]["offer_activity_visibility"]
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          module?: string
+          offer_id?: string
+          target?: string | null
+          visibility?: Database["public"]["Enums"]["offer_activity_visibility"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_activity_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -75,6 +270,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      can_access_offer: {
+        Args: {
+          _offer_id: string
+        }
+        Returns: boolean
+      }
+      can_access_organization: {
+        Args: {
+          _organization_id: string
+        }
+        Returns: boolean
+      }
+      is_offer_member: {
+        Args: {
+          _offer_id: string
+        }
+        Returns: boolean
+      }
       role_for_email: {
         Args: {
           _email: string
@@ -84,6 +297,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "client"
+      offer_activity_visibility: "admin" | "client"
+      offer_member_role:
+        | "admin_lead"
+        | "reviewer"
+        | "client_contributor"
+        | "authorized_negotiator"
+        | "viewer"
+      offer_stage:
+        | "intake"
+        | "readiness"
+        | "automation"
+        | "review"
+        | "submission"
+        | "post_submission"
+      offer_status: "active" | "blocked" | "submitted" | "awarded" | "archived"
+      offer_type: "gsa_mas" | "va_fss" | "gwac_rfp" | "custom_solicitation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -212,6 +441,24 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "client"],
+      offer_activity_visibility: ["admin", "client"],
+      offer_member_role: [
+        "admin_lead",
+        "reviewer",
+        "client_contributor",
+        "authorized_negotiator",
+        "viewer",
+      ],
+      offer_stage: [
+        "intake",
+        "readiness",
+        "automation",
+        "review",
+        "submission",
+        "post_submission",
+      ],
+      offer_status: ["active", "blocked", "submitted", "awarded", "archived"],
+      offer_type: ["gsa_mas", "va_fss", "gwac_rfp", "custom_solicitation"],
     },
   },
 } as const
