@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createOfferWorkspace,
   getOfferWorkspace,
+  listOrganizations,
   listOfferWorkspaces,
   logOfferActivity,
 } from "./offer-workspace.functions";
@@ -107,44 +108,96 @@ describe("getOfferWorkspace", () => {
 });
 
 describe("createOfferWorkspace", () => {
-  it("creates organization, offer, client member, and activity rows in order", async () => {
-    const calls: string[] = [];
+  it("calls the atomic creation RPC with normalized values", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
     const client = {
-      from: (table: string) => ({
-        insert: (payload: unknown) => {
-          calls.push(`${table}:${JSON.stringify(payload)}`);
-          if (table === "organizations") {
-            return {
-              select: () => ({ single: async () => ({ data: { id: "org-1" }, error: null }) }),
-            };
-          }
-          if (table === "offers") {
-            return {
-              select: () => ({ single: async () => ({ data: { id: "offer-1" }, error: null }) }),
-            };
-          }
-          return {
-            select: () => ({ single: async () => ({ data: { id: "member-1" }, error: null }) }),
-          };
-        },
-      }),
+      rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return { data: [{ organization_id: "org-1", offer_id: "offer-1" }], error: null };
+      },
     };
 
     await expect(
       createOfferWorkspace(
         {
-          organizationName: "Acme LLC",
-          offerName: "Acme GSA MAS Offer",
-          clientEmail: "client@acme.example",
-          solicitationNumber: "47QSMD20R0001",
+          organizationName: " Acme LLC ",
+          offerName: " Acme GSA MAS Offer ",
+          clientEmail: " CLIENT@ACME.EXAMPLE ",
+          solicitationNumber: " 47QSMD20R0001 ",
         },
         client as never,
       ),
     ).resolves.toEqual({ offerId: "offer-1", organizationId: "org-1" });
 
-    expect(calls[0]).toContain("organizations");
-    expect(calls[1]).toContain("offers");
-    expect(calls[2]).toContain("offer_members");
+    expect(calls).toEqual([
+      {
+        name: "create_offer_workspace",
+        args: {
+          p_organization_id: null,
+          p_organization_name: "Acme LLC",
+          p_offer_name: "Acme GSA MAS Offer",
+          p_client_email: "client@acme.example",
+          p_solicitation_number: "47QSMD20R0001",
+        },
+      },
+    ]);
+  });
+
+  it("reuses the selected organization without requiring a name", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return { data: [{ organization_id: "org-1", offer_id: "offer-1" }], error: null };
+      },
+    };
+
+    await createOfferWorkspace(
+      { organizationId: "org-1", organizationName: "", offerName: "Second offer" },
+      client as never,
+    );
+
+    expect(calls[0]?.args).toMatchObject({
+      p_organization_id: "org-1",
+      p_organization_name: null,
+    });
+  });
+
+  it("surfaces atomic creation failures without attempting client-side writes", async () => {
+    const client = {
+      rpc: async () => ({ data: null, error: new Error("permission denied") }),
+      from: () => {
+        throw new Error("client-side writes must not occur");
+      },
+    };
+
+    await expect(
+      createOfferWorkspace({ organizationName: "Acme LLC", offerName: "Acme offer" }, client as never),
+    ).rejects.toThrow("Could not create offer workspace: permission denied");
+  });
+});
+
+describe("listOrganizations", () => {
+  it("returns organization options ordered by legal name", async () => {
+    const organizations = await listOrganizations({
+      from: (table: string) => {
+        expect(table).toBe("organizations");
+        return {
+          select: (selection: string) => {
+            expect(selection).toBe("id, legal_name");
+            return {
+              order: async (column: string, options: { ascending: boolean }) => {
+                expect(column).toBe("legal_name");
+                expect(options).toEqual({ ascending: true });
+                return { data: [{ id: "org-1", legal_name: "Acme LLC" }], error: null };
+              },
+            };
+          },
+        };
+      },
+    } as never);
+
+    expect(organizations).toEqual([{ id: "org-1", legalName: "Acme LLC" }]);
   });
 });
 

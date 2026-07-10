@@ -3,7 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BriefcaseBusiness, CircleAlert, Clock, FileText, Search, UserCheck } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { PageHeader, StatusPill } from "@/components/ui-primitives";
-import { createOfferWorkspace, listOfferWorkspaces } from "@/lib/offer-workspace.functions";
+import {
+  createOfferWorkspace,
+  listOfferWorkspaces,
+  listOrganizations,
+  type CreateOfferWorkspaceInput,
+  type OrganizationOption,
+} from "@/lib/offer-workspace.functions";
 import {
   filterOfferWorkspaceCards,
   OFFER_STAGE_META,
@@ -11,6 +17,8 @@ import {
   type OfferStage,
   type OfferWorkspaceCard,
 } from "@/lib/offer-workspace";
+import { offerWorkspaceQueryKeys } from "@/lib/offer-workspace-query";
+import { useAuth } from "@/lib/auth-context";
 
 const STAGE_ORDER: OfferStage[] = [
   "intake",
@@ -24,21 +32,34 @@ const STAGE_ORDER: OfferStage[] = [
 export function WorkspaceBoard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<OfferStage | "all">("all");
   const [blockedOnly, setBlockedOnly] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   const query = useQuery({
-    queryKey: ["offer-workspaces"],
+    queryKey: offerWorkspaceQueryKeys.list(user?.id ?? "anonymous"),
     queryFn: () => listOfferWorkspaces(),
+    enabled: Boolean(user?.id),
+  });
+
+  const organizations = useQuery({
+    queryKey: offerWorkspaceQueryKeys.organizations(user?.id ?? "anonymous"),
+    queryFn: () => listOrganizations(),
+    enabled: Boolean(user?.id),
   });
 
   const createMutation = useMutation({
     mutationFn: createOfferWorkspace,
     onSuccess: async (result) => {
       selectOffer(result.offerId);
-      await queryClient.invalidateQueries({ queryKey: ["offer-workspaces"] });
+      if (user?.id) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: offerWorkspaceQueryKeys.list(user.id) }),
+          queryClient.invalidateQueries({ queryKey: offerWorkspaceQueryKeys.organizations(user.id) }),
+        ]);
+      }
       setCreateOpen(false);
       navigate({ to: "/status" });
     },
@@ -74,6 +95,8 @@ export function WorkspaceBoard() {
           <button
             type="button"
             onClick={() => setCreateOpen((open) => !open)}
+            aria-expanded={createOpen}
+            aria-controls="create-workspace-form"
             className="inline-flex items-center gap-2 rounded-sm bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground"
           >
             <BriefcaseBusiness className="size-4" />
@@ -86,6 +109,7 @@ export function WorkspaceBoard() {
         <CreateWorkspaceForm
           busy={createMutation.isPending}
           error={createMutation.error ? (createMutation.error as Error).message : null}
+          organizations={organizations.data ?? []}
           onCancel={() => setCreateOpen(false)}
           onSubmit={(values) => createMutation.mutate(values)}
         />
@@ -168,19 +192,17 @@ export function WorkspaceBoard() {
 function CreateWorkspaceForm({
   busy,
   error,
+  organizations,
   onCancel,
   onSubmit,
 }: {
   busy: boolean;
   error: string | null;
+  organizations: OrganizationOption[];
   onCancel: () => void;
-  onSubmit: (values: {
-    organizationName: string;
-    offerName: string;
-    clientEmail?: string;
-    solicitationNumber?: string;
-  }) => void;
+  onSubmit: (values: CreateOfferWorkspaceInput) => void;
 }) {
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState("");
   const [offerName, setOfferName] = useState("");
   const [clientEmail, setClientEmail] = useState("");
@@ -188,10 +210,12 @@ function CreateWorkspaceForm({
 
   return (
     <form
+      id="create-workspace-form"
       className="mb-6 rounded-sm border border-border bg-card p-4"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit({
+          organizationId: organizationId ?? undefined,
           organizationName,
           offerName,
           clientEmail,
@@ -204,13 +228,32 @@ function CreateWorkspaceForm({
           <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             Client company
           </span>
-          <input
-            value={organizationName}
-            onChange={(event) => setOrganizationName(event.target.value)}
+          <select
+            value={organizationId ?? "new"}
+            onChange={(event) => setOrganizationId(event.target.value === "new" ? null : event.target.value)}
             className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm"
-            required
-          />
+          >
+            <option value="new">Create new organization</option>
+            {organizations.map((organization) => (
+              <option key={organization.id} value={organization.id}>
+                {organization.legalName}
+              </option>
+            ))}
+          </select>
         </label>
+        {organizationId === null ? (
+          <label className="space-y-1">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              New organization name
+            </span>
+            <input
+              value={organizationName}
+              onChange={(event) => setOrganizationName(event.target.value)}
+              className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm"
+              required
+            />
+          </label>
+        ) : null}
         <label className="space-y-1">
           <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             Offer name
@@ -244,7 +287,7 @@ function CreateWorkspaceForm({
           />
         </label>
       </div>
-      {error ? <div className="mt-3 text-sm text-destructive">{error}</div> : null}
+      {error ? <div role="alert" className="mt-3 text-sm text-destructive">{error}</div> : null}
       <div className="mt-4 flex justify-end gap-2">
         <button
           type="button"

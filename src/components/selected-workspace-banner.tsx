@@ -3,13 +3,16 @@ import { Link } from "@tanstack/react-router";
 import { BriefcaseBusiness } from "lucide-react";
 import { getOfferWorkspace } from "@/lib/offer-workspace.functions";
 import { useSelectedOfferId } from "@/lib/offer-workspace";
+import { offerWorkspaceQueryKeys } from "@/lib/offer-workspace-query";
+import { useAuth } from "@/lib/auth-context";
 
 export function SelectedWorkspaceBanner() {
+  const { user } = useAuth();
   const selectedOfferId = useSelectedOfferId();
   const query = useQuery({
-    queryKey: ["selected-offer-workspace", selectedOfferId],
+    queryKey: offerWorkspaceQueryKeys.detail(user?.id ?? "anonymous", selectedOfferId ?? "none"),
     queryFn: () => (selectedOfferId ? getOfferWorkspace(selectedOfferId) : Promise.resolve(null)),
-    enabled: Boolean(selectedOfferId),
+    enabled: Boolean(user?.id && selectedOfferId),
   });
 
   if (!selectedOfferId) {

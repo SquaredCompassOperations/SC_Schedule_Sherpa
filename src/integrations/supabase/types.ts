@@ -282,6 +282,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      create_offer_workspace: {
+        Args: {
+          p_client_email?: string | null
+          p_offer_name: string
+          p_organization_id?: string | null
+          p_organization_name?: string | null
+          p_solicitation_number?: string | null
+        }
+        Returns: {
+          offer_id: string
+          organization_id: string
+        }[]
+      }
       is_offer_member: {
         Args: {
           _offer_id: string

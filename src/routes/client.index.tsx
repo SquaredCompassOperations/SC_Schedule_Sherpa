@@ -7,6 +7,8 @@ import { useEntity, useIntake, DOC_LABELS, type DocKey } from "@/lib/intake-stor
 import { useReadiness, readinessStatus } from "@/lib/readiness-store";
 import { listOfferWorkspaces } from "@/lib/offer-workspace.functions";
 import { selectOffer } from "@/lib/offer-workspace";
+import { offerWorkspaceQueryKeys } from "@/lib/offer-workspace-query";
+import { useAuth } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/client/")({
   component: ClientOverview,
@@ -66,9 +68,11 @@ function StepCard({
 }
 
 function ClientOverview() {
+  const { user } = useAuth();
   const workspaces = useQuery({
-    queryKey: ["client-offer-workspaces"],
+    queryKey: offerWorkspaceQueryKeys.list(user?.id ?? "anonymous"),
     queryFn: () => listOfferWorkspaces(),
+    enabled: Boolean(user?.id),
   });
   const status = useStatus();
   const entity = useEntity();

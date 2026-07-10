@@ -44,7 +44,8 @@ const WORKSPACE_SELECT = `
 `;
 
 export type CreateOfferWorkspaceInput = {
-  organizationName: string;
+  organizationId?: string;
+  organizationName?: string;
   offerName: string;
   clientEmail?: string;
   solicitationNumber?: string;
@@ -53,6 +54,11 @@ export type CreateOfferWorkspaceInput = {
 export type CreateOfferWorkspaceResult = {
   organizationId: string;
   offerId: string;
+};
+
+export type OrganizationOption = {
+  id: string;
+  legalName: string;
 };
 
 export async function listOfferWorkspaces(
@@ -87,75 +93,53 @@ export async function getOfferWorkspace(
   return data ? deriveOfferWorkspaceCard(data as OfferWorkspaceRow) : null;
 }
 
+export async function listOrganizations(
+  client: WorkspaceClient = supabase,
+): Promise<OrganizationOption[]> {
+  const { data, error } = await client
+    .from("organizations")
+    .select("id, legal_name")
+    .order("legal_name", { ascending: true });
+
+  if (error) {
+    throw new Error(`Could not load organizations: ${error.message}`);
+  }
+
+  return (data ?? []).map((organization) => ({
+    id: organization.id,
+    legalName: organization.legal_name,
+  }));
+}
+
 export async function createOfferWorkspace(
   input: CreateOfferWorkspaceInput,
   client: WorkspaceClient = supabase,
 ): Promise<CreateOfferWorkspaceResult> {
-  const organizationName = input.organizationName.trim();
+  const organizationId = input.organizationId?.trim() || null;
+  const organizationName = input.organizationName?.trim() || null;
   const offerName = input.offerName.trim();
   const clientEmail = input.clientEmail?.trim().toLowerCase() || null;
   const solicitationNumber = input.solicitationNumber?.trim() || null;
 
-  if (!organizationName) throw new Error("Organization name is required");
+  if (!organizationId && !organizationName) throw new Error("Organization name is required");
   if (!offerName) throw new Error("Offer name is required");
 
-  const { data: organization, error: organizationError } = await client
-    .from("organizations")
-    .insert({ legal_name: organizationName, primary_contact_email: clientEmail })
-    .select("id")
-    .single();
+  const { data, error } = await client.rpc("create_offer_workspace", {
+    p_organization_id: organizationId,
+    p_organization_name: organizationName,
+    p_offer_name: offerName,
+    p_client_email: clientEmail,
+    p_solicitation_number: solicitationNumber,
+  });
 
-  if (organizationError) {
-    throw new Error(`Could not create organization: ${organizationError.message}`);
+  if (error) {
+    throw new Error(`Could not create offer workspace: ${error.message}`);
   }
 
-  const { data: offer, error: offerError } = await client
-    .from("offers")
-    .insert({
-      organization_id: organization.id,
-      name: offerName,
-      offer_type: "gsa_mas",
-      solicitation_number: solicitationNumber,
-      agency: "GSA",
-      current_stage: "intake",
-      status: "active",
-    })
-    .select("id")
-    .single();
+  const result = data?.[0];
+  if (!result) throw new Error("Could not create offer workspace: the transaction returned no workspace");
 
-  if (offerError) {
-    throw new Error(`Could not create offer workspace: ${offerError.message}`);
-  }
-
-  if (clientEmail) {
-    const { error: memberError } = await client
-      .from("offer_members")
-      .insert({
-        offer_id: offer.id,
-        invitation_email: clientEmail,
-        role: "client_contributor",
-        is_active: true,
-      })
-      .select("id")
-      .single();
-
-    if (memberError) {
-      throw new Error(`Could not assign client to offer: ${memberError.message}`);
-    }
-  }
-
-  await logOfferActivity(
-    {
-      offerId: offer.id,
-      module: "Workspace",
-      action: "created workspace",
-      target: offerName,
-      visibility: "client",
-    },
-    client,
-  );
-
-  return { organizationId: organization.id, offerId: offer.id };
+  return { organizationId: result.organization_id, offerId: result.offer_id };
 }
 
 export async function logOfferActivity(
