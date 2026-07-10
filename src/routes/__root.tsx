@@ -78,10 +78,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:title", content: "Offer Automation Workspace" },
       { name: "twitter:title", content: "Offer Automation Workspace" },
-      { property: "og:description", content: "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation." },
-      { name: "twitter:description", content: "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e599ae73-c485-44fb-bc25-d26bfaca176c/id-preview-f0983f6d--8f44a953-2b65-42f6-a18a-34bf373764b0.lovable.app-1779391990484.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e599ae73-c485-44fb-bc25-d26bfaca176c/id-preview-f0983f6d--8f44a953-2b65-42f6-a18a-34bf373764b0.lovable.app-1779391990484.png" },
+      {
+        property: "og:description",
+        content:
+          "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation.",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Automates GSA/VA FSS offer preparation, streamlining intake, compliance, and document generation.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e599ae73-c485-44fb-bc25-d26bfaca176c/id-preview-f0983f6d--8f44a953-2b65-42f6-a18a-34bf373764b0.lovable.app-1779391990484.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e599ae73-c485-44fb-bc25-d26bfaca176c/id-preview-f0983f6d--8f44a953-2b65-42f6-a18a-34bf373764b0.lovable.app-1779391990484.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
@@ -163,7 +179,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       <div className="flex grow">
         <AppSidebar />
         <main className="grow overflow-y-auto animate-fade-in">
-          <div className="p-8 max-w-7xl mx-auto w-full">{children}</div>
+          <div className="mx-auto w-full max-w-7xl px-6 py-5">{children}</div>
         </main>
       </div>
     </div>

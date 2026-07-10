@@ -1,59 +1,95 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useResolvedModules } from "@/lib/module-status-store";
+import { Bot, CheckCircle2, FileText, FolderKanban, ClipboardList } from "lucide-react";
+import type { ComponentType } from "react";
 
-const groups = [
-  { id: "Status", label: "Workspace Status" },
-  { id: "Intake", label: "Intake & Readiness" },
-  { id: "Engine", label: "Automation" },
-  { id: "Final", label: "Review & Submission" },
+type WorkflowItem = {
+  label: string;
+  to: string;
+  icon: ComponentType<{ className?: string }>;
+  activePaths: string[];
+  tone: "active" | "ready" | "watch";
+};
+
+const workflowItems: WorkflowItem[] = [
+  {
+    label: "Workspace",
+    to: "/",
+    icon: FolderKanban,
+    activePaths: ["/", "/status", "/status/milestones", "/status/open-items", "/status/activity"],
+    tone: "active",
+  },
+  {
+    label: "Intake",
+    to: "/intake",
+    icon: ClipboardList,
+    activePaths: ["/intake", "/readiness", "/sin"],
+    tone: "ready",
+  },
+  {
+    label: "Automation",
+    to: "/market-validation",
+    icon: Bot,
+    activePaths: ["/market-validation", "/sca", "/pricing-workbook"],
+    tone: "watch",
+  },
+  {
+    label: "Documents",
+    to: "/documents",
+    icon: FileText,
+    activePaths: ["/documents"],
+    tone: "watch",
+  },
+  {
+    label: "Review",
+    to: "/review",
+    icon: CheckCircle2,
+    activePaths: ["/review", "/export", "/submission"],
+    tone: "watch",
+  },
 ];
 
-function statusDot(status: string) {
-  if (status === "complete") return "bg-success";
-  if (status === "in_progress") return "bg-warning";
-  if (status === "blocked") return "bg-destructive";
-  return "border border-border";
+function isActive(pathname: string, item: WorkflowItem) {
+  return item.activePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+function dotClass(tone: WorkflowItem["tone"], active: boolean) {
+  if (active) return "bg-primary";
+  if (tone === "ready") return "bg-success";
+  if (tone === "watch") return "bg-warning";
+  return "border border-border bg-card";
 }
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
-  const modules = useResolvedModules();
 
   return (
-    <aside className="w-64 border-r border-border bg-sidebar flex flex-col shrink-0 h-[calc(100vh-3rem)] sticky top-12">
-      <div className="p-4 flex flex-col gap-4 overflow-y-auto">
-        {groups.map((g) => (
-          <div key={g.id} className="flex flex-col gap-1">
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1 px-3">
-              {g.label}
-            </div>
-            {modules.filter((m) => m.group === g.id).map((m) => {
-              const active = pathname === m.slug;
-              return (
-                <Link
-                  key={m.slug}
-                  to={m.slug}
-                  className={`flex items-center gap-3 px-3 py-2 text-sm rounded-sm transition-all ${
-                    active
-                      ? "bg-card border border-border shadow-sm font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-card hover:border hover:border-border"
-                  }`}
-                >
-                  <span className={`size-2 rounded-full shrink-0 ${statusDot(m.status)}`} />
-                  <span className="truncate">{m.label}</span>
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-
-        <Link
-          to="/export"
-          className="mt-2 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-bold uppercase tracking-widest bg-primary text-primary-foreground hover:bg-primary/90 transition-colors rounded-sm border border-primary"
-        >
-          Build eOffer Package
-        </Link>
-      </div>
+    <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-40 shrink-0 border-r border-border bg-sidebar">
+      <nav aria-label="Workflow" className="flex h-full flex-col gap-2 px-3 py-5">
+        <div className="px-2 pb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          Workflow
+        </div>
+        <div className="flex flex-col gap-1">
+          {workflowItems.map((item) => {
+            const active = isActive(pathname, item);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className={`group flex h-9 items-center gap-2 rounded-sm border px-2 text-xs font-semibold transition ${
+                  active
+                    ? "border-border bg-card text-foreground shadow-sm"
+                    : "border-transparent text-muted-foreground hover:border-border hover:bg-card hover:text-foreground"
+                }`}
+              >
+                <span className={`size-1.5 shrink-0 rounded-full ${dotClass(item.tone, active)}`} />
+                <Icon className="size-3.5 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </aside>
   );
 }
