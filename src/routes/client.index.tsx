@@ -1,9 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useStatus } from "@/lib/status-data";
 import { CLIENT } from "@/lib/mock-data";
 import { useEntity, useIntake, DOC_LABELS, type DocKey } from "@/lib/intake-store";
 import { useReadiness, readinessStatus } from "@/lib/readiness-store";
+import { listOfferWorkspaces } from "@/lib/offer-workspace.functions";
+import { selectOffer } from "@/lib/offer-workspace";
 
 export const Route = createFileRoute("/client/")({
   component: ClientOverview,
@@ -63,6 +66,10 @@ function StepCard({
 }
 
 function ClientOverview() {
+  const workspaces = useQuery({
+    queryKey: ["client-offer-workspaces"],
+    queryFn: () => listOfferWorkspaces(),
+  });
   const status = useStatus();
   const entity = useEntity();
   const intake = useIntake();
@@ -96,6 +103,41 @@ function ClientOverview() {
         <p className="text-sm text-muted-foreground mt-1">
           {CLIENT.schedule} · {CLIENT.solicitation}
         </p>
+      </div>
+
+      <div className="border border-border rounded-sm bg-card">
+        <div className="px-4 py-3 border-b border-border text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Assigned Workspaces
+        </div>
+        {workspaces.isLoading ? (
+          <div className="p-4 text-sm text-muted-foreground">Loading assigned workspaces...</div>
+        ) : workspaces.isError ? (
+          <div className="p-4 text-sm text-destructive">{(workspaces.error as Error).message}</div>
+        ) : (workspaces.data ?? []).length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">
+            No offer workspaces have been assigned to this account yet.
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {(workspaces.data ?? []).map((workspace) => (
+              <button
+                key={workspace.id}
+                onClick={() => selectOffer(workspace.id)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted"
+              >
+                <span>
+                  <span className="block text-sm font-bold">{workspace.organizationName}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {workspace.offerTypeLabel} · {workspace.stageLabel} · {workspace.readinessPercent}% ready
+                  </span>
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                  Select
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>

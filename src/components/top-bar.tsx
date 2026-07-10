@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useEntity } from "@/lib/intake-store";
 import { useAuth } from "@/lib/auth-context";
 import { clearAllPersisted } from "@/lib/persist";
 
-function resetWorkspace() {
+function resetLocalDrafts() {
   if (typeof window === "undefined") return;
   const ok = window.confirm(
-    "Reset workspace? This clears all locally-saved intake, documents, pricing, status, and submission data so you can start a fresh trial run. This cannot be undone.",
+    "Clear local draft data? This clears browser-only trial data from the older modules. Supabase workspaces are not deleted.",
   );
   if (!ok) return;
   clearAllPersisted();
@@ -20,7 +19,6 @@ function resetWorkspace() {
 
 export function TopBar() {
   const { user, fullName, signOut, role } = useAuth();
-  const entity = useEntity();
   const initials = (fullName || user?.email || "U")
     .split(/\s+/)
     .map((s) => s[0])
@@ -32,29 +30,26 @@ export function TopBar() {
     <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0 bg-card sticky top-0 z-20">
       <div className="flex items-center gap-6">
         <Link to="/" className="font-bold tracking-tighter text-lg uppercase text-foreground">
-          ScheduleBuilder <span className="text-primary">v0.1</span>
+          Offer Automation <span className="text-primary">Workspace</span>
         </Link>
         <nav className="flex gap-4 text-xs font-medium text-muted-foreground">
-          <span className="text-foreground border-b-2 border-primary h-12 flex items-center px-1">
-            Workspace
-          </span>
+          <Link to="/" className="text-foreground border-b-2 border-primary h-12 flex items-center px-1">
+            Board
+          </Link>
         </nav>
       </div>
       <div className="flex items-center gap-3">
-        <div className="text-[10px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-sm border border-border hidden sm:block">
-          UEI: {entity.uei}
-        </div>
         {user ? (
           <>
             <div className="text-[10px] font-mono text-muted-foreground hidden md:block">
               {fullName || user.email} · {role}
             </div>
             <button
-              onClick={resetWorkspace}
-              title="Clear all local data for a fresh trial run"
+              onClick={resetLocalDrafts}
+              title="Clear browser-only draft data from older modules"
               className="text-[10px] font-bold uppercase tracking-widest border border-border px-2 py-1 rounded-sm hover:bg-muted"
             >
-              Reset
+              Clear drafts
             </button>
             <button
               onClick={() => signOut()}
