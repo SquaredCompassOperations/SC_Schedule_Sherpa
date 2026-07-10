@@ -1815,6 +1815,7 @@ git commit -m "Add workspace board"
 - Create: `src/components/selected-workspace-banner.tsx`
 - Modify: `src/components/top-bar.tsx`
 - Modify: `src/components/app-sidebar.tsx`
+- Modify: `src/routes/__root.tsx`
 - Modify: `src/routes/client.index.tsx`
 
 **Interfaces:**
