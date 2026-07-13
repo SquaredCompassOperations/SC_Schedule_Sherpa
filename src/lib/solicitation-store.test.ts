@@ -50,6 +50,11 @@ describe("solicitation packet documents", () => {
     });
     expect(getSolicitationPacket("offer-2").files).toEqual([]);
   });
+
+  it("returns a stable empty packet when no solicitation files exist yet", () => {
+    expect(getSolicitationPacket(null)).toBe(getSolicitationPacket(null));
+    expect(getSolicitationPacket("missing-offer")).toBe(getSolicitationPacket("missing-offer"));
+  });
 });
 
 describe("deriveSolicitationDocumentName", () => {

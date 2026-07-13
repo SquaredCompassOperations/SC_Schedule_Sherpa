@@ -32,6 +32,10 @@ export type SolicitationDocumentQueueItem = {
 type Store = Record<string, SolicitationPacket>;
 
 let store: Store = loadPersisted<Store>(PERSIST_KEY, {});
+const EMPTY_PACKET: SolicitationPacket = {
+  files: [],
+  ingestedAt: null,
+};
 
 const listeners = new Set<() => void>();
 const subscribe = (listener: () => void) => {
@@ -43,11 +47,9 @@ const emit = () => {
   listeners.forEach((listener) => listener());
 };
 
-const emptyPacket = (): SolicitationPacket => ({ files: [], ingestedAt: null });
-
 export function getSolicitationPacket(offerId: string | null | undefined): SolicitationPacket {
-  if (!offerId) return emptyPacket();
-  return store[offerId] ?? emptyPacket();
+  if (!offerId) return EMPTY_PACKET;
+  return store[offerId] ?? EMPTY_PACKET;
 }
 
 export function useSolicitationPacket(offerId: string | null | undefined): SolicitationPacket {
