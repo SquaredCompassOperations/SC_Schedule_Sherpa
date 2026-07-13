@@ -15,8 +15,11 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { StatusPill } from "@/components/ui-primitives";
+import { useAutomation, type SelectedSin } from "@/lib/automation-store";
+import { useDocStore, type DocState } from "@/lib/doc-store";
+import { useIntake } from "@/lib/intake-store";
 import {
   createOfferWorkspace,
   listOfferWorkspaces,
@@ -28,14 +31,23 @@ import {
 import {
   filterOfferWorkspaceCards,
   OFFER_STAGE_META,
+  SOLICITATION_TYPE_OPTIONS,
+  isGsaMasOfferType,
   selectOffer,
   useSelectedOfferId,
   type OfferStage,
+  type OfferType,
   type OfferWorkspaceCard,
 } from "@/lib/offer-workspace";
 import { offerWorkspaceQueryKeys } from "@/lib/offer-workspace-query";
 import { useAuth } from "@/lib/auth-context";
-import { COMPLIANCE_MATRIX, REGISTRATION_ITEMS, SIN_MATCHES } from "@/lib/mock-data";
+import { replaceSolicitationPacket, type SolicitationFileInput } from "@/lib/solicitation-store";
+import {
+  buildComplianceRows,
+  buildRegistrationItems,
+  buildSinRows,
+  type RegistrationSource,
+} from "./workspace-board-state";
 
 const STAGE_ORDER: OfferStage[] = [
   "intake",
@@ -103,8 +115,11 @@ export function WorkspaceBoard() {
 
   const createMutation = useMutation<CreateOfferWorkspaceResult, Error, CreateOfferWorkspaceInput>({
     mutationFn: (input: CreateOfferWorkspaceInput) => createOfferWorkspace(input),
-    onSuccess: async (result) => {
-      selectOffer(result.offerId);
+    onSuccess: async (result, input) => {
+      selectOffer(result.offerId, input.offerType ?? "gsa_mas");
+      if (input.solicitationFiles && input.solicitationFiles.length > 0) {
+        replaceSolicitationPacket(result.offerId, input.solicitationFiles);
+      }
       if (user?.id) {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: offerWorkspaceQueryKeys.list(user.id) }),
@@ -137,6 +152,13 @@ export function WorkspaceBoard() {
       filtered[0]
     );
   }, [cards, filtered, selectedOfferId]);
+
+  useEffect(() => {
+    if (!activeCard) return;
+    if (!selectedOfferId || selectedOfferId === activeCard.id) {
+      selectOffer(activeCard.id, activeCard.offerType);
+    }
+  }, [activeCard, selectedOfferId]);
 
   return (
     <div className="space-y-4">
@@ -288,12 +310,16 @@ function ActiveOfferDashboard({
   workspaces: OfferWorkspaceCard[];
   onSelectWorkspace: (id: string) => void;
 }) {
+  const intake = useIntake();
+  const automation = useAutomation();
+  const docs = useDocStore();
+
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.15fr_0.82fr]">
-      <RegistrationPanel card={activeCard} />
-      <CompliancePanel card={activeCard} />
+      <RegistrationPanel card={activeCard} corporate={intake.corporate} />
+      <CompliancePanel card={activeCard} docs={docs} />
       <ExportPanel card={activeCard} />
-      <SinPanel card={activeCard} />
+      <SinPanel card={activeCard} selectedSins={automation.selectedSins} />
       <ProgressPanel card={activeCard} />
       <WorkspaceQueuePanel
         activeCard={activeCard}
@@ -337,51 +363,48 @@ function Panel({
   );
 }
 
-function RegistrationPanel({ card }: { card: OfferWorkspaceCard }) {
-  const items = REGISTRATION_ITEMS.map((item) => {
-    if (item.label === "eOffer Digital Cert") {
-      return {
-        ...item,
-        status: card.authorizedNegotiatorStatus === "ready" ? "ok" : "gap",
-        note:
-          card.authorizedNegotiatorStatus === "ready" ? "Authorized negotiator ready" : item.note,
-      };
-    }
-    if (item.label === "Readiness Assessment") {
-      return {
-        ...item,
-        status: card.readinessPercent >= 100 ? "ok" : "gap",
-        note:
-          card.readinessPercent >= 100
-            ? "Readiness assessment complete"
-            : `${card.readinessPercent}% complete`,
-      };
-    }
-    return item;
-  });
+function RegistrationPanel({
+  card,
+  corporate,
+}: {
+  card: OfferWorkspaceCard;
+  corporate: RegistrationSource;
+}) {
+  const items = buildRegistrationItems(corporate, card);
 
   return (
     <Panel title="Registration Gaps" eyebrow={card.offerTypeLabel}>
-      <div className="divide-y divide-border">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-start gap-3 px-4 py-3">
-            <StatusIcon status={item.status} />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-semibold text-foreground">{item.label}</div>
-              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.note}</div>
+      {items.length === 0 ? (
+        <EmptyPanelState message="No registration data yet. Start Intake or upload a solicitation packet." />
+      ) : (
+        <div className="divide-y divide-border">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-start gap-3 px-4 py-3">
+              <StatusIcon status={item.status} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-foreground">{item.label}</div>
+                <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.note}</div>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 }
 
-function CompliancePanel({ card }: { card: OfferWorkspaceCard }) {
-  const verifiedCount = COMPLIANCE_MATRIX.filter((item) => item.status === "valid").length;
+function CompliancePanel({
+  card,
+  docs,
+}: {
+  card: OfferWorkspaceCard;
+  docs: Record<string, DocState>;
+}) {
+  const rows = buildComplianceRows(docs);
+  const verifiedCount = rows.filter((item) => item.status === "valid").length;
   const reviewCount = Math.max(
     card.documentsInReview,
-    COMPLIANCE_MATRIX.filter((item) => item.status === "review").length,
+    rows.filter((item) => item.status === "review").length,
   );
 
   return (
@@ -390,40 +413,55 @@ function CompliancePanel({ card }: { card: OfferWorkspaceCard }) {
       eyebrow={`${verifiedCount} verified · ${reviewCount} review`}
       action={<StatusPill status={card.status} />}
     >
-      <div className="grid grid-cols-[1fr_1.35fr_0.9fr_auto] border-b border-border px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-        <span>Ref</span>
-        <span>Requirement</span>
-        <span>Source</span>
-        <span>Status</span>
-      </div>
-      <div className="divide-y divide-border">
-        {COMPLIANCE_MATRIX.slice(0, 6).map((item) => (
-          <div
-            key={`${item.ref}-${item.req}`}
-            className="grid grid-cols-[1fr_1.35fr_0.9fr_auto] items-center gap-3 px-4 py-2.5 text-xs"
-          >
-            <span className="font-mono text-muted-foreground">{item.ref}</span>
-            <span className="min-w-0 truncate font-medium text-foreground">{item.req}</span>
-            <span className="min-w-0 truncate text-muted-foreground">{item.source}</span>
-            <MatrixStatus status={item.status} />
+      {rows.length === 0 ? (
+        <EmptyPanelState message="No compliance rows yet. Generate or upload documents to start the matrix." />
+      ) : (
+        <>
+          <div className="grid grid-cols-[1fr_1.35fr_0.9fr_auto] border-b border-border px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <span>Ref</span>
+            <span>Requirement</span>
+            <span>Source</span>
+            <span>Status</span>
           </div>
-        ))}
-      </div>
+          <div className="divide-y divide-border">
+            {rows.slice(0, 6).map((item) => (
+              <div
+                key={`${item.ref}-${item.req}`}
+                className="grid grid-cols-[1fr_1.35fr_0.9fr_auto] items-center gap-3 px-4 py-2.5 text-xs"
+              >
+                <span className="font-mono text-muted-foreground">{item.ref}</span>
+                <span className="min-w-0 truncate font-medium text-foreground">{item.req}</span>
+                <span className="min-w-0 truncate text-muted-foreground">{item.source}</span>
+                <MatrixStatus status={item.status} />
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Panel>
   );
 }
 
 function ExportPanel({ card }: { card: OfferWorkspaceCard }) {
+  const hasPackageData =
+    card.readinessPercent > 0 ||
+    card.documentsInReview > 0 ||
+    card.openClientItems > 0 ||
+    card.submissionStatus !== "not_started";
+  const packageLabel =
+    card.offerType === "gsa_mas" ? "eOffer package assembly" : "Package assembly";
+
   return (
     <section className="flex min-h-64 flex-col justify-between rounded-sm border border-primary/20 bg-[#15152b] p-4 text-primary-foreground">
       <div>
         <div className="text-[10px] font-bold uppercase tracking-widest text-primary-foreground/55">
-          Export Ready
+          {hasPackageData ? "Export Ready" : "Not Started"}
         </div>
-        <h2 className="mt-2 text-xl font-extrabold tracking-tight">eOffer package assembly</h2>
+        <h2 className="mt-2 text-xl font-extrabold tracking-tight">{packageLabel}</h2>
         <p className="mt-2 text-sm text-primary-foreground/70">
-          Package locked source files, finalized narratives, pricing workbook, and client sign-off
-          into a submission-ready zip.
+          {hasPackageData
+            ? "Package locked source files, finalized narratives, pricing workbook, and client sign-off into a submission-ready zip."
+            : "No package inputs yet. Intake, documents, pricing, and review data will appear here once started."}
         </p>
       </div>
       <div className="mt-6 space-y-3">
@@ -431,41 +469,47 @@ function ExportPanel({ card }: { card: OfferWorkspaceCard }) {
           <Metric
             icon={<Clock className="size-3" />}
             label="Ready"
-            value={`${card.readinessPercent}%`}
+            value={hasPackageData ? `${card.readinessPercent}%` : "—"}
           />
           <Metric
             icon={<FileText className="size-3" />}
             label="Review"
-            value={String(card.documentsInReview)}
+            value={hasPackageData ? String(card.documentsInReview) : "—"}
           />
           <Metric
             icon={<CircleAlert className="size-3" />}
             label="Client"
-            value={String(card.openClientItems)}
+            value={hasPackageData ? String(card.openClientItems) : "—"}
           />
         </div>
-        <Link
-          to="/export"
-          onClick={() => selectOffer(card.id)}
-          className="flex h-10 items-center justify-center gap-2 rounded-sm bg-primary px-3 text-xs font-bold uppercase tracking-widest text-primary-foreground"
-        >
-          <FileArchive className="size-4" />
-          Generate eOffer Zip
-        </Link>
+        {hasPackageData ? (
+          <Link
+            to="/export"
+            onClick={() => selectOffer(card.id, card.offerType)}
+            className="flex h-10 items-center justify-center gap-2 rounded-sm bg-primary px-3 text-xs font-bold uppercase tracking-widest text-primary-foreground"
+          >
+            <FileArchive className="size-4" />
+            Generate Package Zip
+          </Link>
+        ) : (
+          <div className="flex h-10 items-center justify-center gap-2 rounded-sm bg-primary/40 px-3 text-xs font-bold uppercase tracking-widest text-primary-foreground/70">
+            <FileArchive className="size-4" />
+            Generate Package Zip
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function SinPanel({ card }: { card: OfferWorkspaceCard }) {
-  const sinCodes =
-    card.selectedSinCodes.length > 0
-      ? card.selectedSinCodes.map((code, index) => ({
-          code,
-          title: index === 0 ? "Selected scope" : "Additional scope",
-          confidence: Math.max(58, 96 - index * 12),
-        }))
-      : SIN_MATCHES.slice(0, 3);
+function SinPanel({
+  card,
+  selectedSins,
+}: {
+  card: OfferWorkspaceCard;
+  selectedSins: SelectedSin[];
+}) {
+  const sinCodes = buildSinRows(selectedSins.length > 0 ? selectedSins : card.selectedSinCodes);
 
   return (
     <Panel
@@ -476,25 +520,29 @@ function SinPanel({ card }: { card: OfferWorkspaceCard }) {
         </Link>
       }
     >
-      <div className="divide-y divide-border">
-        {sinCodes.map((sin) => (
-          <div key={sin.code} className="flex items-center justify-between gap-3 px-4 py-3">
-            <div className="min-w-0">
-              <div className="font-mono text-sm font-bold text-foreground">{sin.code}</div>
-              <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{sin.title}</div>
+      {sinCodes.length === 0 ? (
+        <EmptyPanelState message="No SINs selected yet. Run intake and automation before this panel fills in." />
+      ) : (
+        <div className="divide-y divide-border">
+          {sinCodes.map((sin) => (
+            <div key={sin.code} className="flex items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <div className="font-mono text-sm font-bold text-foreground">{sin.code}</div>
+                <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{sin.title}</div>
+              </div>
+              <span
+                className={`rounded-sm border px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                  sin.confidence >= 90
+                    ? "border-success/30 bg-success/10 text-success"
+                    : "border-warning/30 bg-warning/10 text-warning"
+                }`}
+              >
+                {sin.confidence >= 90 ? "Match" : "Watch"}
+              </span>
             </div>
-            <span
-              className={`rounded-sm border px-2 py-1 text-[10px] font-bold uppercase tracking-widest ${
-                sin.confidence >= 90
-                  ? "border-success/30 bg-success/10 text-success"
-                  : "border-warning/30 bg-warning/10 text-warning"
-              }`}
-            >
-              {sin.confidence >= 90 ? "Match" : "Watch"}
-            </span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </Panel>
   );
 }
@@ -510,7 +558,7 @@ function ProgressPanel({ card }: { card: OfferWorkspaceCard }) {
             <Link
               key={item.label}
               to={item.route}
-              onClick={() => selectOffer(card.id)}
+              onClick={() => selectOffer(card.id, card.offerType)}
               className="flex items-center gap-3 rounded-sm border border-border bg-surface px-3 py-2.5 transition hover:border-primary/40 hover:bg-card"
             >
               <span
@@ -559,7 +607,10 @@ function WorkspaceQueuePanel({
             <button
               key={workspace.id}
               type="button"
-              onClick={() => onSelectWorkspace(workspace.id)}
+              onClick={() => {
+                selectOffer(workspace.id, workspace.offerType);
+                onSelectWorkspace(workspace.id);
+              }}
               className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-surface ${
                 active ? "bg-primary/5" : ""
               }`}
@@ -683,8 +734,11 @@ function CreateWorkspaceForm({
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [organizationName, setOrganizationName] = useState("");
   const [offerName, setOfferName] = useState("");
+  const [offerType, setOfferType] = useState<OfferType>("gsa_mas");
   const [clientEmail, setClientEmail] = useState("");
   const [solicitationNumber, setSolicitationNumber] = useState("47QSMD20R0001");
+  const [solicitationFiles, setSolicitationFiles] = useState<SolicitationFileInput[]>([]);
+  const gsaMas = isGsaMasOfferType(offerType);
 
   return (
     <form
@@ -696,8 +750,10 @@ function CreateWorkspaceForm({
           organizationId: organizationId ?? undefined,
           organizationName,
           offerName,
+          offerType,
           clientEmail,
           solicitationNumber,
+          solicitationFiles,
         });
       }}
     >
@@ -747,6 +803,26 @@ function CreateWorkspaceForm({
         </label>
         <label className="space-y-1">
           <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Solicitation type selection
+          </span>
+          <select
+            value={offerType}
+            onChange={(event) => {
+              const next = event.target.value as OfferType;
+              setOfferType(next);
+              if (next === "gsa_mas") setSolicitationNumber("47QSMD20R0001");
+            }}
+            className="h-10 w-full rounded-sm border border-border bg-surface px-3 text-sm"
+          >
+            {SOLICITATION_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="space-y-1">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
             Client email
           </span>
           <input
@@ -767,6 +843,42 @@ function CreateWorkspaceForm({
           />
         </label>
       </div>
+      {!gsaMas ? (
+        <div className="mt-4 rounded-sm border border-dashed border-border bg-surface p-3">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Solicitation document ingestion
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                MAS readiness is disabled. Uploaded packet files will become the Documents queue.
+              </div>
+            </div>
+            <input
+              type="file"
+              multiple
+              onChange={(event) => {
+                const files = Array.from(event.target.files ?? []).map((file) => ({
+                  filename: file.name,
+                  mediaType: file.type || "application/octet-stream",
+                  size: file.size,
+                }));
+                setSolicitationFiles(files);
+              }}
+              className="text-xs"
+            />
+          </div>
+          {solicitationFiles.length > 0 ? (
+            <ul className="mt-3 grid gap-1 text-[11px] text-muted-foreground md:grid-cols-2">
+              {solicitationFiles.map((file) => (
+                <li key={`${file.filename}-${file.size}`} className="truncate">
+                  {file.filename}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       {organizationError ? (
         <div role="alert" className="mt-3 text-sm text-destructive">
           Could not load existing organizations. Try again before creating a workspace.{" "}
@@ -805,6 +917,10 @@ function CreateWorkspaceForm({
       </div>
     </form>
   );
+}
+
+function EmptyPanelState({ message }: { message: string }) {
+  return <div className="px-4 py-8 text-sm text-muted-foreground">{message}</div>;
 }
 
 function EmptyWorkspaceState({ hasFilters }: { hasFilters: boolean }) {

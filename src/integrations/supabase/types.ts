@@ -588,6 +588,7 @@ export type Database = {
         Args: {
           p_client_email?: string | null;
           p_offer_name: string;
+          p_offer_type?: Database["public"]["Enums"]["offer_type"];
           p_organization_id?: string | null;
           p_organization_name?: string | null;
           p_solicitation_number?: string | null;

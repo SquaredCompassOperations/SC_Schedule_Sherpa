@@ -34,21 +34,20 @@ export type DocState = {
 };
 type Store = Record<string, DocState>;
 
+function defaultDocState(status: DocStatus = "draft"): DocState {
+  return {
+    text: "",
+    status,
+    savedAt: null,
+    dirty: false,
+    source: "generated",
+    sourceFile: null,
+    signOff: null,
+  };
+}
+
 const defaultStore = (): Store =>
-  Object.fromEntries(
-    DOCUMENT_QUEUE.map((d) => [
-      d.name,
-      {
-        text: "",
-        status: d.status as DocStatus,
-        savedAt: null,
-        dirty: false,
-        source: "generated" as DocSource,
-        sourceFile: null,
-        signOff: null,
-      },
-    ]),
-  );
+  Object.fromEntries(DOCUMENT_QUEUE.map((d) => [d.name, defaultDocState(d.status as DocStatus)]));
 
 // Migrate legacy EPA mechanism keys → canonical (a)(1)-(a)(3) keys.
 const EPA_LEGACY_MAP: Record<string, EpaMechanism> = {
@@ -80,8 +79,7 @@ const emit = () => {
 };
 
 export function patchDoc(name: string, patch: Partial<DocState>) {
-  if (!store[name]) return;
-  const prev = store[name];
+  const prev = store[name] ?? defaultDocState();
   store = { ...store, [name]: { ...prev, ...patch } };
 
   // Notify the client when a doc transitions into "review" (ready for review).
@@ -92,9 +90,19 @@ export function patchDoc(name: string, patch: Partial<DocState>) {
       body: "Open the Review Workflow to read the draft and sign off when satisfied.",
       href: "/review",
     });
-    logActivity({ module: "Documentation", action: "ready for review", target: name, clientVisible: true });
+    logActivity({
+      module: "Documentation",
+      action: "ready for review",
+      target: name,
+      clientVisible: true,
+    });
   } else if (patch.status === "final" && prev.status !== "final") {
-    logActivity({ module: "Documentation", action: "marked final", target: name, clientVisible: true });
+    logActivity({
+      module: "Documentation",
+      action: "marked final",
+      target: name,
+      clientVisible: true,
+    });
   } else if (patch.status === "draft" && prev.status !== "draft") {
     logActivity({ module: "Documentation", action: "moved back to draft", target: name });
   }

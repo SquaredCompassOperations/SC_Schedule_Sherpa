@@ -7,6 +7,7 @@ import {
   type ReadinessStatus,
 } from "@/lib/intake-readiness";
 import { useIntake } from "@/lib/intake-store";
+import { getOfferTypeLabel, isGsaMasOfferType, useSelectedOfferType } from "@/lib/offer-workspace";
 
 export const Route = createFileRoute("/readiness")({
   head: () => ({ meta: [{ title: "Readiness Assessment — ScheduleBuilder" }] }),
@@ -15,12 +16,17 @@ export const Route = createFileRoute("/readiness")({
 
 function ReadinessPage() {
   const intake = useIntake();
+  const offerType = useSelectedOfferType();
 
   const categories = useMemo(() => buildIntakeReadinessCategories(intake), [intake]);
 
   const composite = useMemo(() => {
     return calculateReadinessComposite(categories);
   }, [categories]);
+
+  if (!isGsaMasOfferType(offerType)) {
+    return <ReadinessDisabled offerTypeLabel={getOfferTypeLabel(offerType)} />;
+  }
 
   return (
     <>
@@ -86,6 +92,48 @@ function ReadinessPage() {
               ) : null}
             </div>
           ))}
+        </div>
+      </Panel>
+    </>
+  );
+}
+
+function ReadinessDisabled({ offerTypeLabel }: { offerTypeLabel: string }) {
+  return (
+    <>
+      <PageHeader
+        eyebrow="Intake & Readiness"
+        title="GSA MAS Readiness Disabled"
+        description={`${offerTypeLabel} offers use uploaded solicitation documents instead of the GSA MAS readiness checklist.`}
+        actions={
+          <div className="text-right">
+            <div className="text-[10px] font-mono text-muted-foreground uppercase">Composite</div>
+            <div className="text-4xl font-mono font-extrabold text-muted-foreground leading-none">
+              —
+            </div>
+          </div>
+        }
+      />
+      <Panel title="Solicitation-driven workflow">
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>
+            Upload the solicitation packet in Documents or from New Offer. The extracted packet
+            forms replace the predetermined MAS document queue for this offer.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/documents"
+              className="rounded-sm bg-primary px-3 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground"
+            >
+              Open Documents
+            </a>
+            <a
+              href="/market-validation"
+              className="rounded-sm border border-border px-3 py-2 text-xs font-bold uppercase tracking-widest"
+            >
+              Open Automation
+            </a>
+          </div>
         </div>
       </Panel>
     </>

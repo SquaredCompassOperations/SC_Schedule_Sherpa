@@ -5,8 +5,10 @@ import {
   filterOfferWorkspaceCards,
   getOfferStageMeta,
   getOfferTypeLabel,
+  isGsaMasOfferType,
   selectOffer,
   getSelectedOfferId,
+  getSelectedOfferType,
   type OfferWorkspaceRow,
 } from "./offer-workspace";
 
@@ -47,6 +49,21 @@ const baseRow: OfferWorkspaceRow = {
 describe("getOfferTypeLabel", () => {
   it("labels the first supported GSA MAS offer type", () => {
     expect(getOfferTypeLabel("gsa_mas")).toBe("GSA MAS");
+  });
+
+  it("labels solicitation types using the New Offer dropdown copy", () => {
+    expect(getOfferTypeLabel("va_fss")).toBe("VA FSS");
+    expect(getOfferTypeLabel("gwac_rfp")).toBe("RFP/RFQ/RFI/RFB");
+    expect(getOfferTypeLabel("custom_solicitation")).toBe("Other Solicitation Type");
+  });
+});
+
+describe("isGsaMasOfferType", () => {
+  it("enables MAS readiness only for GSA MAS offers", () => {
+    expect(isGsaMasOfferType("gsa_mas")).toBe(true);
+    expect(isGsaMasOfferType("va_fss")).toBe(false);
+    expect(isGsaMasOfferType("gwac_rfp")).toBe(false);
+    expect(isGsaMasOfferType("custom_solicitation")).toBe(false);
   });
 });
 
@@ -117,10 +134,12 @@ describe("selected offer helpers", () => {
   it("stores and clears the selected offer ID", () => {
     clearSelectedOffer();
     expect(getSelectedOfferId()).toBe(null);
-    selectOffer("offer-1");
+    selectOffer("offer-1", "va_fss");
     expect(getSelectedOfferId()).toBe("offer-1");
+    expect(getSelectedOfferType()).toBe("va_fss");
     clearSelectedOffer();
     expect(getSelectedOfferId()).toBe(null);
+    expect(getSelectedOfferType()).toBe("gsa_mas");
   });
 
   it("keeps selection changes working when storage is unavailable", () => {

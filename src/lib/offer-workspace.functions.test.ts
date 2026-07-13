@@ -138,9 +138,33 @@ describe("createOfferWorkspace", () => {
           p_offer_name: "Acme GSA MAS Offer",
           p_client_email: "client@acme.example",
           p_solicitation_number: "47QSMD20R0001",
+          p_offer_type: "gsa_mas",
         },
       },
     ]);
+  });
+
+  it("passes non-GSA solicitation type selection to the creation RPC", async () => {
+    const calls: Array<{ name: string; args: unknown }> = [];
+    const client = {
+      rpc: async (name: string, args: unknown) => {
+        calls.push({ name, args });
+        return { data: [{ organization_id: "org-1", offer_id: "offer-1" }], error: null };
+      },
+    };
+
+    await createOfferWorkspace(
+      {
+        organizationName: "Acme LLC",
+        offerName: "Acme VA Offer",
+        offerType: "va_fss",
+      },
+      client as never,
+    );
+
+    expect(calls[0]?.args).toMatchObject({
+      p_offer_type: "va_fss",
+    });
   });
 
   it("reuses the selected organization without requiring a name", async () => {
@@ -172,7 +196,10 @@ describe("createOfferWorkspace", () => {
     };
 
     await expect(
-      createOfferWorkspace({ organizationName: "Acme LLC", offerName: "Acme offer" }, client as never),
+      createOfferWorkspace(
+        { organizationName: "Acme LLC", offerName: "Acme offer" },
+        client as never,
+      ),
     ).rejects.toThrow("Could not create offer workspace: permission denied");
   });
 });
@@ -244,7 +271,10 @@ describe("logOfferActivity", () => {
     };
 
     await expect(
-      logOfferActivity({ offerId: "offer-1", module: "Workspace", action: "updated" }, client as never),
+      logOfferActivity(
+        { offerId: "offer-1", module: "Workspace", action: "updated" },
+        client as never,
+      ),
     ).rejects.toThrow("Could not log offer activity: permission denied");
   });
 });

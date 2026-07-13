@@ -204,6 +204,7 @@ export const DOCUMENT_QUEUE = [
   { name: "EPA Narrative", kind: "epa-narrative", status: "draft" },
   { name: "Uncompensated Overtime Policy", kind: "uncompensated-overtime", status: "draft" },
   { name: "Professional Compensation Plan", kind: "compensation-plan", status: "draft" },
+  { name: "Agent Authorization Letter", kind: "agent-authorization-letter", status: "draft" },
 ];
 
 export const DOC_CRITERIA: Record<string, { source: string; items: string[] }> = {

@@ -1,7 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bot, CheckCircle2, FileText, FolderKanban, ClipboardList } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Bot,
+  CheckCircle2,
+  FileArchive,
+  FileText,
+  FolderKanban,
+  ClipboardList,
+} from "lucide-react";
 import type { ComponentType } from "react";
 import { useModuleStatuses } from "@/lib/module-status-store";
+import { listOfferWorkspaces } from "@/lib/offer-workspace.functions";
+import { offerWorkspaceQueryKeys } from "@/lib/offer-workspace-query";
+import { selectOffer, useSelectedOfferId } from "@/lib/offer-workspace";
+import { useAuth } from "@/lib/auth-context";
+import { buildActiveClientOptions } from "./app-sidebar-options";
 import { workflowDotClass, type WorkflowTone } from "./app-sidebar-status";
 
 type WorkflowItem = {
@@ -54,6 +67,14 @@ const workflowItems: WorkflowItem[] = [
     tone: "watch",
     statusSlug: "/review",
   },
+  {
+    label: "Submission",
+    to: "/submission",
+    icon: FileArchive,
+    activePaths: ["/submission", "/export"],
+    tone: "watch",
+    statusSlug: "/submission",
+  },
 ];
 
 function isActive(pathname: string, item: WorkflowItem) {
@@ -63,6 +84,14 @@ function isActive(pathname: string, item: WorkflowItem) {
 export function AppSidebar() {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const moduleStatuses = useModuleStatuses();
+  const selectedOfferId = useSelectedOfferId();
+  const { user } = useAuth();
+  const workspaces = useQuery({
+    queryKey: offerWorkspaceQueryKeys.list(user?.id ?? "anonymous"),
+    queryFn: () => listOfferWorkspaces(),
+    enabled: Boolean(user?.id),
+  });
+  const activeClientOptions = buildActiveClientOptions(workspaces.data ?? []);
 
   return (
     <aside className="sticky top-14 h-[calc(100vh-3.5rem)] w-40 shrink-0 border-r border-border bg-sidebar">
@@ -97,6 +126,31 @@ export function AppSidebar() {
               </Link>
             );
           })}
+        </div>
+        <div className="mt-auto border-t border-border pt-3">
+          <label className="block">
+            <span className="block pb-1 text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
+              Active Client
+            </span>
+            <select
+              value={selectedOfferId ?? ""}
+              onChange={(event) => {
+                const option = activeClientOptions.find((item) => item.id === event.target.value);
+                if (option) selectOffer(option.id, option.offerType);
+              }}
+              disabled={activeClientOptions.length === 0}
+              className="h-8 w-full rounded-sm border border-border bg-card px-2 text-[11px] font-semibold text-foreground disabled:text-muted-foreground"
+            >
+              <option value="">
+                {activeClientOptions.length === 0 ? "No active clients" : "Select client"}
+              </option>
+              {activeClientOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </nav>
     </aside>

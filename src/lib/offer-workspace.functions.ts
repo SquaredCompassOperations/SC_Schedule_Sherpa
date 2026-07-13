@@ -47,8 +47,10 @@ export type CreateOfferWorkspaceInput = {
   organizationId?: string;
   organizationName?: string;
   offerName: string;
+  offerType?: Database["public"]["Enums"]["offer_type"];
   clientEmail?: string;
   solicitationNumber?: string;
+  solicitationFiles?: Array<{ filename: string; mediaType: string; size: number }>;
 };
 
 export type CreateOfferWorkspaceResult = {
@@ -118,6 +120,7 @@ export async function createOfferWorkspace(
   const organizationId = input.organizationId?.trim() || null;
   const organizationName = input.organizationName?.trim() || null;
   const offerName = input.offerName.trim();
+  const offerType = input.offerType ?? "gsa_mas";
   const clientEmail = input.clientEmail?.trim().toLowerCase() || null;
   const solicitationNumber = input.solicitationNumber?.trim() || null;
 
@@ -128,6 +131,7 @@ export async function createOfferWorkspace(
     p_organization_id: organizationId,
     p_organization_name: organizationName,
     p_offer_name: offerName,
+    p_offer_type: offerType,
     p_client_email: clientEmail,
     p_solicitation_number: solicitationNumber,
   });
@@ -137,7 +141,8 @@ export async function createOfferWorkspace(
   }
 
   const result = data?.[0];
-  if (!result) throw new Error("Could not create offer workspace: the transaction returned no workspace");
+  if (!result)
+    throw new Error("Could not create offer workspace: the transaction returned no workspace");
 
   return { organizationId: result.organization_id, offerId: result.offer_id };
 }

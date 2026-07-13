@@ -89,17 +89,14 @@ function ClientOverview() {
       : uploadedCount > 0 || intake.clientSubmittedAt
         ? "in_progress"
         : "not_started";
+  const hasNoAssignedWorkspaces = workspaces.isSuccess && (workspaces.data ?? []).length === 0;
 
   // Only nudge unassigned clients after their workspace list has resolved.
   useEffect(() => {
-    if (
-      workspaces.isSuccess && (workspaces.data ?? []).length === 0 &&
-      readinessState === "not_started" &&
-      uploadedCount === 0
-    ) {
+    if (hasNoAssignedWorkspaces && readinessState === "not_started" && uploadedCount === 0) {
       navigate({ to: "/client/readiness", replace: true });
     }
-  }, [workspaces.isSuccess, workspaces.data, readinessState, uploadedCount, navigate]);
+  }, [hasNoAssignedWorkspaces, readinessState, uploadedCount, navigate]);
 
   return (
     <div className="space-y-6">
@@ -107,7 +104,9 @@ function ClientOverview() {
         <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           Your GSA MAS Offer
         </div>
-        <h1 className="text-3xl font-bold mt-1">{entity.name !== "—" ? entity.name : CLIENT.name}</h1>
+        <h1 className="text-3xl font-bold mt-1">
+          {entity.name !== "—" ? entity.name : CLIENT.name}
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           {CLIENT.schedule} · {CLIENT.solicitation}
         </p>
@@ -130,13 +129,14 @@ function ClientOverview() {
             {(workspaces.data ?? []).map((workspace) => (
               <button
                 key={workspace.id}
-                onClick={() => selectOffer(workspace.id)}
+                onClick={() => selectOffer(workspace.id, workspace.offerType)}
                 className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted"
               >
                 <span>
                   <span className="block text-sm font-bold">{workspace.organizationName}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {workspace.offerTypeLabel} · {workspace.stageLabel} · {workspace.readinessPercent}% ready
+                    {workspace.offerTypeLabel} · {workspace.stageLabel} ·{" "}
+                    {workspace.readinessPercent}% ready
                   </span>
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
@@ -189,7 +189,9 @@ function ClientOverview() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="border border-border rounded-sm p-5 bg-card">
-          <div className="text-[10px] font-mono uppercase text-muted-foreground">Overall Progress</div>
+          <div className="text-[10px] font-mono uppercase text-muted-foreground">
+            Overall Progress
+          </div>
           <div className="text-4xl font-mono font-bold text-primary mt-1 leading-none">
             {status.composite}%
           </div>
@@ -200,7 +202,9 @@ function ClientOverview() {
         <div className="border border-border rounded-sm p-5 bg-card">
           <div className="text-[10px] font-mono uppercase text-muted-foreground">Current Stage</div>
           <div className="text-xl font-bold mt-1">{status.currentStage.label}</div>
-          <div className="text-xs text-muted-foreground mt-1">{status.currentStage.description}</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {status.currentStage.description}
+          </div>
         </div>
         <div className="border border-border rounded-sm p-5 bg-card">
           <div className="text-[10px] font-mono uppercase text-muted-foreground">What we need</div>

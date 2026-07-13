@@ -41,7 +41,9 @@ export type OfferWorkspaceFilters = {
 };
 
 const SELECTED_OFFER_KEY = "selected-offer-id";
+const SELECTED_OFFER_TYPE_KEY = "selected-offer-type";
 let selectedOfferId = readSelectedOffer();
+let selectedOfferType = readSelectedOfferType();
 const selectedListeners = new Set<() => void>();
 
 function readSelectedOffer(): string | null {
@@ -53,12 +55,26 @@ function readSelectedOffer(): string | null {
   }
 }
 
+function readSelectedOfferType(): OfferType {
+  if (typeof window === "undefined") return "gsa_mas";
+  try {
+    const value = window.localStorage.getItem(SELECTED_OFFER_TYPE_KEY);
+    return isOfferType(value) ? value : "gsa_mas";
+  } catch {
+    return "gsa_mas";
+  }
+}
+
 function emitSelectedOffer() {
   selectedListeners.forEach((listener) => listener());
 }
 
 export function getSelectedOfferId(): string | null {
   return selectedOfferId;
+}
+
+export function getSelectedOfferType(): OfferType {
+  return selectedOfferType;
 }
 
 export function useSelectedOfferId(): string | null {
@@ -72,11 +88,24 @@ export function useSelectedOfferId(): string | null {
   );
 }
 
-export function selectOffer(id: string) {
+export function useSelectedOfferType(): OfferType {
+  return useSyncExternalStore(
+    (listener) => {
+      selectedListeners.add(listener);
+      return () => selectedListeners.delete(listener);
+    },
+    getSelectedOfferType,
+    getSelectedOfferType,
+  );
+}
+
+export function selectOffer(id: string, offerType?: OfferType) {
   selectedOfferId = id;
+  if (offerType) selectedOfferType = offerType;
   if (typeof window !== "undefined") {
     try {
       window.localStorage.setItem(SELECTED_OFFER_KEY, id);
+      if (offerType) window.localStorage.setItem(SELECTED_OFFER_TYPE_KEY, offerType);
     } catch {
       // Persistence is best effort; the in-memory selection still applies.
     }
@@ -86,9 +115,11 @@ export function selectOffer(id: string) {
 
 export function clearSelectedOffer() {
   selectedOfferId = null;
+  selectedOfferType = "gsa_mas";
   if (typeof window !== "undefined") {
     try {
       window.localStorage.removeItem(SELECTED_OFFER_KEY);
+      window.localStorage.removeItem(SELECTED_OFFER_TYPE_KEY);
     } catch {
       // Persistence is best effort; the in-memory selection still applies.
     }
@@ -140,10 +171,30 @@ export function getOfferTypeLabel(type: OfferType): string {
   const labels: Record<OfferType, string> = {
     gsa_mas: "GSA MAS",
     va_fss: "VA FSS",
-    gwac_rfp: "GWAC/RFP",
-    custom_solicitation: "Custom Solicitation",
+    gwac_rfp: "RFP/RFQ/RFI/RFB",
+    custom_solicitation: "Other Solicitation Type",
   };
   return labels[type];
+}
+
+export const SOLICITATION_TYPE_OPTIONS: Array<{ value: OfferType; label: string }> = [
+  { value: "gsa_mas", label: "GSA MAS" },
+  { value: "va_fss", label: "VA FSS" },
+  { value: "gwac_rfp", label: "RFP/RFQ/RFI/RFB" },
+  { value: "custom_solicitation", label: "Other Solicitation Type" },
+];
+
+function isOfferType(value: unknown): value is OfferType {
+  return (
+    value === "gsa_mas" ||
+    value === "va_fss" ||
+    value === "gwac_rfp" ||
+    value === "custom_solicitation"
+  );
+}
+
+export function isGsaMasOfferType(type: OfferType | null | undefined): boolean {
+  return type === "gsa_mas";
 }
 
 function extractSinCodes(value: Json): string[] {
