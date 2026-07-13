@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { getActivityLog, resetActivityLog } from "./activity-log";
 import { getMessages, resetMessages } from "./messages-store";
-import { buildAutomationActions, sendClientUpdateRequest } from "./automation-workspace";
+import {
+  buildAutomationActions,
+  getAutomationActionCommand,
+  sendClientUpdateRequest,
+} from "./automation-workspace";
 
 describe("automation workspace actions", () => {
   it("exposes the requested four action cards in order", () => {
@@ -30,6 +34,60 @@ describe("automation workspace actions", () => {
 
     expect(actions.find((action) => action.id === "market-validation")?.status).toBe("off");
     expect(actions.find((action) => action.id === "agent-authorization")?.status).toBe("off");
+  });
+
+  it("lets controls turn off an otherwise available workflow", () => {
+    const actions = buildAutomationActions({
+      offerType: "gsa_mas",
+      marketRows: 0,
+      pricingRows: 0,
+      hasAgentAuthorizationDraft: false,
+      disabledActionIds: ["pricing-workbook"],
+    });
+
+    expect(actions.find((action) => action.id === "pricing-workbook")).toMatchObject({
+      status: "off",
+      lockedOff: false,
+    });
+    expect(actions.find((action) => action.id === "market-validation")?.status).toBe("enabled");
+  });
+
+  it("locks non-applicable workflows off instead of treating them as control toggles", () => {
+    const actions = buildAutomationActions({
+      offerType: "va_fss",
+      marketRows: 0,
+      pricingRows: 0,
+      hasAgentAuthorizationDraft: false,
+      disabledActionIds: [],
+    });
+
+    expect(actions.find((action) => action.id === "market-validation")).toMatchObject({
+      status: "off",
+      lockedOff: true,
+    });
+  });
+
+  it("returns the bottom-panel command for a selected workspace", () => {
+    const actions = buildAutomationActions({
+      offerType: "gsa_mas",
+      marketRows: 0,
+      pricingRows: 0,
+      hasAgentAuthorizationDraft: false,
+    });
+
+    expect(
+      getAutomationActionCommand(actions.find((action) => action.id === "market-validation")!),
+    ).toMatchObject({
+      label: "Run Market Validation Workflow",
+      disabled: false,
+    });
+    expect(
+      getAutomationActionCommand(actions.find((action) => action.id === "pricing-workbook")!),
+    ).toMatchObject({
+      label: "Open Pricing Workbook Build",
+      href: "/pricing-workbook",
+      disabled: false,
+    });
   });
 });
 

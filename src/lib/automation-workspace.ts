@@ -15,10 +15,18 @@ export type AutomationAction = {
   id: AutomationActionId;
   title: string;
   status: AutomationActionStatus;
+  lockedOff?: boolean;
   description: string;
   output: string;
   source: string;
   estimatedCost: string;
+};
+
+export type AutomationActionCommand = {
+  label: string;
+  href?: "/pricing-workbook";
+  disabled: boolean;
+  disabledReason?: string;
 };
 
 export type BuildAutomationActionsInput = {
@@ -26,36 +34,57 @@ export type BuildAutomationActionsInput = {
   marketRows: number;
   pricingRows: number;
   hasAgentAuthorizationDraft: boolean;
+  disabledActionIds?: AutomationActionId[];
 };
 
 const GSA_AGENT_AUTHORIZATION_SOURCE = "GSA7000 (Rev. 03/2024)";
 
 export function buildAutomationActions(input: BuildAutomationActionsInput): AutomationAction[] {
   const gsaMas = isGsaMasOfferType(input.offerType);
+  const disabledActionIds = new Set(input.disabledActionIds ?? []);
+  const applyControls = (
+    action: Omit<AutomationAction, "lockedOff">,
+    options: { lockedOff?: boolean } = {},
+  ): AutomationAction => {
+    if (options.lockedOff || action.status === "off") {
+      return { ...action, status: "off", lockedOff: true };
+    }
+    if (disabledActionIds.has(action.id)) {
+      return { ...action, status: "off", lockedOff: false };
+    }
+    return { ...action, lockedOff: false };
+  };
+
   return [
-    {
-      id: "market-validation",
-      title: "Market Validation Scan",
-      status: !gsaMas ? "off" : input.marketRows > 0 ? "complete" : "enabled",
-      description: gsaMas
-        ? "Runs controlled web search and crawl tasks for selected SIN and LCAT pricing."
-        : "GSA MAS market validation is disabled for this solicitation type.",
-      output: "Market Validation Spreadsheet",
-      source: gsaMas ? "GSA eLibrary and GSA Advantage" : "Solicitation packet",
-      estimatedCost: "$0.10",
-    },
-    {
-      id: "agent-authorization",
-      title: "Agent Authorization Letter",
-      status: !gsaMas ? "off" : input.hasAgentAuthorizationDraft ? "complete" : "enabled",
-      description: gsaMas
-        ? "Builds GSA Form 7000 letter from intake and authorized-agent details."
-        : "GSA Form 7000 is only applicable to GSA MAS offers.",
-      output: "Agent Authorization Letter",
-      source: GSA_AGENT_AUTHORIZATION_SOURCE,
-      estimatedCost: "$0.02",
-    },
-    {
+    applyControls(
+      {
+        id: "market-validation",
+        title: "Market Validation Scan",
+        status: input.marketRows > 0 ? "complete" : "enabled",
+        description: gsaMas
+          ? "Runs controlled web search and crawl tasks for selected SIN and LCAT pricing."
+          : "GSA MAS market validation is disabled for this solicitation type.",
+        output: "Market Validation Spreadsheet",
+        source: gsaMas ? "GSA eLibrary and GSA Advantage" : "Solicitation packet",
+        estimatedCost: "$0.10",
+      },
+      { lockedOff: !gsaMas },
+    ),
+    applyControls(
+      {
+        id: "agent-authorization",
+        title: "Agent Authorization Letter",
+        status: input.hasAgentAuthorizationDraft ? "complete" : "enabled",
+        description: gsaMas
+          ? "Builds GSA Form 7000 letter from intake and authorized-agent details."
+          : "GSA Form 7000 is only applicable to GSA MAS offers.",
+        output: "Agent Authorization Letter",
+        source: GSA_AGENT_AUTHORIZATION_SOURCE,
+        estimatedCost: "$0.02",
+      },
+      { lockedOff: !gsaMas },
+    ),
+    applyControls({
       id: "pricing-workbook",
       title: "Pricing Workbook Build",
       status: input.pricingRows > 0 ? "complete" : "enabled",
@@ -63,8 +92,8 @@ export function buildAutomationActions(input: BuildAutomationActionsInput): Auto
       output: "Pricing Terms Workbook",
       source: gsaMas ? "GSA price templates" : "Solicitation packet forms",
       estimatedCost: "$0.04",
-    },
-    {
+    }),
+    applyControls({
       id: "client-update",
       title: "Client Update",
       status: "enabled",
@@ -72,8 +101,58 @@ export function buildAutomationActions(input: BuildAutomationActionsInput): Auto
       output: "Client-visible update",
       source: "Client main contact",
       estimatedCost: "$0.00",
-    },
+    }),
   ];
+}
+
+export function getAutomationActionCommand(action: AutomationAction): AutomationActionCommand {
+  const disabled = action.status === "off";
+  const disabledReason = disabled
+    ? action.lockedOff
+      ? "This workflow is not applicable to the selected solicitation type."
+      : "This workflow is disabled in Controls."
+    : undefined;
+
+  const commands: Record<AutomationActionId, Omit<AutomationActionCommand, "disabledReason">> = {
+    "market-validation": {
+      label: "Run Market Validation Workflow",
+      disabled,
+    },
+    "agent-authorization": {
+      label: "Build Agent Authorization Letter",
+      disabled,
+    },
+    "pricing-workbook": {
+      label: "Open Pricing Workbook Build",
+      href: "/pricing-workbook",
+      disabled,
+    },
+    "client-update": {
+      label: "Send Client Update",
+      disabled,
+    },
+  };
+
+  return { ...commands[action.id], disabledReason };
+}
+
+export function isActionControlChecked(action: AutomationAction): boolean {
+  return action.status !== "off";
+}
+
+export function isActionControlDisabled(action: AutomationAction): boolean {
+  return Boolean(action.lockedOff);
+}
+
+export function toggleDisabledAction(
+  disabledActionIds: AutomationActionId[],
+  action: AutomationAction,
+): AutomationActionId[] {
+  if (action.lockedOff) return disabledActionIds;
+  if (disabledActionIds.includes(action.id)) {
+    return disabledActionIds.filter((id) => id !== action.id);
+  }
+  return [...disabledActionIds, action.id];
 }
 
 export function sendClientUpdateRequest(input: {

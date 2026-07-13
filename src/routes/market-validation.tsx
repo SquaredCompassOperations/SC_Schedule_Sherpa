@@ -10,8 +10,12 @@ import { useDocStore, patchDoc } from "@/lib/doc-store";
 import { useIntake } from "@/lib/intake-store";
 import {
   buildAutomationActions,
+  getAutomationActionCommand,
+  isActionControlChecked,
+  isActionControlDisabled,
   getAgentAuthorizationDraftText,
   sendClientUpdateRequest,
+  toggleDisabledAction,
   type AutomationAction,
   type AutomationActionId,
 } from "@/lib/automation-workspace";
@@ -35,6 +39,7 @@ function AutomationWorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [activeSin, setActiveSin] = useState<string>(automation.selectedSins[0]?.code || "");
+  const [disabledActionIds, setDisabledActionIds] = useState<AutomationActionId[]>([]);
   const [clientUpdateSubject, setClientUpdateSubject] = useState("");
   const [clientUpdateBody, setClientUpdateBody] = useState("");
 
@@ -50,10 +55,18 @@ function AutomationWorkspacePage() {
         marketRows: automation.marketRows.length,
         pricingRows: automation.pricingRows.length,
         hasAgentAuthorizationDraft: Boolean(docs[AGENT_AUTH_DOC]?.text),
+        disabledActionIds,
       }),
-    [automation.marketRows.length, automation.pricingRows.length, docs, offerType],
+    [
+      automation.marketRows.length,
+      automation.pricingRows.length,
+      disabledActionIds,
+      docs,
+      offerType,
+    ],
   );
   const selected = actions.find((action) => action.id === selectedAction) ?? actions[0];
+  const selectedCommand = getAutomationActionCommand(selected);
   const enabledActions = actions.filter((action) => action.status !== "off").length;
   const spend = actions
     .filter((action) => action.status === "complete")
@@ -152,14 +165,6 @@ function AutomationWorkspacePage() {
                   action={action}
                   selected={selected.id === action.id}
                   onSelect={() => setSelectedAction(action.id)}
-                  onRun={
-                    action.id === "market-validation"
-                      ? runMarketScan
-                      : action.id === "agent-authorization"
-                        ? buildAgentAuthorization
-                        : undefined
-                  }
-                  running={running && action.id === "market-validation"}
                 />
               ))}
             </div>
@@ -179,7 +184,14 @@ function AutomationWorkspacePage() {
                   className="flex items-center justify-between rounded-sm border border-border px-2 py-1.5 text-xs"
                 >
                   <label className="flex items-center gap-2">
-                    <input type="checkbox" checked={action.status !== "off"} readOnly />
+                    <input
+                      type="checkbox"
+                      checked={isActionControlChecked(action)}
+                      disabled={isActionControlDisabled(action)}
+                      onChange={() =>
+                        setDisabledActionIds((current) => toggleDisabledAction(current, action))
+                      }
+                    />
                     {action.title}
                   </label>
                   <span
@@ -213,14 +225,7 @@ function AutomationWorkspacePage() {
         title={selected.title}
         className="mt-6"
         trailing={
-          selected.id === "pricing-workbook" ? (
-            <Link
-              to="/pricing-workbook"
-              className="text-[10px] font-bold uppercase tracking-widest text-primary"
-            >
-              Open Workspace →
-            </Link>
-          ) : selected.id === "market-validation" ? (
+          selected.id === "market-validation" ? (
             <MarketSinPicker
               activeSin={activeSin}
               onActiveSin={setActiveSin}
@@ -236,6 +241,11 @@ function AutomationWorkspacePage() {
         </div>
         {selected.id === "client-update" ? (
           <div className="mt-5 space-y-3">
+            {selectedCommand.disabledReason ? (
+              <div className="rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+                {selectedCommand.disabledReason}
+              </div>
+            ) : null}
             <input
               value={clientUpdateSubject}
               onChange={(event) => setClientUpdateSubject(event.target.value)}
@@ -251,16 +261,38 @@ function AutomationWorkspacePage() {
             <button
               type="button"
               onClick={sendUpdate}
-              disabled={!clientUpdateSubject.trim() || !clientUpdateBody.trim()}
+              disabled={
+                selectedCommand.disabled || !clientUpdateSubject.trim() || !clientUpdateBody.trim()
+              }
               className="rounded-sm bg-primary px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
             >
-              Send Client Update
+              {selectedCommand.label}
             </button>
           </div>
         ) : selected.id === "market-validation" && automation.marketRows.length > 0 ? (
-          <MarketRows rows={automation.marketRows} />
+          <>
+            <AutomationCommandBar
+              command={selectedCommand}
+              running={running}
+              onRun={runMarketScan}
+            />
+            <MarketRows rows={automation.marketRows} />
+          </>
         ) : (
-          <div className="mt-4 text-sm text-muted-foreground">{selected.description}</div>
+          <>
+            <AutomationCommandBar
+              command={selectedCommand}
+              running={running && selected.id === "market-validation"}
+              onRun={
+                selected.id === "market-validation"
+                  ? runMarketScan
+                  : selected.id === "agent-authorization"
+                    ? buildAgentAuthorization
+                    : undefined
+              }
+            />
+            <div className="mt-4 text-sm text-muted-foreground">{selected.description}</div>
+          </>
         )}
       </Panel>
 
@@ -271,47 +303,66 @@ function AutomationWorkspacePage() {
   );
 }
 
-function AutomationActionCard({
-  action,
-  selected,
+function AutomationCommandBar({
+  command,
   running,
-  onSelect,
   onRun,
 }: {
-  action: AutomationAction;
-  selected: boolean;
+  command: ReturnType<typeof getAutomationActionCommand>;
   running: boolean;
-  onSelect: () => void;
   onRun?: () => void;
 }) {
   return (
-    <div
+    <div className="mt-5 flex flex-wrap items-center gap-3">
+      {command.href && !command.disabled ? (
+        <Link
+          to={command.href}
+          className="rounded-sm bg-primary px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground"
+        >
+          {command.label} →
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={command.disabled || running || !onRun}
+          className="rounded-sm bg-primary px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
+        >
+          {running ? "Running..." : command.label}
+        </button>
+      )}
+      {command.disabledReason ? (
+        <span className="text-xs text-muted-foreground">{command.disabledReason}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function AutomationActionCard({
+  action,
+  selected,
+  onSelect,
+}: {
+  action: AutomationAction;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
       className={`min-h-32 rounded-sm border p-4 ${
         selected ? "border-primary bg-primary/5" : "border-border bg-surface"
-      }`}
+      } text-left transition-colors hover:border-primary/60`}
     >
       <div className="flex items-start justify-between gap-3">
-        <button type="button" onClick={onSelect} className="text-left">
+        <div>
           <h2 className="text-sm font-extrabold text-foreground">{action.title}</h2>
-        </button>
+        </div>
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={onSelect}
-            className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest"
-          >
+          <span className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest">
             {selected ? "Selected" : "Open"}
-          </button>
-          {onRun ? (
-            <button
-              type="button"
-              onClick={onRun}
-              disabled={action.status === "off" || running}
-              className="rounded-sm bg-primary px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-40"
-            >
-              {running ? "Run..." : "Run"}
-            </button>
-          ) : null}
+          </span>
         </div>
       </div>
       <div
@@ -330,7 +381,7 @@ function AutomationActionCard({
         Output: {action.output}
       </div>
       <div className="mt-1 text-[10px] font-mono text-primary">{action.source}</div>
-    </div>
+    </button>
   );
 }
 
