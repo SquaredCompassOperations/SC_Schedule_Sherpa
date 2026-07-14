@@ -8,191 +8,19 @@ import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
 import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
 import { useSelectedOfferId } from "@/lib/offer-workspace";
+import {
+  buildPricingRowsFromAutomation,
+  derivePricingKeywords,
+  emptyPricingWorkbookRow,
+  type PricingWorkbookRow,
+} from "@/lib/pricing-workbook-rows";
 
 export const Route = createFileRoute("/pricing-workbook")({
   head: () => ({ meta: [{ title: "Pricing Workbook — ScheduleBuilder" }] }),
   component: PricingWorkbookPage,
 });
 
-type Row = {
-  sin: string;
-  title: string;
-  description: string;
-  keywords: string;
-  minimumEducation: string;
-  minimumYearsExperience: string;
-  unitOfMeasure: string;
-  price: string;
-  scaLaborCategory: string;
-  wageDeterminationTable: string;
-};
-
-function emptyRow(sin = ""): Row {
-  return {
-    sin,
-    title: "",
-    description: "",
-    keywords: "",
-    minimumEducation: "Bachelors",
-    minimumYearsExperience: "5",
-    unitOfMeasure: "Hour",
-    price: "",
-    scaLaborCategory: "",
-    wageDeterminationTable: "",
-  };
-}
-
-const STOPWORDS = new Set([
-  "the",
-  "a",
-  "an",
-  "and",
-  "or",
-  "of",
-  "for",
-  "to",
-  "in",
-  "on",
-  "with",
-  "by",
-  "at",
-  "as",
-  "is",
-  "are",
-  "be",
-  "been",
-  "this",
-  "that",
-  "these",
-  "those",
-  "from",
-  "into",
-  "under",
-  "over",
-  "within",
-  "across",
-  "per",
-  "using",
-  "use",
-  "their",
-  "they",
-  "them",
-  "its",
-  "it",
-  "also",
-  "may",
-  "such",
-  "including",
-  "other",
-  "than",
-  "upon",
-  "via",
-  "each",
-  "any",
-  "all",
-  "not",
-  "but",
-  "if",
-  "when",
-  "while",
-  "will",
-  "shall",
-  "must",
-  "can",
-  "should",
-  "would",
-  "could",
-  "has",
-  "have",
-  "had",
-  "do",
-  "does",
-  "done",
-  "being",
-  "etc",
-  "e.g",
-  "i.e",
-  "level",
-  "levels",
-  "ensure",
-  "ensures",
-  "provide",
-  "provides",
-  "provided",
-  "perform",
-  "performs",
-  "performed",
-  "performing",
-  "support",
-  "supports",
-  "supported",
-  "supporting",
-  "work",
-  "works",
-  "working",
-  "worked",
-  "candidate",
-  "candidates",
-  "duties",
-  "duty",
-  "responsibilities",
-  "responsibility",
-  "experience",
-  "required",
-  "requires",
-  "requirement",
-  "requirements",
-  "year",
-  "years",
-  "minimum",
-  "preferred",
-  "plus",
-  "including",
-  "includes",
-  "included",
-  "tasks",
-  "task",
-]);
-
-function deriveKeywords(description: string): string {
-  if (!description || description.trim().length < 30) return "";
-  // Prefer multi-word "Capitalized Phrases" first (proper nouns / domain terms).
-  const phraseMatches = Array.from(
-    description.matchAll(/\b([A-Z][a-zA-Z0-9]+(?:[ -][A-Z][a-zA-Z0-9]+){0,3})\b/g),
-  ).map((m) => m[1].trim());
-  const phraseFreq = new Map<string, number>();
-  for (const p of phraseMatches) {
-    if (p.length < 3 || p.length > 60) continue;
-    if (STOPWORDS.has(p.toLowerCase())) continue;
-    phraseFreq.set(p, (phraseFreq.get(p) ?? 0) + 1);
-  }
-  const phrases = Array.from(phraseFreq.entries())
-    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-    .map(([p]) => p);
-
-  // Fall back to frequent single words if not enough phrases.
-  const wordFreq = new Map<string, number>();
-  for (const raw of description.toLowerCase().split(/[^a-z0-9-]+/)) {
-    const w = raw.trim();
-    if (w.length < 4 || STOPWORDS.has(w)) continue;
-    wordFreq.set(w, (wordFreq.get(w) ?? 0) + 1);
-  }
-  const words = Array.from(wordFreq.entries())
-    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-    .map(([w]) => w);
-
-  const picked: string[] = [];
-  const seen = new Set<string>();
-  for (const candidate of [...phrases, ...words]) {
-    const norm = candidate.toLowerCase();
-    if (seen.has(norm)) continue;
-    if (candidate.length > 100) continue;
-    seen.add(norm);
-    picked.push(candidate);
-    if (picked.length >= 5) break;
-  }
-  return picked.join(", ");
-}
+type Row = PricingWorkbookRow;
 
 function PricingWorkbookPage() {
   const genFn = useServerFn(generatePricingWorkbook);
@@ -205,46 +33,13 @@ function PricingWorkbookPage() {
     automation.pricingTemplate || "fcp-services-plus",
   );
   const [rows, setRows] = useState<Row[]>(() => {
-    // hydrate from previously saved rows first
-    if (automation.pricingRows && automation.pricingRows.length > 0) {
-      return automation.pricingRows.map((r) => ({
-        ...emptyRow(r.sin),
-        ...r,
-        keywords: r.keywords ?? "",
-      }));
-    }
-    const firstSin = automation.selectedSins[0]?.code || "";
-    // Prefer the uploaded Commercial Price List as the basis for line items.
-    if (automation.priceListLcats && automation.priceListLcats.length > 0) {
-      // Build a quick lookup of any matching SIN-mapping LCAT to inherit descriptions.
-      const descBy = new Map(
-        automation.selectedLcats.map((l) => [l.title.toLowerCase(), l.rationale]),
-      );
-      return automation.priceListLcats.map((p) => {
-        const description = descBy.get(p.title.toLowerCase()) ?? "";
-        return {
-          ...emptyRow(p.sin || firstSin),
-          title: p.title,
-          description,
-          keywords: deriveKeywords(description),
-          unitOfMeasure: p.unit || "Hour",
-          price: (p.rate || "").replace(/[$,]/g, "").trim(),
-        };
-      });
-    }
-    // Fall back to selected LCATs from SIN mapping
-    if (automation.selectedLcats.length > 0) {
-      return automation.selectedLcats.map((l) => ({
-        ...emptyRow(firstSin),
-        title: l.title,
-        description: l.rationale,
-        keywords: deriveKeywords(l.rationale),
-      }));
-    }
-    return [emptyRow(firstSin)];
+    return buildPricingRowsFromAutomation(automation);
   });
   const [savedAt, setSavedAt] = useState<number | null>(automation.pricingSavedAt);
   const [dirty, setDirty] = useState(false);
+  const [lastSyncedPriceListAt, setLastSyncedPriceListAt] = useState(
+    automation.priceListExtractedAt,
+  );
   const [version, setVersion] = useState<{
     message: string;
     upToDate: boolean;
@@ -263,6 +58,24 @@ function PricingWorkbookPage() {
       .catch(() => {});
   }, [versionFn]);
 
+  useEffect(() => {
+    if (
+      !automation.priceListExtractedAt ||
+      automation.priceListExtractedAt === lastSyncedPriceListAt ||
+      automation.pricingRows.length > 0 ||
+      dirty
+    ) {
+      return;
+    }
+
+    const next = buildPricingRowsFromAutomation({ ...automation, pricingRows: [] });
+    setRows(next);
+    savePricingRows(next);
+    setSavedAt(Date.now());
+    setDirty(false);
+    setLastSyncedPriceListAt(automation.priceListExtractedAt);
+  }, [automation, dirty, lastSyncedPriceListAt]);
+
   const switchTemplate = (t: "fcp-product" | "fcp-services-plus") => {
     setTemplateLocal(t);
     setPricingTemplate(t);
@@ -273,7 +86,7 @@ function PricingWorkbookPage() {
     setDirty(true);
   };
   const addRow = () => {
-    setRows((rs) => [...rs, emptyRow(automation.selectedSins[0]?.code || "")]);
+    setRows((rs) => [...rs, emptyPricingWorkbookRow(automation.selectedSins[0]?.code || "")]);
     setDirty(true);
   };
   const removeRow = (i: number) => {
@@ -285,6 +98,15 @@ function PricingWorkbookPage() {
     savePricingRows(rows);
     setSavedAt(Date.now());
     setDirty(false);
+  };
+
+  const syncFromPriceList = () => {
+    const next = buildPricingRowsFromAutomation({ ...automation, pricingRows: [] });
+    setRows(next);
+    savePricingRows(next);
+    setSavedAt(Date.now());
+    setDirty(false);
+    setLastSyncedPriceListAt(automation.priceListExtractedAt);
   };
 
   const generate = async () => {
@@ -422,7 +244,28 @@ function PricingWorkbookPage() {
         </div>
       </Panel>
 
-      <Panel title="Line items" className="mb-4">
+      <Panel
+        title="Line items"
+        trailing={
+          automation.priceListLcats.length > 0 ? (
+            <button
+              type="button"
+              onClick={syncFromPriceList}
+              className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted"
+            >
+              Sync from extracted price list
+            </button>
+          ) : null
+        }
+        className="mb-4"
+      >
+        {automation.priceListLcats.length > 0 ? (
+          <div className="mb-3 rounded-sm border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
+            {automation.priceListLcats.length} extracted price-list row
+            {automation.priceListLcats.length === 1 ? "" : "s"} available
+            {automation.priceListSource ? ` from ${automation.priceListSource}` : ""}.
+          </div>
+        ) : null}
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
@@ -557,7 +400,7 @@ function PricingWorkbookPage() {
                     const patch: Partial<Row> = { description };
                     // Auto-fill keywords from description if user hasn't set any yet.
                     if (!r.keywords.trim()) {
-                      patch.keywords = deriveKeywords(description);
+                      patch.keywords = derivePricingKeywords(description);
                     }
                     update(i, patch);
                   }}
@@ -573,7 +416,7 @@ function PricingWorkbookPage() {
                   onChange={(v) => update(i, { keywords: v })}
                   onSuggest={
                     r.description.trim().length >= 30
-                      ? () => update(i, { keywords: deriveKeywords(r.description) })
+                      ? () => update(i, { keywords: derivePricingKeywords(r.description) })
                       : undefined
                   }
                 />

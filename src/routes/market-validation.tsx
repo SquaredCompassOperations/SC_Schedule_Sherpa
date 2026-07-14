@@ -1,13 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SaveAndContinue } from "@/components/save-and-continue";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { runMarketValidation } from "@/lib/market-validation.functions";
-import { useAutomation, setMarketRows, type MarketRow } from "@/lib/automation-store";
+import { crawlClientForSins } from "@/lib/sin-crawler.functions";
+import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
+import {
+  useAutomation,
+  setMarketRows,
+  setPriceListLcats,
+  setSelectedSins,
+  type MarketRow,
+  type SelectedSin,
+} from "@/lib/automation-store";
 import { useSelectedOfferId, useSelectedOfferType } from "@/lib/offer-workspace";
 import { useDocStore, patchDoc } from "@/lib/doc-store";
 import { useIntake } from "@/lib/intake-store";
+import {
+  recommendedSelectedCodes,
+  selectSinCandidatesForSave,
+  type SinScanCandidate,
+} from "@/lib/validation-workspace";
 import {
   buildAutomationActions,
   getAutomationActionCommand,
@@ -29,19 +43,42 @@ const AGENT_AUTH_DOC = "Agent Authorization Letter";
 
 function AutomationWorkspacePage() {
   const fn = useServerFn(runMarketValidation);
+  const sinScanFn = useServerFn(crawlClientForSins);
+  const priceListCrawlFn = useServerFn(crawlPriceListFromSite);
   const automation = useAutomation();
   const docs = useDocStore();
   const intake = useIntake();
   const selectedOfferId = useSelectedOfferId();
   const offerType = useSelectedOfferType();
-  const [selectedAction, setSelectedAction] = useState<AutomationActionId>("agent-authorization");
+  const [selectedAction, setSelectedAction] = useState<AutomationActionId>("market-validation");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [activeSin, setActiveSin] = useState<string>(automation.selectedSins[0]?.code || "");
+  const [scanUrl, setScanUrl] = useState(intake.corporate.website || "");
+  const [scanRunning, setScanRunning] = useState(false);
+  const [scanCandidates, setScanCandidates] = useState<SinScanCandidate[]>([]);
+  const [scanSelectedCodes, setScanSelectedCodes] = useState<string[]>(
+    automation.selectedSins.map((sin) => sin.code),
+  );
+  const [scanSummary, setScanSummary] = useState("");
+  const [scanKeywords, setScanKeywords] = useState<string[]>([]);
+  const [scanNotes, setScanNotes] = useState<string[]>([]);
   const [disabledActionIds, setDisabledActionIds] = useState<AutomationActionId[]>([]);
   const [clientUpdateSubject, setClientUpdateSubject] = useState("");
   const [clientUpdateBody, setClientUpdateBody] = useState("");
+
+  useEffect(() => {
+    if (intake.corporate.website && !scanUrl) {
+      setScanUrl(intake.corporate.website);
+    }
+  }, [intake.corporate.website, scanUrl]);
+
+  useEffect(() => {
+    if (!activeSin && automation.selectedSins[0]?.code) {
+      setActiveSin(automation.selectedSins[0].code);
+    }
+  }, [activeSin, automation.selectedSins]);
 
   const benchmarkLcats =
     automation.priceListLcats.length > 0
@@ -71,6 +108,70 @@ function AutomationWorkspacePage() {
   const spend = actions
     .filter((action) => action.status === "complete")
     .reduce((sum, action) => sum + Number(action.estimatedCost.replace(/[^0-9.]/g, "")), 0);
+
+  const runSinScan = async () => {
+    const url = scanUrl.trim();
+    if (!url) {
+      setError("Enter the client's website to run the SIN scan.");
+      return;
+    }
+
+    setScanRunning(true);
+    setError(null);
+    setScanNotes([]);
+    try {
+      const res = await sinScanFn({ data: { url } });
+      if (res.error) setError(res.error);
+
+      const candidates: SinScanCandidate[] = res.candidates.map((candidate) => ({
+        code: candidate.code,
+        title: candidate.title,
+        confidence: candidate.confidence,
+        rationale: candidate.rationale,
+        source: candidate.source,
+      }));
+      setScanCandidates(candidates);
+      setScanSelectedCodes(recommendedSelectedCodes(candidates));
+      setScanSummary(res.summary);
+      setScanKeywords(res.keywords);
+
+      if (automation.priceListLcats.length === 0) {
+        try {
+          const priceList = await priceListCrawlFn({ data: { url } });
+          if (priceList.lcats.length > 0) {
+            setPriceListLcats(priceList.lcats, priceList.source ?? `${url} price list`);
+            setScanNotes(priceList.notes);
+          } else if (priceList.error) {
+            setScanNotes([...priceList.notes, priceList.error]);
+          } else {
+            setScanNotes(priceList.notes);
+          }
+        } catch (priceListError) {
+          setScanNotes([
+            priceListError instanceof Error
+              ? priceListError.message
+              : "Price list discovery failed.",
+          ]);
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "SIN scan failed.");
+    } finally {
+      setScanRunning(false);
+    }
+  };
+
+  const toggleScanCode = (code: string) => {
+    setScanSelectedCodes((current) =>
+      current.includes(code) ? current.filter((item) => item !== code) : [...current, code],
+    );
+  };
+
+  const saveScannedSins = () => {
+    const selectedSins = selectSinCandidatesForSave(scanCandidates, scanSelectedCodes);
+    setSelectedSins(selectedSins);
+    setActiveSin(selectedSins[0]?.code ?? "");
+  };
 
   const runMarketScan = async () => {
     if (!activeSin) {
@@ -221,25 +322,36 @@ function AutomationWorkspacePage() {
         </ul>
       ) : null}
 
-      <Panel
-        title={selected.title}
-        className="mt-6"
-        trailing={
-          selected.id === "market-validation" ? (
-            <MarketSinPicker
-              activeSin={activeSin}
-              onActiveSin={setActiveSin}
-              sins={automation.selectedSins}
-            />
-          ) : null
-        }
-      >
+      <Panel title={selected.title} className="mt-6" trailing={null}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field label="Status" value={statusLabel(selected.status)} />
           <Field label="Estimated cost" value={selected.estimatedCost} />
           <Field label="Source" value={selected.source} />
         </div>
-        {selected.id === "client-update" ? (
+        {selected.id === "market-validation" ? (
+          <MarketValidationWorkspace
+            activeSin={activeSin}
+            benchmarkRunning={running}
+            command={selectedCommand}
+            marketRows={automation.marketRows}
+            onActiveSin={setActiveSin}
+            onRunBenchmark={runMarketScan}
+            onRunSinScan={runSinScan}
+            onSaveScannedSins={saveScannedSins}
+            onScanUrl={setScanUrl}
+            onToggleScanCode={toggleScanCode}
+            priceListCount={automation.priceListLcats.length}
+            priceListSource={automation.priceListSource}
+            savedSins={automation.selectedSins}
+            scanCandidates={scanCandidates}
+            scanKeywords={scanKeywords}
+            scanNotes={scanNotes}
+            scanRunning={scanRunning}
+            scanSelectedCodes={scanSelectedCodes}
+            scanSummary={scanSummary}
+            scanUrl={scanUrl}
+          />
+        ) : selected.id === "client-update" ? (
           <div className="mt-5 space-y-3">
             {selectedCommand.disabledReason ? (
               <div className="rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
@@ -269,27 +381,12 @@ function AutomationWorkspacePage() {
               {selectedCommand.label}
             </button>
           </div>
-        ) : selected.id === "market-validation" && automation.marketRows.length > 0 ? (
-          <>
-            <AutomationCommandBar
-              command={selectedCommand}
-              running={running}
-              onRun={runMarketScan}
-            />
-            <MarketRows rows={automation.marketRows} />
-          </>
         ) : (
           <>
             <AutomationCommandBar
               command={selectedCommand}
-              running={running && selected.id === "market-validation"}
-              onRun={
-                selected.id === "market-validation"
-                  ? runMarketScan
-                  : selected.id === "agent-authorization"
-                    ? buildAgentAuthorization
-                    : undefined
-              }
+              running={false}
+              onRun={selected.id === "agent-authorization" ? buildAgentAuthorization : undefined}
             />
             <div className="mt-4 text-sm text-muted-foreground">{selected.description}</div>
           </>
@@ -300,6 +397,206 @@ function AutomationWorkspacePage() {
         <SaveAndContinue moduleSlug="/market-validation" nextHref="/documents" />
       </div>
     </>
+  );
+}
+
+function MarketValidationWorkspace({
+  activeSin,
+  benchmarkRunning,
+  command,
+  marketRows,
+  onActiveSin,
+  onRunBenchmark,
+  onRunSinScan,
+  onSaveScannedSins,
+  onScanUrl,
+  onToggleScanCode,
+  priceListCount,
+  priceListSource,
+  savedSins,
+  scanCandidates,
+  scanKeywords,
+  scanNotes,
+  scanRunning,
+  scanSelectedCodes,
+  scanSummary,
+  scanUrl,
+}: {
+  activeSin: string;
+  benchmarkRunning: boolean;
+  command: ReturnType<typeof getAutomationActionCommand>;
+  marketRows: MarketRow[];
+  onActiveSin: (value: string) => void;
+  onRunBenchmark: () => void;
+  onRunSinScan: () => void;
+  onSaveScannedSins: () => void;
+  onScanUrl: (value: string) => void;
+  onToggleScanCode: (value: string) => void;
+  priceListCount: number;
+  priceListSource: string | null;
+  savedSins: SelectedSin[];
+  scanCandidates: SinScanCandidate[];
+  scanKeywords: string[];
+  scanNotes: string[];
+  scanRunning: boolean;
+  scanSelectedCodes: string[];
+  scanSummary: string;
+  scanUrl: string;
+}) {
+  const benchmarkDisabled =
+    command.disabled || benchmarkRunning || !activeSin || priceListCount === 0;
+
+  return (
+    <div className="mt-5 space-y-4">
+      <div className="rounded-sm border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Step 1 · SIN scan by website
+            </div>
+            <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+              Crawl the client website to detect applicable Special Item Numbers before
+              benchmarking. Saved SINs feed the benchmark dropdown and the downstream pricing
+              workspace.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-success">
+            {savedSins.length} SIN saved{savedSins.length === 1 ? "" : "s"}
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            value={scanUrl}
+            onChange={(event) => onScanUrl(event.target.value)}
+            placeholder="https://client-website.com"
+            className="h-10 flex-1 rounded-sm border border-border bg-background px-3 text-sm"
+          />
+          <button
+            type="button"
+            onClick={onRunSinScan}
+            disabled={scanRunning || !scanUrl.trim()}
+            className="h-10 rounded-sm bg-primary px-4 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
+          >
+            {scanRunning ? "Scanning..." : "Run SIN Scan"}
+          </button>
+        </div>
+
+        {scanSummary ? (
+          <div className="mt-3 rounded-sm border border-border bg-muted/30 px-3 py-2 text-xs text-foreground">
+            {scanSummary}
+          </div>
+        ) : null}
+
+        {scanKeywords.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {scanKeywords.slice(0, 12).map((keyword) => (
+              <span
+                key={keyword}
+                className="rounded-sm border border-border bg-background px-2 py-1 text-[10px] font-mono text-muted-foreground"
+              >
+                {keyword}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        {scanCandidates.length > 0 ? (
+          <div className="mt-3 overflow-hidden rounded-sm border border-border">
+            {scanCandidates.map((candidate) => (
+              <label
+                key={candidate.code}
+                className="grid cursor-pointer grid-cols-[auto_1fr_auto] gap-3 border-b border-border px-3 py-2 last:border-b-0 hover:bg-muted/40"
+              >
+                <input
+                  type="checkbox"
+                  checked={scanSelectedCodes.includes(candidate.code)}
+                  onChange={() => onToggleScanCode(candidate.code)}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block text-xs font-bold text-foreground">
+                    {candidate.code} · {candidate.title}
+                  </span>
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
+                    {candidate.rationale}
+                  </span>
+                  <span className="mt-1 block truncate text-[10px] font-mono text-primary">
+                    {candidate.source}
+                  </span>
+                </span>
+                <span className="self-start rounded-sm border border-border px-2 py-1 text-[10px] font-mono font-bold">
+                  {candidate.confidence}%
+                </span>
+              </label>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onSaveScannedSins}
+            disabled={scanCandidates.length === 0 || scanSelectedCodes.length === 0}
+            className="rounded-sm border border-border px-3 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            Save selected SINs
+          </button>
+          {scanNotes.length > 0 ? (
+            <span className="text-[11px] text-muted-foreground">{scanNotes[0]}</span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="rounded-sm border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Step 2 · Run benchmark
+            </div>
+            <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
+              Run the Market Validation workflow against the saved SIN and the extracted price-list
+              LCATs. Uploaded price lists from Intake and discovered website price lists both feed
+              this step.
+            </p>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {priceListCount} LCAT{priceListCount === 1 ? "" : "s"} from price list
+          </span>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2 md:flex-row">
+          <MarketSinPicker activeSin={activeSin} onActiveSin={onActiveSin} sins={savedSins} />
+          <button
+            type="button"
+            onClick={onRunBenchmark}
+            disabled={benchmarkDisabled}
+            className="h-10 rounded-sm bg-primary px-4 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
+          >
+            {benchmarkRunning ? "Running..." : "Run Benchmark"}
+          </button>
+        </div>
+
+        {priceListCount === 0 ? (
+          <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+            Upload and extract the client's price list in Intake, or run the SIN scan so Schedule
+            Sherpa can try to discover a public price list from the client website.
+          </div>
+        ) : (
+          <div className="mt-3 rounded-sm border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
+            Price-list rows are ready{priceListSource ? ` from ${priceListSource}` : ""}.
+          </div>
+        )}
+
+        {command.disabledReason ? (
+          <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+            {command.disabledReason}
+          </div>
+        ) : null}
+
+        {marketRows.length > 0 ? <MarketRows rows={marketRows} /> : null}
+      </div>
+    </div>
   );
 }
 
