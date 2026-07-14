@@ -36,6 +36,13 @@ export type MarketRow = {
   contractNumber: string;
   sourceUrl: string;
   needsReview?: boolean;
+  clientPrice?: string;
+  calcAverage?: string;
+  calcMedian?: string;
+  calcRange?: string;
+  calcSampleSize?: number;
+  pricingPosition?: "below_market" | "market_aligned" | "above_market" | "no_calc_match";
+  pricingDelta?: string;
 };
 
 export type PricingRow = {
