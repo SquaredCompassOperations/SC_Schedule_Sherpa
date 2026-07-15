@@ -12,18 +12,25 @@ const UNIT_PATTERN = /^(hourly|hour|hours|each|month|monthly|year|yearly|unit|lo
 export function parsePriceListLcatsFromText(text: string): ParsedPriceListLcat[] {
   const rows: ParsedPriceListLcat[] = [];
   const seen = new Set<string>();
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  for (const rawLine of text.split(/\r?\n/)) {
-    const line = rawLine.trim();
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     if (!line || looksLikeHeader(line)) continue;
 
     const parsed = line.includes(",") ? parseCsvLikeLine(line) : parseWhitespaceLine(line);
-    if (!parsed?.title) continue;
+    const row = parsed ? { parsed, nextIndex: index } : parseCellRow(lines, index);
+    if (!row?.parsed?.title) continue;
 
-    const key = `${parsed.sin ?? ""}|${parsed.title}|${parsed.rate ?? ""}`.toLowerCase();
+    const key =
+      `${row.parsed.sin ?? ""}|${row.parsed.title}|${row.parsed.rate ?? ""}`.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push(parsed);
+    rows.push(row.parsed);
+    index = row.nextIndex;
   }
 
   return rows;
@@ -68,6 +75,38 @@ function parseWhitespaceLine(line: string): ParsedPriceListLcat | null {
     unit,
     rate: normalizeRate(rate),
   };
+}
+
+function parseCellRow(
+  lines: string[],
+  startIndex: number,
+): { parsed: ParsedPriceListLcat; nextIndex: number } | null {
+  const sin = lines[startIndex];
+  if (!SIN_PATTERN.test(sin)) return null;
+
+  const cells: string[] = [];
+  for (let index = startIndex + 1; index < Math.min(lines.length, startIndex + 10); index += 1) {
+    const cell = lines[index];
+    if (SIN_PATTERN.test(cell)) return null;
+    if (looksLikeHeader(cell)) continue;
+    cells.push(cell);
+
+    const rateIndex = cells.findIndex((candidate) => PRICE_PATTERN.test(candidate));
+    const unitIndex = cells.findIndex((candidate) => UNIT_PATTERN.test(candidate));
+    if (rateIndex < 0 || unitIndex < 0 || unitIndex > rateIndex) continue;
+
+    const title = cells.slice(0, unitIndex).join(" ").replace(/\s+/g, " ").trim();
+    const unit = cells[unitIndex];
+    const rate = cells[rateIndex];
+    if (!title) continue;
+
+    return {
+      parsed: { sin, title, unit, rate: normalizeRate(rate) },
+      nextIndex: index,
+    };
+  }
+
+  return null;
 }
 
 function normalizeRate(rate: string) {

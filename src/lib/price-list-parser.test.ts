@@ -37,4 +37,27 @@ SIN,Labor Category,UOM,Price
       { sin: "541611", title: "Technical Writer II", unit: "Hour", rate: "$125.00" },
     ]);
   });
+
+  it("assembles rows from PDF-style table cells", () => {
+    expect(
+      parsePriceListLcatsFromText(`
+SIN
+Labor Category
+UOM
+Price
+541611
+Technical
+Writer/Editor II
+Hourly
+$125.00
+541611
+Project Manager II
+Hourly
+$160.00
+`),
+    ).toEqual([
+      { sin: "541611", title: "Technical Writer/Editor II", unit: "Hourly", rate: "$125.00" },
+      { sin: "541611", title: "Project Manager II", unit: "Hourly", rate: "$160.00" },
+    ]);
+  });
 });
