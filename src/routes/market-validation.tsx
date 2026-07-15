@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SaveAndContinue } from "@/components/save-and-continue";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { runMarketValidation } from "@/lib/market-validation.functions";
 import { runCalcPricingBenchmark } from "@/lib/calc-pricing.functions";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
 import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
+import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
 import {
   useAutomation,
   setMarketRows,
@@ -25,6 +26,7 @@ import {
 } from "@/lib/validation-workspace";
 import {
   buildAutomationActions,
+  getAutomationActionCardCommand,
   getAutomationActionCommand,
   isActionControlChecked,
   isActionControlDisabled,
@@ -47,6 +49,8 @@ function AutomationWorkspacePage() {
   const calcPricingFn = useServerFn(runCalcPricingBenchmark);
   const sinScanFn = useServerFn(crawlClientForSins);
   const priceListCrawlFn = useServerFn(crawlPriceListFromSite);
+  const priceListExtractFn = useServerFn(extractPriceListLcats);
+  const priceListFileRef = useRef<HTMLInputElement>(null);
   const automation = useAutomation();
   const docs = useDocStore();
   const intake = useIntake();
@@ -67,6 +71,8 @@ function AutomationWorkspacePage() {
   const [scanSummary, setScanSummary] = useState("");
   const [scanKeywords, setScanKeywords] = useState<string[]>([]);
   const [scanNotes, setScanNotes] = useState<string[]>([]);
+  const [priceListUploadRunning, setPriceListUploadRunning] = useState(false);
+  const [priceListUploadError, setPriceListUploadError] = useState<string | null>(null);
   const [disabledActionIds, setDisabledActionIds] = useState<AutomationActionId[]>([]);
   const [clientUpdateSubject, setClientUpdateSubject] = useState("");
   const [clientUpdateBody, setClientUpdateBody] = useState("");
@@ -256,6 +262,33 @@ function AutomationWorkspacePage() {
     setSelectedAction("agent-authorization");
   };
 
+  const uploadPriceList = async (file: File) => {
+    setPriceListUploadRunning(true);
+    setPriceListUploadError(null);
+    setError(null);
+    try {
+      const payload = await fileToExtractionPayload(file);
+      const res = await priceListExtractFn({ data: payload });
+      if (res.error) setPriceListUploadError(res.error);
+      if (res.lcats.length === 0) {
+        setPriceListUploadError(
+          res.error || "No labor categories could be extracted from this price list.",
+        );
+        return;
+      }
+
+      setPriceListLcats(res.lcats, file.name);
+      setScanNotes((current) => [
+        `Loaded ${res.lcats.length} LCAT${res.lcats.length === 1 ? "" : "s"} from ${file.name}.`,
+        ...current,
+      ]);
+    } catch (e) {
+      setPriceListUploadError(e instanceof Error ? e.message : "Price list extraction failed.");
+    } finally {
+      setPriceListUploadRunning(false);
+    }
+  };
+
   const sendUpdate = () => {
     sendClientUpdateRequest({
       subject: clientUpdateSubject,
@@ -299,8 +332,10 @@ function AutomationWorkspacePage() {
                 <AutomationActionCard
                   key={action.id}
                   action={action}
+                  command={getAutomationActionCardCommand(action)}
                   selected={selected.id === action.id}
                   onSelect={() => setSelectedAction(action.id)}
+                  onRun={action.id === "agent-authorization" ? buildAgentAuthorization : undefined}
                 />
               ))}
             </div>
@@ -376,8 +411,12 @@ function AutomationWorkspacePage() {
             onSaveScannedSins={saveScannedSins}
             onScanUrl={setScanUrl}
             onToggleScanCode={toggleScanCode}
+            onUploadPriceList={uploadPriceList}
             priceListCount={automation.priceListLcats.length}
+            priceListFileRef={priceListFileRef}
             priceListSource={automation.priceListSource}
+            priceListUploadError={priceListUploadError}
+            priceListUploadRunning={priceListUploadRunning}
             savedSins={automation.selectedSins}
             scanCandidates={scanCandidates}
             scanKeywords={scanKeywords}
@@ -450,8 +489,12 @@ function MarketValidationWorkspace({
   onSaveScannedSins,
   onScanUrl,
   onToggleScanCode,
+  onUploadPriceList,
   priceListCount,
+  priceListFileRef,
   priceListSource,
+  priceListUploadError,
+  priceListUploadRunning,
   savedSins,
   scanCandidates,
   scanKeywords,
@@ -473,8 +516,12 @@ function MarketValidationWorkspace({
   onSaveScannedSins: () => void;
   onScanUrl: (value: string) => void;
   onToggleScanCode: (value: string) => void;
+  onUploadPriceList: (file: File) => void;
   priceListCount: number;
+  priceListFileRef: RefObject<HTMLInputElement | null>;
   priceListSource: string | null;
+  priceListUploadError: string | null;
+  priceListUploadRunning: boolean;
   savedSins: SelectedSin[];
   scanCandidates: SinScanCandidate[];
   scanKeywords: string[];
@@ -607,6 +654,29 @@ function MarketValidationWorkspace({
 
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
           <MarketSinPicker activeSin={activeSin} onActiveSin={onActiveSin} sins={savedSins} />
+          <input
+            ref={priceListFileRef}
+            type="file"
+            accept=".pdf,.xlsx,.xls,.csv,.txt,application/pdf"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onUploadPriceList(file);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => priceListFileRef.current?.click()}
+            disabled={priceListUploadRunning}
+            className="h-10 rounded-sm border border-border px-4 text-xs font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            {priceListUploadRunning
+              ? "Extracting..."
+              : priceListCount > 0
+                ? "Replace Price List"
+                : "Upload Price List"}
+          </button>
           <button
             type="button"
             onClick={onRunBenchmark}
@@ -627,14 +697,20 @@ function MarketValidationWorkspace({
 
         {priceListCount === 0 ? (
           <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-            Upload and extract the client's price list in Intake, or run the SIN scan so Schedule
-            Sherpa can try to discover a public price list from the client website.
+            Upload the client's price list here, upload it in Intake, or run the SIN scan so
+            Schedule Sherpa can try to discover a public price list from the client website.
           </div>
         ) : (
           <div className="mt-3 rounded-sm border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
             Price-list rows are ready{priceListSource ? ` from ${priceListSource}` : ""}.
           </div>
         )}
+
+        {priceListUploadError ? (
+          <div className="mt-3 rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            {priceListUploadError}
+          </div>
+        ) : null}
 
         {command.disabledReason ? (
           <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
@@ -685,17 +761,25 @@ function AutomationCommandBar({
 
 function AutomationActionCard({
   action,
+  command,
   selected,
   onSelect,
+  onRun,
 }: {
   action: AutomationAction;
+  command: ReturnType<typeof getAutomationActionCardCommand>;
   selected: boolean;
   onSelect: () => void;
+  onRun?: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onSelect();
+      }}
       className={`min-h-32 rounded-sm border p-4 ${
         selected ? "border-primary bg-primary/5" : "border-border bg-surface"
       } text-left transition-colors hover:border-primary/60`}
@@ -705,9 +789,18 @@ function AutomationActionCard({
           <h2 className="text-sm font-extrabold text-foreground">{action.title}</h2>
         </div>
         <div className="flex gap-1">
-          <span className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest">
-            {selected ? "Selected" : "Open"}
-          </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect();
+              if (command.runnable && onRun && !command.disabled) onRun();
+            }}
+            disabled={command.disabled}
+            className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            {command.runnable ? command.label : selected ? "Selected" : command.label}
+          </button>
         </div>
       </div>
       <div
@@ -726,7 +819,7 @@ function AutomationActionCard({
         Output: {action.output}
       </div>
       <div className="mt-1 text-[10px] font-mono text-primary">{action.source}</div>
-    </button>
+    </div>
   );
 }
 
@@ -830,4 +923,19 @@ function statusLabel(status: AutomationAction["status"]) {
   if (status === "complete") return "Complete";
   if (status === "selected") return "Selected";
   return "Enabled";
+}
+
+async function fileToExtractionPayload(file: File) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return {
+    filename: file.name,
+    mediaType: file.type || "application/octet-stream",
+    dataBase64: btoa(binary),
+  };
 }

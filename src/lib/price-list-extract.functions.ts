@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromDocument } from "./gemini-service";
+import { extractFileText } from "./file-extraction";
+import { generateTextFromDocument, generateTextFromPrompt } from "./gemini-service";
+import { parsePriceListLcatsFromText } from "./price-list-parser";
 
 export type ExtractedLcat = {
   title: string;
@@ -21,20 +23,35 @@ export const extractPriceListLcats = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }): Promise<{ lcats: ExtractedLcat[]; raw: string; error?: string }> => {
     try {
-      const text = await generateTextFromDocument({
-        system:
-          "You extract Labor Categories (LCATs) and offerings from a contractor's Commercial Price List. Return ONLY a JSON array — no prose, no markdown fences. Each element is an object with keys: title (the exact LCAT or offering name, including seniority level e.g. 'Project Manager II'), rate (commercial hourly/unit price as printed, e.g. '$160.00' — omit if not present), unit (e.g. 'Hour', 'Each' — omit if not present), sin (the SIN this offering falls under, e.g. '541611' — omit if not present). Return EVERY distinct LCAT/offering row. Do NOT collapse seniority levels (Level I and Level II are separate rows). Do NOT invent values. If a row has only a description but no LCAT title, skip it.",
-        prompt: `Extract every Labor Category / offering from "${data.filename}". Output a strict JSON array only.`,
-        file: data,
-        detail: "high",
-      });
+      const extracted = await extractFileText(data);
+      if (extracted.kind === "text") {
+        const localRows = parsePriceListLcatsFromText(extracted.text);
+        if (localRows.length > 0) return { lcats: localRows, raw: extracted.text };
+      }
+
+      const system =
+        "You extract Labor Categories (LCATs) and offerings from a contractor's Commercial Price List. Return ONLY a JSON array — no prose, no markdown fences. Each element is an object with keys: title (the exact LCAT or offering name, including seniority level e.g. 'Project Manager II'), rate (commercial hourly/unit price as printed, e.g. '$160.00' — omit if not present), unit (e.g. 'Hour', 'Each' — omit if not present), sin (the SIN this offering falls under, e.g. '541611' — omit if not present). Return EVERY distinct LCAT/offering row. Do NOT collapse seniority levels (Level I and Level II are separate rows). Do NOT invent values. If a row has only a description but no LCAT title, skip it.";
+      const prompt = `Extract every Labor Category / offering from "${data.filename}". Output a strict JSON array only.`;
+
+      const text =
+        extracted.kind === "text"
+          ? await generateTextFromPrompt({
+              system,
+              prompt: `${prompt}\n\nExtracted text from ${data.filename} (${extracted.source}):\n${extracted.text}`,
+            })
+          : await generateTextFromDocument({
+              system,
+              prompt,
+              file: data,
+              detail: "high",
+            });
 
       const cleaned = text
         .trim()
         .replace(/^```(?:json)?/i, "")
         .replace(/```$/, "")
         .trim();
-      const lcats: ExtractedLcat[] = [];
+      let lcats: ExtractedLcat[] = [];
       try {
         const arr = JSON.parse(cleaned);
         if (Array.isArray(arr)) {
@@ -57,7 +74,7 @@ export const extractPriceListLcats = createServerFn({ method: "POST" })
           }
         }
       } catch {
-        // fall through
+        lcats = parsePriceListLcatsFromText(text);
       }
 
       return { lcats, raw: text };

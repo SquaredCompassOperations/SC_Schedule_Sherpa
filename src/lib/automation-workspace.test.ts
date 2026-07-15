@@ -3,6 +3,7 @@ import { getActivityLog, resetActivityLog } from "./activity-log";
 import { getMessages, resetMessages } from "./messages-store";
 import {
   buildAutomationActions,
+  getAutomationActionCardCommand,
   getAutomationActionCommand,
   sendClientUpdateRequest,
 } from "./automation-workspace";
@@ -87,6 +88,25 @@ describe("automation workspace actions", () => {
       label: "Open Pricing Workbook Build",
       href: "/pricing-workbook",
       disabled: false,
+    });
+  });
+
+  it("shows agent authorization as a runnable card action", () => {
+    const actions = buildAutomationActions({
+      offerType: "gsa_mas",
+      marketRows: 0,
+      pricingRows: 0,
+      hasAgentAuthorizationDraft: false,
+    });
+
+    expect(
+      getAutomationActionCardCommand(
+        actions.find((action) => action.id === "agent-authorization")!,
+      ),
+    ).toMatchObject({
+      label: "Build",
+      disabled: false,
+      runnable: true,
     });
   });
 });

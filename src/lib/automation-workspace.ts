@@ -29,6 +29,13 @@ export type AutomationActionCommand = {
   disabledReason?: string;
 };
 
+export type AutomationActionCardCommand = {
+  label: string;
+  disabled: boolean;
+  runnable: boolean;
+  disabledReason?: string;
+};
+
 export type BuildAutomationActionsInput = {
   offerType: OfferType;
   marketRows: number;
@@ -134,6 +141,24 @@ export function getAutomationActionCommand(action: AutomationAction): Automation
   };
 
   return { ...commands[action.id], disabledReason };
+}
+
+export function getAutomationActionCardCommand(
+  action: AutomationAction,
+): AutomationActionCardCommand {
+  const command = getAutomationActionCommand(action);
+  const labels: Record<AutomationActionId, string> = {
+    "market-validation": "Open",
+    "agent-authorization": "Build",
+    "pricing-workbook": "Open",
+    "client-update": "Open",
+  };
+  return {
+    label: labels[action.id],
+    disabled: command.disabled,
+    disabledReason: command.disabledReason,
+    runnable: action.id === "agent-authorization",
+  };
 }
 
 export function isActionControlChecked(action: AutomationAction): boolean {
