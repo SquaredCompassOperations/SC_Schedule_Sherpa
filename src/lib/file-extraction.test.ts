@@ -72,11 +72,29 @@ describe("file extraction", () => {
     expect(result.text).toContain("541611,Program Manager,$125.00");
   });
 
-  it("falls back to model file input for PDFs and images", async () => {
+  it("extracts text from PDFs with ToUnicode character maps", async () => {
     const result = await extractFileText({
-      filename: "profile.pdf",
+      filename: "price-list.pdf",
       mediaType: "application/pdf",
-      dataBase64: toBase64("%PDF-1.4 fake test content"),
+      dataBase64: toBase64(
+        buildTextPdf(["541611", "Technical", "Writer/Editor II", "Hourly", "$125.00"]),
+      ),
+    });
+
+    expect(result.kind).toBe("text");
+    if (result.kind !== "text") throw new Error("Expected PDF extraction to return text");
+    expect(result.source).toBe("pdf");
+    expect(result.text).toContain("541611");
+    expect(result.text).toContain("Technical");
+    expect(result.text).toContain("Writer/Editor II");
+    expect(result.text).toContain("$125.00");
+  });
+
+  it("falls back to model file input for images", async () => {
+    const result = await extractFileText({
+      filename: "profile.png",
+      mediaType: "image/png",
+      dataBase64: toBase64("fake image content"),
     });
 
     expect(result).toEqual({
@@ -89,3 +107,59 @@ describe("file extraction", () => {
     expect(buildDataUrl("application/pdf", "YWJj")).toBe("data:application/pdf;base64,YWJj");
   });
 });
+
+function buildTextPdf(lines: string[]) {
+  const cmapEntries = new Map<string, string>();
+  const contentLines: string[] = [];
+
+  for (const [index, line] of lines.entries()) {
+    const hex = Array.from(line)
+      .map((char) => {
+        const code = char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0");
+        cmapEntries.set(code, code);
+        return code;
+      })
+      .join("");
+    contentLines.push(`BT /F1 12 Tf 1 0 0 1 0 ${700 - index * 14} Tm <${hex}> Tj ET`);
+  }
+
+  const cmap = `/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+${cmapEntries.size} beginbfchar
+${Array.from(cmapEntries)
+  .map(([source, destination]) => `<${source}> <${destination}>`)
+  .join("\n")}
+endbfchar
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end`;
+
+  const content = contentLines.join("\n");
+  return `%PDF-1.4
+1 0 obj
+<</Type /Page
+/Resources <</Font <</F1 2 0 R>>>>
+/Contents 4 0 R>>
+endobj
+2 0 obj
+<</Type /Font /Subtype /Type0 /ToUnicode 3 0 R>>
+endobj
+3 0 obj
+<</Length ${cmap.length}>> stream
+${cmap}
+endstream
+endobj
+4 0 obj
+<</Length ${content.length}>> stream
+${content}
+endstream
+endobj`;
+}

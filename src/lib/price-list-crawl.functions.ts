@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import type { ExtractedLcat } from "./price-list-extract.functions";
 import { generateTextFromPrompt } from "./gemini-service";
+import { parsePriceListLcatsFromText } from "./price-list-parser";
 
 const InputSchema = z.object({ url: z.string().url().max(500) });
 
@@ -113,6 +114,10 @@ export const crawlPriceListFromSite = createServerFn({ method: "POST" })
           notes,
           error: "Could not read the discovered price list.",
         };
+      }
+      const localRows = parsePriceListLcatsFromText(markdown);
+      if (localRows.length > 0) {
+        return { lcats: localRows, source: pick.url, notes };
       }
 
       const prompt = `Extract every Labor Category (LCAT) / offering from the contractor commercial price list below. Return ONLY a JSON array — no prose, no markdown fences. Each element: {"title": "<exact LCAT or offering name including seniority>", "rate": "<commercial price as printed e.g. $160.00>", "unit": "<Hour|Each|...>", "sin": "<SIN if present>"}. Return every distinct row. Do NOT collapse seniority levels. Omit fields not present. If a row has no LCAT title, skip it.

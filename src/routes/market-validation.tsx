@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SaveAndContinue } from "@/components/save-and-continue";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { runMarketValidation } from "@/lib/market-validation.functions";
+import { runCalcPricingBenchmark } from "@/lib/calc-pricing.functions";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
 import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
+import { extractPriceListLcats } from "@/lib/price-list-extract.functions";
 import {
   useAutomation,
   setMarketRows,
@@ -24,6 +26,7 @@ import {
 } from "@/lib/validation-workspace";
 import {
   buildAutomationActions,
+  getAutomationActionCardCommand,
   getAutomationActionCommand,
   isActionControlChecked,
   isActionControlDisabled,
@@ -42,9 +45,12 @@ export const Route = createFileRoute("/market-validation")({
 const AGENT_AUTH_DOC = "Agent Authorization Letter";
 
 function AutomationWorkspacePage() {
-  const fn = useServerFn(runMarketValidation);
+  const legacyMarketValidationFn = useServerFn(runMarketValidation);
+  const calcPricingFn = useServerFn(runCalcPricingBenchmark);
   const sinScanFn = useServerFn(crawlClientForSins);
   const priceListCrawlFn = useServerFn(crawlPriceListFromSite);
+  const priceListExtractFn = useServerFn(extractPriceListLcats);
+  const priceListFileRef = useRef<HTMLInputElement>(null);
   const automation = useAutomation();
   const docs = useDocStore();
   const intake = useIntake();
@@ -52,6 +58,7 @@ function AutomationWorkspacePage() {
   const offerType = useSelectedOfferType();
   const [selectedAction, setSelectedAction] = useState<AutomationActionId>("market-validation");
   const [running, setRunning] = useState(false);
+  const [legacyRunning, setLegacyRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [activeSin, setActiveSin] = useState<string>(automation.selectedSins[0]?.code || "");
@@ -64,6 +71,8 @@ function AutomationWorkspacePage() {
   const [scanSummary, setScanSummary] = useState("");
   const [scanKeywords, setScanKeywords] = useState<string[]>([]);
   const [scanNotes, setScanNotes] = useState<string[]>([]);
+  const [priceListUploadRunning, setPriceListUploadRunning] = useState(false);
+  const [priceListUploadError, setPriceListUploadError] = useState<string | null>(null);
   const [disabledActionIds, setDisabledActionIds] = useState<AutomationActionId[]>([]);
   const [clientUpdateSubject, setClientUpdateSubject] = useState("");
   const [clientUpdateBody, setClientUpdateBody] = useState("");
@@ -173,7 +182,39 @@ function AutomationWorkspacePage() {
     setActiveSin(selectedSins[0]?.code ?? "");
   };
 
-  const runMarketScan = async () => {
+  const runCalcMarketScan = async () => {
+    if (!activeSin) {
+      setError("Pick a SIN to validate.");
+      return;
+    }
+    if (automation.priceListLcats.length === 0) {
+      setError("No LCATs available. Upload the client's price list or save LCATs first.");
+      return;
+    }
+    setRunning(true);
+    setError(null);
+    setNotes([]);
+    try {
+      const res = await calcPricingFn({
+        data: {
+          offerId: selectedOfferId ?? undefined,
+          sin: activeSin,
+          lcats: automation.priceListLcats.slice(0, 50),
+        },
+      });
+      if (res.error) setError(res.error);
+      setNotes(
+        res.runId ? [`Run saved to workspace audit log: ${res.runId}`, ...res.notes] : res.notes,
+      );
+      setMarketRows(res.rows);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "CALC benchmark failed.");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const runLegacyMarketScan = async () => {
     if (!activeSin) {
       setError("Pick a SIN to validate.");
       return;
@@ -182,11 +223,11 @@ function AutomationWorkspacePage() {
       setError("No LCATs available. Upload the client's price list or save LCATs first.");
       return;
     }
-    setRunning(true);
+    setLegacyRunning(true);
     setError(null);
     setNotes([]);
     try {
-      const res = await fn({
+      const res = await legacyMarketValidationFn({
         data: {
           offerId: selectedOfferId ?? undefined,
           sin: activeSin,
@@ -201,7 +242,7 @@ function AutomationWorkspacePage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Run failed");
     } finally {
-      setRunning(false);
+      setLegacyRunning(false);
     }
   };
 
@@ -219,6 +260,33 @@ function AutomationWorkspacePage() {
       source: "generated",
     });
     setSelectedAction("agent-authorization");
+  };
+
+  const uploadPriceList = async (file: File) => {
+    setPriceListUploadRunning(true);
+    setPriceListUploadError(null);
+    setError(null);
+    try {
+      const payload = await fileToExtractionPayload(file);
+      const res = await priceListExtractFn({ data: payload });
+      if (res.error) setPriceListUploadError(res.error);
+      if (res.lcats.length === 0) {
+        setPriceListUploadError(
+          res.error || "No labor categories could be extracted from this price list.",
+        );
+        return;
+      }
+
+      setPriceListLcats(res.lcats, file.name);
+      setScanNotes((current) => [
+        `Loaded ${res.lcats.length} LCAT${res.lcats.length === 1 ? "" : "s"} from ${file.name}.`,
+        ...current,
+      ]);
+    } catch (e) {
+      setPriceListUploadError(e instanceof Error ? e.message : "Price list extraction failed.");
+    } finally {
+      setPriceListUploadRunning(false);
+    }
   };
 
   const sendUpdate = () => {
@@ -264,8 +332,10 @@ function AutomationWorkspacePage() {
                 <AutomationActionCard
                   key={action.id}
                   action={action}
+                  command={getAutomationActionCardCommand(action)}
                   selected={selected.id === action.id}
                   onSelect={() => setSelectedAction(action.id)}
+                  onRun={action.id === "agent-authorization" ? buildAgentAuthorization : undefined}
                 />
               ))}
             </div>
@@ -335,13 +405,18 @@ function AutomationWorkspacePage() {
             command={selectedCommand}
             marketRows={automation.marketRows}
             onActiveSin={setActiveSin}
-            onRunBenchmark={runMarketScan}
+            onRunBenchmark={runCalcMarketScan}
+            onRunLegacyBenchmark={runLegacyMarketScan}
             onRunSinScan={runSinScan}
             onSaveScannedSins={saveScannedSins}
             onScanUrl={setScanUrl}
             onToggleScanCode={toggleScanCode}
+            onUploadPriceList={uploadPriceList}
             priceListCount={automation.priceListLcats.length}
+            priceListFileRef={priceListFileRef}
             priceListSource={automation.priceListSource}
+            priceListUploadError={priceListUploadError}
+            priceListUploadRunning={priceListUploadRunning}
             savedSins={automation.selectedSins}
             scanCandidates={scanCandidates}
             scanKeywords={scanKeywords}
@@ -350,6 +425,7 @@ function AutomationWorkspacePage() {
             scanSelectedCodes={scanSelectedCodes}
             scanSummary={scanSummary}
             scanUrl={scanUrl}
+            legacyBenchmarkRunning={legacyRunning}
           />
         ) : selected.id === "client-update" ? (
           <div className="mt-5 space-y-3">
@@ -404,15 +480,21 @@ function MarketValidationWorkspace({
   activeSin,
   benchmarkRunning,
   command,
+  legacyBenchmarkRunning,
   marketRows,
   onActiveSin,
   onRunBenchmark,
+  onRunLegacyBenchmark,
   onRunSinScan,
   onSaveScannedSins,
   onScanUrl,
   onToggleScanCode,
+  onUploadPriceList,
   priceListCount,
+  priceListFileRef,
   priceListSource,
+  priceListUploadError,
+  priceListUploadRunning,
   savedSins,
   scanCandidates,
   scanKeywords,
@@ -425,15 +507,21 @@ function MarketValidationWorkspace({
   activeSin: string;
   benchmarkRunning: boolean;
   command: ReturnType<typeof getAutomationActionCommand>;
+  legacyBenchmarkRunning: boolean;
   marketRows: MarketRow[];
   onActiveSin: (value: string) => void;
   onRunBenchmark: () => void;
+  onRunLegacyBenchmark: () => void;
   onRunSinScan: () => void;
   onSaveScannedSins: () => void;
   onScanUrl: (value: string) => void;
   onToggleScanCode: (value: string) => void;
+  onUploadPriceList: (file: File) => void;
   priceListCount: number;
+  priceListFileRef: RefObject<HTMLInputElement | null>;
   priceListSource: string | null;
+  priceListUploadError: string | null;
+  priceListUploadRunning: boolean;
   savedSins: SelectedSin[];
   scanCandidates: SinScanCandidate[];
   scanKeywords: string[];
@@ -552,12 +640,11 @@ function MarketValidationWorkspace({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Step 2 · Run benchmark
+              Step 2 · CALC pricing benchmark
             </div>
             <p className="mt-1 max-w-3xl text-xs text-muted-foreground">
-              Run the Market Validation workflow against the saved SIN and the extracted price-list
-              LCATs. Uploaded price lists from Intake and discovered website price lists both feed
-              this step.
+              Run GSA CALC against the saved SIN and extracted price-list LCATs. Uploaded price
+              lists from Intake and discovered website price lists both feed this step.
             </p>
           </div>
           <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -567,26 +654,63 @@ function MarketValidationWorkspace({
 
         <div className="mt-3 flex flex-col gap-2 md:flex-row">
           <MarketSinPicker activeSin={activeSin} onActiveSin={onActiveSin} sins={savedSins} />
+          <input
+            ref={priceListFileRef}
+            type="file"
+            accept=".pdf,.xlsx,.xls,.csv,.txt,application/pdf"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) onUploadPriceList(file);
+              event.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => priceListFileRef.current?.click()}
+            disabled={priceListUploadRunning}
+            className="h-10 rounded-sm border border-border px-4 text-xs font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            {priceListUploadRunning
+              ? "Extracting..."
+              : priceListCount > 0
+                ? "Replace Price List"
+                : "Upload Price List"}
+          </button>
           <button
             type="button"
             onClick={onRunBenchmark}
             disabled={benchmarkDisabled}
             className="h-10 rounded-sm bg-primary px-4 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
           >
-            {benchmarkRunning ? "Running..." : "Run Benchmark"}
+            {benchmarkRunning ? "Running CALC..." : "Run CALC Benchmark"}
+          </button>
+          <button
+            type="button"
+            onClick={onRunLegacyBenchmark}
+            disabled={benchmarkDisabled || legacyBenchmarkRunning}
+            className="h-10 rounded-sm border border-border px-4 text-xs font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            {legacyBenchmarkRunning ? "Running fallback..." : "Run GSA Advantage Fallback"}
           </button>
         </div>
 
         {priceListCount === 0 ? (
           <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-            Upload and extract the client's price list in Intake, or run the SIN scan so Schedule
-            Sherpa can try to discover a public price list from the client website.
+            Upload the client's price list here, upload it in Intake, or run the SIN scan so
+            Schedule Sherpa can try to discover a public price list from the client website.
           </div>
         ) : (
           <div className="mt-3 rounded-sm border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
             Price-list rows are ready{priceListSource ? ` from ${priceListSource}` : ""}.
           </div>
         )}
+
+        {priceListUploadError ? (
+          <div className="mt-3 rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+            {priceListUploadError}
+          </div>
+        ) : null}
 
         {command.disabledReason ? (
           <div className="mt-3 rounded-sm border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
@@ -637,17 +761,25 @@ function AutomationCommandBar({
 
 function AutomationActionCard({
   action,
+  command,
   selected,
   onSelect,
+  onRun,
 }: {
   action: AutomationAction;
+  command: ReturnType<typeof getAutomationActionCardCommand>;
   selected: boolean;
   onSelect: () => void;
+  onRun?: () => void;
 }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") onSelect();
+      }}
       className={`min-h-32 rounded-sm border p-4 ${
         selected ? "border-primary bg-primary/5" : "border-border bg-surface"
       } text-left transition-colors hover:border-primary/60`}
@@ -657,9 +789,18 @@ function AutomationActionCard({
           <h2 className="text-sm font-extrabold text-foreground">{action.title}</h2>
         </div>
         <div className="flex gap-1">
-          <span className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest">
-            {selected ? "Selected" : "Open"}
-          </span>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect();
+              if (command.runnable && onRun && !command.disabled) onRun();
+            }}
+            disabled={command.disabled}
+            className="rounded-sm border border-border px-2 py-1 text-[9px] font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
+          >
+            {command.runnable ? command.label : selected ? "Selected" : command.label}
+          </button>
         </div>
       </div>
       <div
@@ -678,7 +819,7 @@ function AutomationActionCard({
         Output: {action.output}
       </div>
       <div className="mt-1 text-[10px] font-mono text-primary">{action.source}</div>
-    </button>
+    </div>
   );
 }
 
@@ -725,9 +866,13 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
         <thead className="bg-muted/40 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           <tr>
             <th className="px-3 py-2 text-left">SIN</th>
-            <th className="px-3 py-2 text-left">Labor Category</th>
+            <th className="px-3 py-2 text-left">Client LCAT</th>
+            <th className="px-3 py-2 text-left">Client Price</th>
+            <th className="px-3 py-2 text-left">CALC Comparable</th>
             <th className="px-3 py-2 text-left">Unit</th>
-            <th className="px-3 py-2 text-left">GSA Net</th>
+            <th className="px-3 py-2 text-left">CALC Price</th>
+            <th className="px-3 py-2 text-left">Median / Range</th>
+            <th className="px-3 py-2 text-left">Posture</th>
             <th className="px-3 py-2 text-left">Contractor</th>
           </tr>
         </thead>
@@ -735,9 +880,27 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
           {rows.slice(0, 8).map((row, index) => (
             <tr key={`${row.contractNumber}-${index}`}>
               <td className="px-3 py-2 font-mono">{row.sin}</td>
+              <td className="px-3 py-2">{row.clientLcat || row.laborCategory}</td>
+              <td className="px-3 py-2 font-mono">{row.clientPrice || "-"}</td>
               <td className="px-3 py-2">{row.laborCategory}</td>
               <td className="px-3 py-2">{row.unitOfIssue}</td>
               <td className="px-3 py-2 font-mono">{row.netPrice}</td>
+              <td className="px-3 py-2 font-mono">
+                {row.calcMedian ? `${row.calcMedian} / ${row.calcRange}` : "-"}
+              </td>
+              <td className="px-3 py-2">
+                <span
+                  className={`rounded-sm px-2 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                    row.pricingPosition === "market_aligned"
+                      ? "bg-success/10 text-success"
+                      : row.pricingPosition === "no_calc_match"
+                        ? "bg-muted text-muted-foreground"
+                        : "bg-warning/10 text-warning"
+                  }`}
+                >
+                  {postureLabel(row.pricingPosition)}
+                </span>
+              </td>
               <td className="px-3 py-2">{row.contractor}</td>
             </tr>
           ))}
@@ -747,9 +910,32 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
   );
 }
 
+function postureLabel(posture: MarketRow["pricingPosition"]) {
+  if (posture === "below_market") return "Below";
+  if (posture === "market_aligned") return "Aligned";
+  if (posture === "above_market") return "Above";
+  if (posture === "no_calc_match") return "No match";
+  return "Review";
+}
+
 function statusLabel(status: AutomationAction["status"]) {
   if (status === "off") return "Off";
   if (status === "complete") return "Complete";
   if (status === "selected") return "Selected";
   return "Enabled";
+}
+
+async function fileToExtractionPayload(file: File) {
+  const buf = await file.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return {
+    filename: file.name,
+    mediaType: file.type || "application/octet-stream",
+    dataBase64: btoa(binary),
+  };
 }
