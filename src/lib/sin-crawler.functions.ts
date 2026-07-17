@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromPrompt } from "./gemini-service";
+import { generateTextFromPrompt } from "./openai-service";
 
 const InputSchema = z.object({
   url: z.string().url().max(500),

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateTextFromImage } from "./gemini-service";
+import { generateTextFromImage } from "./openai-service";
 import {
   completeAutomationRun,
   failAutomationRun,
@@ -138,7 +138,7 @@ export const lookupSbaCertifications = createServerFn({ method: "POST" })
 
 // ---------------------------------------------------------------------------
 // 2) Screenshot fallback — user uploads a screenshot of the SBA profile row,
-//    Gemini vision extracts the cert badges. Used when CAGE is unknown or the
+//    OpenAI vision extracts the cert badges. Used when CAGE is unknown or the
 //    direct API fails for any reason.
 // ---------------------------------------------------------------------------
 

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { extractFileText } from "./file-extraction";
-import { generateTextFromDocument, generateTextFromPrompt } from "./gemini-service";
+import { generateTextFromDocument, generateTextFromPrompt } from "./openai-service";
 import { parsePriceListLcatsFromText } from "./price-list-parser";
 
 export type ExtractedLcat = {

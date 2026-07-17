@@ -3,7 +3,7 @@ import {
   generateTextFromDocument,
   generateTextFromImage,
   generateTextFromPrompt,
-} from "./gemini-service";
+} from "./openai-service";
 
 const originalOpenAIKey = process.env.OPENAI_API_KEY;
 const originalOpenAIModel = process.env.OPENAI_MODEL;

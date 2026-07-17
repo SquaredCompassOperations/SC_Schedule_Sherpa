@@ -258,7 +258,7 @@ function AddressBlock({
   );
 }
 
-// SAM profile extractor — uploads PDF/Drive doc, runs Gemini extraction, pushes
+// SAM profile extractor — uploads PDF/Drive doc, runs OpenAI extraction, pushes
 // into intake store (including addresses).
 const EXTRACT_ACCEPT = ".pdf,.doc,.docx,.txt,.rtf,.png,.jpg,.jpeg,.tif,.tiff";
 const EXTRACT_MAX_BYTES = 12 * 1024 * 1024;

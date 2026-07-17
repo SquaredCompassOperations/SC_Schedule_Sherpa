@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateTextFromDocument } from "./gemini-service";
+import { generateTextFromDocument } from "./openai-service";
 
 const FIELDS = [
   // Company details

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateTextFromPrompt } from "./gemini-service";
+import { generateTextFromPrompt } from "./openai-service";
 import {
   completeAutomationRun,
   failAutomationRun,
