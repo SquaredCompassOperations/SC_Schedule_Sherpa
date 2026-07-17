@@ -150,6 +150,8 @@ describe("CALC pricing helpers", () => {
         clientLcat: "Technical Writer/Editor II",
         laborCategory: "Technical Writer/Editor II",
         clientPrice: "$125.00",
+        educationLevel: "Bachelors",
+        minYearsExperience: 4,
         netPrice: "$89.78",
         calcMedian: "$138.97",
         calcRange: "$89.78 - $145.65",

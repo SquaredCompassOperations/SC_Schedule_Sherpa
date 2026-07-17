@@ -815,6 +815,8 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
             <th className="px-3 py-2 text-left">Client LCAT</th>
             <th className="px-3 py-2 text-left">Client Price</th>
             <th className="px-3 py-2 text-left">CALC Comparable</th>
+            <th className="px-3 py-2 text-left">Education</th>
+            <th className="px-3 py-2 text-left">Experience</th>
             <th className="px-3 py-2 text-left">Unit</th>
             <th className="px-3 py-2 text-left">CALC Price</th>
             <th className="px-3 py-2 text-left">Median / Range</th>
@@ -829,6 +831,8 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
               <td className="px-3 py-2">{row.clientLcat || row.laborCategory}</td>
               <td className="px-3 py-2 font-mono">{row.clientPrice || "-"}</td>
               <td className="px-3 py-2">{row.laborCategory}</td>
+              <td className="px-3 py-2">{row.educationLevel || "-"}</td>
+              <td className="px-3 py-2">{row.minYearsExperience ?? "-"}</td>
               <td className="px-3 py-2">{row.unitOfIssue}</td>
               <td className="px-3 py-2 font-mono">{row.netPrice}</td>
               <td className="px-3 py-2 font-mono">
@@ -847,7 +851,21 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
                   {postureLabel(row.pricingPosition)}
                 </span>
               </td>
-              <td className="px-3 py-2">{row.contractor}</td>
+              <td className="px-3 py-2">
+                {row.contractor ? (
+                  <a
+                    href={row.sourceUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary hover:underline"
+                    title={row.contractNumber || row.sourceUrl}
+                  >
+                    {row.contractor}
+                  </a>
+                ) : (
+                  "-"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
