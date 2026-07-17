@@ -3,7 +3,6 @@ import { SaveAndContinue } from "@/components/save-and-continue";
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
-import { runMarketValidation } from "@/lib/market-validation.functions";
 import { runCalcPricingBenchmark } from "@/lib/calc-pricing.functions";
 import { crawlClientForSins } from "@/lib/sin-crawler.functions";
 import { crawlPriceListFromSite } from "@/lib/price-list-crawl.functions";
@@ -45,7 +44,6 @@ export const Route = createFileRoute("/market-validation")({
 const AGENT_AUTH_DOC = "Agent Authorization Letter";
 
 function AutomationWorkspacePage() {
-  const legacyMarketValidationFn = useServerFn(runMarketValidation);
   const calcPricingFn = useServerFn(runCalcPricingBenchmark);
   const sinScanFn = useServerFn(crawlClientForSins);
   const priceListCrawlFn = useServerFn(crawlPriceListFromSite);
@@ -58,7 +56,6 @@ function AutomationWorkspacePage() {
   const offerType = useSelectedOfferType();
   const [selectedAction, setSelectedAction] = useState<AutomationActionId>("market-validation");
   const [running, setRunning] = useState(false);
-  const [legacyRunning, setLegacyRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<string[]>([]);
   const [activeSin, setActiveSin] = useState<string>(automation.selectedSins[0]?.code || "");
@@ -88,11 +85,6 @@ function AutomationWorkspacePage() {
       setActiveSin(automation.selectedSins[0].code);
     }
   }, [activeSin, automation.selectedSins]);
-
-  const benchmarkLcats =
-    automation.priceListLcats.length > 0
-      ? automation.priceListLcats.map((l) => l.title)
-      : automation.selectedLcats.map((l) => l.title);
 
   const actions = useMemo(
     () =>
@@ -211,38 +203,6 @@ function AutomationWorkspacePage() {
       setError(e instanceof Error ? e.message : "CALC benchmark failed.");
     } finally {
       setRunning(false);
-    }
-  };
-
-  const runLegacyMarketScan = async () => {
-    if (!activeSin) {
-      setError("Pick a SIN to validate.");
-      return;
-    }
-    if (benchmarkLcats.length === 0) {
-      setError("No LCATs available. Upload the client's price list or save LCATs first.");
-      return;
-    }
-    setLegacyRunning(true);
-    setError(null);
-    setNotes([]);
-    try {
-      const res = await legacyMarketValidationFn({
-        data: {
-          offerId: selectedOfferId ?? undefined,
-          sin: activeSin,
-          lcats: benchmarkLcats.slice(0, 50),
-        },
-      });
-      if (res.error) setError(res.error);
-      setNotes(
-        res.runId ? [`Run saved to workspace audit log: ${res.runId}`, ...res.notes] : res.notes,
-      );
-      setMarketRows(res.rows);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Run failed");
-    } finally {
-      setLegacyRunning(false);
     }
   };
 
@@ -399,15 +359,14 @@ function AutomationWorkspacePage() {
           <Field label="Source" value={selected.source} />
         </div>
         {selected.id === "market-validation" ? (
-          <MarketValidationWorkspace
-            activeSin={activeSin}
-            benchmarkRunning={running}
-            command={selectedCommand}
-            marketRows={automation.marketRows}
-            onActiveSin={setActiveSin}
-            onRunBenchmark={runCalcMarketScan}
-            onRunLegacyBenchmark={runLegacyMarketScan}
-            onRunSinScan={runSinScan}
+        <MarketValidationWorkspace
+          activeSin={activeSin}
+          benchmarkRunning={running}
+          command={selectedCommand}
+          marketRows={automation.marketRows}
+          onActiveSin={setActiveSin}
+          onRunBenchmark={runCalcMarketScan}
+          onRunSinScan={runSinScan}
             onSaveScannedSins={saveScannedSins}
             onScanUrl={setScanUrl}
             onToggleScanCode={toggleScanCode}
@@ -425,7 +384,6 @@ function AutomationWorkspacePage() {
             scanSelectedCodes={scanSelectedCodes}
             scanSummary={scanSummary}
             scanUrl={scanUrl}
-            legacyBenchmarkRunning={legacyRunning}
           />
         ) : selected.id === "client-update" ? (
           <div className="mt-5 space-y-3">
@@ -480,11 +438,9 @@ function MarketValidationWorkspace({
   activeSin,
   benchmarkRunning,
   command,
-  legacyBenchmarkRunning,
   marketRows,
   onActiveSin,
   onRunBenchmark,
-  onRunLegacyBenchmark,
   onRunSinScan,
   onSaveScannedSins,
   onScanUrl,
@@ -507,11 +463,9 @@ function MarketValidationWorkspace({
   activeSin: string;
   benchmarkRunning: boolean;
   command: ReturnType<typeof getAutomationActionCommand>;
-  legacyBenchmarkRunning: boolean;
   marketRows: MarketRow[];
   onActiveSin: (value: string) => void;
   onRunBenchmark: () => void;
-  onRunLegacyBenchmark: () => void;
   onRunSinScan: () => void;
   onSaveScannedSins: () => void;
   onScanUrl: (value: string) => void;
@@ -684,14 +638,6 @@ function MarketValidationWorkspace({
             className="h-10 rounded-sm bg-primary px-4 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
           >
             {benchmarkRunning ? "Running CALC..." : "Run CALC Benchmark"}
-          </button>
-          <button
-            type="button"
-            onClick={onRunLegacyBenchmark}
-            disabled={benchmarkDisabled || legacyBenchmarkRunning}
-            className="h-10 rounded-sm border border-border px-4 text-xs font-bold uppercase tracking-widest hover:bg-muted disabled:opacity-50"
-          >
-            {legacyBenchmarkRunning ? "Running fallback..." : "Run GSA Advantage Fallback"}
           </button>
         </div>
 
