@@ -359,14 +359,14 @@ function AutomationWorkspacePage() {
           <Field label="Source" value={selected.source} />
         </div>
         {selected.id === "market-validation" ? (
-          <MarketValidationWorkspace
-            activeSin={activeSin}
-            benchmarkRunning={running}
-            command={selectedCommand}
-            marketRows={automation.marketRows}
-            onActiveSin={setActiveSin}
-            onRunBenchmark={runCalcMarketScan}
-            onRunSinScan={runSinScan}
+        <MarketValidationWorkspace
+          activeSin={activeSin}
+          benchmarkRunning={running}
+          command={selectedCommand}
+          marketRows={automation.marketRows}
+          onActiveSin={setActiveSin}
+          onRunBenchmark={runCalcMarketScan}
+          onRunSinScan={runSinScan}
             onSaveScannedSins={saveScannedSins}
             onScanUrl={setScanUrl}
             onToggleScanCode={toggleScanCode}
@@ -815,6 +815,8 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
             <th className="px-3 py-2 text-left">Client LCAT</th>
             <th className="px-3 py-2 text-left">Client Price</th>
             <th className="px-3 py-2 text-left">CALC Comparable</th>
+            <th className="px-3 py-2 text-left">Education</th>
+            <th className="px-3 py-2 text-left">Experience</th>
             <th className="px-3 py-2 text-left">Unit</th>
             <th className="px-3 py-2 text-left">CALC Price</th>
             <th className="px-3 py-2 text-left">Median / Range</th>
@@ -829,6 +831,8 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
               <td className="px-3 py-2">{row.clientLcat || row.laborCategory}</td>
               <td className="px-3 py-2 font-mono">{row.clientPrice || "-"}</td>
               <td className="px-3 py-2">{row.laborCategory}</td>
+              <td className="px-3 py-2">{row.educationLevel || "-"}</td>
+              <td className="px-3 py-2">{row.minYearsExperience ?? "-"}</td>
               <td className="px-3 py-2">{row.unitOfIssue}</td>
               <td className="px-3 py-2 font-mono">{row.netPrice}</td>
               <td className="px-3 py-2 font-mono">
@@ -847,7 +851,31 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
                   {postureLabel(row.pricingPosition)}
                 </span>
               </td>
-              <td className="px-3 py-2">{row.contractor}</td>
+              <td className="px-3 py-2">
+                {row.contractor ? (
+                  <div className="min-w-0">
+                    <a
+                      href={row.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex max-w-full items-baseline gap-1 font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+                      title={row.contractNumber || row.sourceUrl}
+                    >
+                      <span className="truncate">{row.contractor}</span>
+                      <span aria-hidden="true" className="text-[10px] text-primary/70">
+                        ↗
+                      </span>
+                    </a>
+                    {row.contractNumber ? (
+                      <div className="mt-0.5 truncate text-[10px] font-mono text-muted-foreground">
+                        {row.contractNumber}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  "-"
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

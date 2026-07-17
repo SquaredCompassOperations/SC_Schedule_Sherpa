@@ -35,6 +35,8 @@ export type MarketRow = {
   contractor: string;
   contractNumber: string;
   sourceUrl: string;
+  educationLevel?: string;
+  minYearsExperience?: number | null;
   needsReview?: boolean;
   clientPrice?: string;
   calcAverage?: string;

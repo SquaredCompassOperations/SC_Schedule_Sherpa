@@ -181,6 +181,8 @@ export function buildCalcBenchmarkRows(input: {
       contractor: comparable?.contractor || "",
       contractNumber: comparable?.contractNumber || "",
       sourceUrl: benchmark?.sourceUrl ?? buildCalcQrUrl({ laborCategory: lcat.title, sin }),
+      educationLevel: comparable?.educationLevel || "",
+      minYearsExperience: comparable?.minYearsExperience ?? null,
       needsReview: comparison.posture !== "market_aligned",
       clientPrice: formatCurrency(parseCurrency(lcat.rate)),
       calcAverage: formatCurrency(benchmark?.average),

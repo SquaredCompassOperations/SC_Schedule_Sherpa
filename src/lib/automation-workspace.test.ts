@@ -103,7 +103,7 @@ describe("automation workspace actions", () => {
     expect(
       getAutomationActionCardCommand(
         actions.find((action) => action.id === "agent-authorization")!,
-      ),
+        ),
     ).toMatchObject({
       label: "Build",
       disabled: false,
