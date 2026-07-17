@@ -196,18 +196,6 @@ function ClientReadiness() {
               <Area value={r.taaMonitoring} onChange={(e) => patchReadiness({ taaMonitoring: e.target.value })} />
             </div>
             <div>
-              <Label>Section 889: do you provide covered telecom equipment/services?</Label>
-              <YN value={r.section889Provides} onChange={(v) => patchReadiness({ section889Provides: v as never })} options={["yes", "no", "unsure"]} />
-            </div>
-            <div>
-              <Label>Section 889: do you use covered telecom equipment/services internally?</Label>
-              <YN value={r.section889Uses} onChange={(v) => patchReadiness({ section889Uses: v as never })} options={["yes", "no", "unsure"]} />
-            </div>
-            <div>
-              <Label>How do you monitor Section 889 ongoing compliance?</Label>
-              <Area value={r.section889Monitoring} onChange={(e) => patchReadiness({ section889Monitoring: e.target.value })} />
-            </div>
-            <div>
               <Label>Do you understand FASCSA covered article prohibitions?</Label>
               <YN value={r.fascsaUnderstood} onChange={(v) => patchReadiness({ fascsaUnderstood: v as never })} options={["yes", "no", "unsure"]} />
             </div>

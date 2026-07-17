@@ -29,9 +29,6 @@ export type ReadinessState = {
   // Compliance
   taaCompliant: YesNoUnsureNa;
   taaMonitoring: string;
-  section889Provides: YesNoUnsure;
-  section889Uses: YesNoUnsure;
-  section889Monitoring: string;
   fascsaUnderstood: YesNoUnsure;
   fascsaMonitoring: string;
   prohibitedMonitoring: string;
@@ -64,9 +61,6 @@ const defaults = (): ReadinessState => ({
   adminEmail: "",
   taaCompliant: "",
   taaMonitoring: "",
-  section889Provides: "",
-  section889Uses: "",
-  section889Monitoring: "",
   fascsaUnderstood: "",
   fascsaMonitoring: "",
   prohibitedMonitoring: "",
