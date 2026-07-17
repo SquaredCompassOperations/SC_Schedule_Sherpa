@@ -14,13 +14,26 @@ export function GsaRefreshBanner() {
 
   useEffect(() => {
     let cancelled = false;
-    fn()
-      .then((s) => {
-        if (!cancelled) setStatus(s);
-      })
-      .catch(() => {});
+    const run = () => {
+      fn()
+        .then((s) => {
+          if (!cancelled) setStatus(s);
+        })
+        .catch(() => {});
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const handle = window.requestIdleCallback(run, { timeout: 2000 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(handle);
+      };
+    }
+
+    const timer = window.setTimeout(run, 0);
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [fn]);
 

@@ -27,6 +27,7 @@ const REQUIRED_TEMPLATES_URL =
   "https://www.gsa.gov/sell-to-government/step-1-learn-about-government-contracting/how-to-access-contract-opportunities/help-with-mas-contracts-to-sell-to-government/roadmap-to-get-a-mas-contract/required-templates-for-a-mas-offer";
 const INTERACT_URL = "https://buy.gsa.gov/interact/community/6/activity-feed";
 const INTERACT_KEYWORDS = ["New Offer Checklist", "Pricing Terms", "Pricing File", "Refresh"];
+const REMOTE_FETCH_TIMEOUT_MS = 8000;
 
 // Note: HTML is normalized (%20 → space) before regex matching to prevent
 // "Refresh%2032" being misread as "Refresh 2032". Refresh numbers are 1-2 digits.
@@ -37,13 +38,26 @@ const TRACKED_TEMPLATES: Array<{ label: string; pattern: RegExp }> = [
   { label: "New Offer Checklist", pattern: /New[\s_-]+Offer[\s_-]+Checklist[^"'<>]*Refresh[\s_-]+(\d{1,2})\b[^"'<>]*\.xlsx/gi },
 ];
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = REMOTE_FETCH_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function scrapeRequiredTemplates(): Promise<{
   html: string;
   source: string;
 } | null> {
   // Try direct fetch first (page is public).
   try {
-    const res = await fetch(REQUIRED_TEMPLATES_URL, {
+    const res = await fetchWithTimeout(REQUIRED_TEMPLATES_URL, {
       headers: { "User-Agent": "Mozilla/5.0 ScheduleBuilder/1.0" },
     });
     if (res.ok) {
@@ -57,7 +71,7 @@ async function scrapeRequiredTemplates(): Promise<{
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) return null;
   try {
-    const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+    const res = await fetchWithTimeout("https://api.firecrawl.dev/v2/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -131,7 +145,7 @@ async function checkInteractFeed(): Promise<{
     };
   }
   try {
-    const res = await fetch("https://api.firecrawl.dev/v2/scrape", {
+    const res = await fetchWithTimeout("https://api.firecrawl.dev/v2/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
