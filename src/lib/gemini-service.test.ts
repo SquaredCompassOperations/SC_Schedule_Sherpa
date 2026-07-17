@@ -5,8 +5,8 @@ import {
   generateTextFromPrompt,
 } from "./gemini-service";
 
-const originalGeminiKey = process.env.GEMINI_API_KEY;
-const originalGeminiModel = process.env.GEMINI_MODEL;
+const originalOpenAIKey = process.env.OPENAI_API_KEY;
+const originalOpenAIModel = process.env.OPENAI_MODEL;
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
   return new Response(JSON.stringify(body), { status, statusText: ok ? "OK" : "Bad Request" });
@@ -18,43 +18,43 @@ function lastRequestBody(fetchMock: ReturnType<typeof vi.fn>) {
   return JSON.parse(body) as {
     model?: string;
     input?: unknown;
-    system_instruction?: string;
-    generation_config?: Record<string, unknown>;
+    max_output_tokens?: number;
+    text?: Record<string, unknown>;
   };
 }
 
-describe("Gemini service", () => {
+describe("OpenAI service", () => {
   beforeEach(() => {
-    process.env.GEMINI_API_KEY = "test-gemini-key";
-    delete process.env.GEMINI_MODEL;
+    process.env.OPENAI_API_KEY = "test-openai-key";
+    delete process.env.OPENAI_MODEL;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    if (originalGeminiKey === undefined) {
-      delete process.env.GEMINI_API_KEY;
+    if (originalOpenAIKey === undefined) {
+      delete process.env.OPENAI_API_KEY;
     } else {
-      process.env.GEMINI_API_KEY = originalGeminiKey;
+      process.env.OPENAI_API_KEY = originalOpenAIKey;
     }
-    if (originalGeminiModel === undefined) {
-      delete process.env.GEMINI_MODEL;
+    if (originalOpenAIModel === undefined) {
+      delete process.env.OPENAI_MODEL;
     } else {
-      process.env.GEMINI_MODEL = originalGeminiModel;
+      process.env.OPENAI_MODEL = originalOpenAIModel;
     }
   });
 
-  it("asks for the Gemini key when configuration is missing", async () => {
-    delete process.env.GEMINI_API_KEY;
+  it("asks for the OpenAI key when configuration is missing", async () => {
+    delete process.env.OPENAI_API_KEY;
 
     await expect(generateTextFromPrompt({ prompt: "hello" })).rejects.toThrow(
-      "GEMINI_API_KEY is not configured",
+      "OPENAI_API_KEY is not configured",
     );
   });
 
-  it("sends prompt-only requests to the Gemini Interactions API", async () => {
+  it("sends prompt-only requests to the OpenAI responses API", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(jsonResponse({ output_text: "Gemini response" }));
+      .mockResolvedValue(jsonResponse({ output_text: "OpenAI response" }));
 
     const text = await generateTextFromPrompt({
       prompt: "Draft a checklist",
@@ -62,22 +62,30 @@ describe("Gemini service", () => {
       maxOutputTokens: 1200,
     });
 
-    expect(text).toBe("Gemini response");
+    expect(text).toBe("OpenAI response");
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      "https://api.openai.com/v1/responses",
       expect.objectContaining({
         method: "POST",
         headers: expect.objectContaining({
           "Content-Type": "application/json",
-          "x-goog-api-key": "test-gemini-key",
+          Authorization: "Bearer test-openai-key",
         }),
       }),
     );
     expect(lastRequestBody(fetchMock)).toMatchObject({
-      model: "gemini-3.5-flash",
-      system_instruction: "Return concise text",
-      input: "Draft a checklist",
-      generation_config: { max_output_tokens: 1200 },
+      model: "gpt-4.1-mini",
+      input: [
+        {
+          role: "system",
+          content: [{ type: "input_text", text: "Return concise text" }],
+        },
+        {
+          role: "user",
+          content: [{ type: "input_text", text: "Draft a checklist" }],
+        },
+      ],
+      max_output_tokens: 1200,
     });
   });
 
@@ -95,10 +103,10 @@ describe("Gemini service", () => {
       },
     });
 
-    expect(lastRequestBody(fetchMock).input).toContain(
+    expect(JSON.stringify(lastRequestBody(fetchMock).input)).toContain(
       "Extracted text from sam-profile.txt (plain_text):",
     );
-    expect(lastRequestBody(fetchMock).input).toContain("UEI: ABC123456789");
+    expect(JSON.stringify(lastRequestBody(fetchMock).input)).toContain("UEI: ABC123456789");
   });
 
   it("sends PDFs and other binary documents as inline document input", async () => {
@@ -117,8 +125,18 @@ describe("Gemini service", () => {
     });
 
     expect(lastRequestBody(fetchMock).input).toEqual([
-      { type: "document", data: dataBase64, mime_type: "application/pdf" },
-      { type: "text", text: "Summarize" },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_file",
+            file_data: dataBase64,
+            filename: "uploaded-document",
+            mime_type: "application/pdf",
+          },
+          { type: "input_text", text: "Summarize" },
+        ],
+      },
     ]);
   });
 
@@ -138,8 +156,13 @@ describe("Gemini service", () => {
     });
 
     expect(lastRequestBody(fetchMock).input).toEqual([
-      { type: "text", text: "Read the screenshot" },
-      { type: "image", data: dataBase64, mime_type: "image/png" },
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: "Read the screenshot" },
+          { type: "input_image", image_url: `data:image/png;base64,${dataBase64}` },
+        ],
+      },
     ]);
   });
 

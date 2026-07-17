@@ -11,7 +11,7 @@ type ImageInput = {
   data: string;
   mime_type: string;
 };
-type GeminiInput = string | Array<TextInput | DocumentInput | ImageInput>;
+type OpenAIInput = string | Array<TextInput | DocumentInput | ImageInput>;
 
 type GenerateOptions = {
   system?: string;
@@ -25,30 +25,32 @@ type DocumentOptions = GenerateOptions & {
   detail?: "low" | "high";
 };
 
-const GEMINI_INTERACTIONS_URL = "https://generativelanguage.googleapis.com/v1beta/interactions";
-const DEFAULT_MODEL = "gemini-3.5-flash";
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+const DEFAULT_MODEL = "gpt-4.1-mini";
 const DEFAULT_MAX_OUTPUT_TOKENS = 4000;
 
-function getGeminiKey() {
-  const key = process.env.GEMINI_API_KEY;
+function getOpenAIKey() {
+  const key = process.env.OPENAI_API_KEY;
   if (!key) {
     throw new Error(
-      "GEMINI_API_KEY is not configured. Add it in Vercel Project Settings > Environment Variables.",
+      "OPENAI_API_KEY is not configured. Add it in Vercel Project Settings > Environment Variables.",
     );
   }
   return key;
 }
 
 function getModel(model?: string) {
-  return model || process.env.GEMINI_MODEL || DEFAULT_MODEL;
+  return model || process.env.OPENAI_MODEL || DEFAULT_MODEL;
 }
 
 function collectOutputText(value: unknown): string[] {
   if (!value || typeof value !== "object") return [];
-  if ("output_text" in value && typeof value.output_text === "string") {
-    return [value.output_text];
+  if ("output_text" in value && typeof (value as { output_text?: unknown }).output_text === "string") {
+    return [(value as { output_text: string }).output_text];
   }
-  if ("text" in value && typeof value.text === "string") return [value.text];
+  if ("text" in value && typeof (value as { text?: unknown }).text === "string") {
+    return [(value as { text: string }).text];
+  }
 
   const out: string[] = [];
   for (const nested of Object.values(value)) {
@@ -85,23 +87,45 @@ function binaryInputFor(file: FileExtractionInput): DocumentInput | ImageInput {
   };
 }
 
+function mapContentItem(item: TextInput | DocumentInput | ImageInput) {
+  if (item.type === "text") {
+    return { type: "input_text" as const, text: item.text };
+  }
+  if (item.type === "document") {
+    return {
+      type: "input_file" as const,
+      file_data: item.data,
+      filename: "uploaded-document",
+      mime_type: item.mime_type,
+    };
+  }
+  return {
+    type: "input_image" as const,
+    image_url: `data:${item.mime_type};base64,${item.data}`,
+  };
+}
+
 async function generateFromInput(
-  input: GeminiInput,
+  input: OpenAIInput,
   { system, maxOutputTokens, model }: GenerateOptions,
 ) {
+  const content: Array<TextInput | DocumentInput | ImageInput> =
+    typeof input === "string" ? [{ type: "text", text: input }] : input;
+  const mappedContent = content.map((item) => mapContentItem(item));
   const body = {
     model: getModel(model),
-    system_instruction: system,
-    input,
-    generation_config: {
-      max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
-    },
+    input: [
+      ...(system ? [{ role: "system", content: [{ type: "input_text", text: system }] }] : []),
+      { role: "user", content: mappedContent },
+    ],
+    max_output_tokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
+    text: { format: { type: "text" } },
   };
 
-  const res = await fetch(GEMINI_INTERACTIONS_URL, {
+  const res = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
     headers: {
-      "x-goog-api-key": getGeminiKey(),
+      Authorization: `Bearer ${getOpenAIKey()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
@@ -109,12 +133,12 @@ async function generateFromInput(
 
   const responseBody = await res.text();
   if (!res.ok) {
-    throw new Error(`Gemini request failed [${res.status}]: ${responseBody.slice(0, 500)}`);
+    throw new Error(`OpenAI request failed [${res.status}]: ${responseBody.slice(0, 500)}`);
   }
 
   const parsed = JSON.parse(responseBody) as unknown;
   const text = responseText(parsed);
-  if (!text) throw new Error("Gemini returned an empty response.");
+  if (!text) throw new Error("OpenAI returned an empty response.");
   return text;
 }
 

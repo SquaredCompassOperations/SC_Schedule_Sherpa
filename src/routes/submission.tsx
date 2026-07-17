@@ -8,8 +8,6 @@ import {
   removeEvent,
   addEventAttachments,
   removeEventAttachment,
-  lockArchive,
-  unlockArchive,
   EVENT_KIND_META,
   type TrackerEventKind,
 } from "@/lib/submission-store";
@@ -79,9 +77,6 @@ function SubmissionPage() {
   const [evActor, setEvActor] = useState("GSA");
   const [evFiles, setEvFiles] = useState<File[]>([]);
 
-  // Archive form
-  const [archiveNotes, setArchiveNotes] = useState("");
-
   const saveReceipt = () => {
     if (!confirmationNumber.trim()) return;
     setReceipt({
@@ -132,17 +127,6 @@ function SubmissionPage() {
 
   const fmtBytes = (n: number) =>
     n < 1024 ? `${n} B` : n < 1024 * 1024 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
-
-  const lock = () => {
-    if (!submitted) return;
-    lockArchive({
-      archivedAt: Date.now(),
-      archivedBy: sub.receipt?.submittedBy ?? defaultPoc,
-      snapshotName: `eOffer_Snapshot_${(entity.cage !== "—" ? entity.cage : "offer")}_${new Date().toISOString().slice(0, 10)}.zip`,
-      notes: archiveNotes.trim(),
-    });
-    setArchiveNotes("");
-  };
 
   return (
     <>
@@ -468,64 +452,6 @@ function SubmissionPage() {
             </ul>
           </Panel>
 
-          <Panel title="Archive & Lock">
-            {sub.locked ? (
-              <div className="space-y-2 text-xs">
-                <div className="border border-success/30 bg-success/5 rounded-sm p-3">
-                  <div className="font-bold text-success uppercase text-[10px] tracking-widest mb-1">
-                    Offer Locked
-                  </div>
-                  <div className="font-mono text-foreground break-all">
-                    {sub.archive!.snapshotName}
-                  </div>
-                  <div className="text-[10px] font-mono text-muted-foreground mt-1">
-                    {fmt(sub.archive!.archivedAt)} · {sub.archive!.archivedBy}
-                  </div>
-                  {sub.archive!.notes && (
-                    <div className="text-xs mt-2 whitespace-pre-wrap">{sub.archive!.notes}</div>
-                  )}
-                </div>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Upstream modules are read-only against this snapshot. Unlock only if a contract
-                  modification or post-award refresh is authorized.
-                </p>
-                <button
-                  onClick={unlockArchive}
-                  className="text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 border border-border rounded-sm hover:bg-muted"
-                >
-                  Unlock for Modification
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Once the offer reaches final disposition (award, rejection, or withdrawal),
-                  archive the package to lock all modules as read-only and create an immutable
-                  audit snapshot.
-                </p>
-                <textarea
-                  value={archiveNotes}
-                  onChange={(e) => setArchiveNotes(e.target.value)}
-                  rows={2}
-                  placeholder="Disposition note (e.g. Awarded under contract GS-35F-1234X)…"
-                  className="w-full px-2 py-1.5 bg-background border border-border rounded-sm text-xs"
-                />
-                <button
-                  onClick={lock}
-                  disabled={!submitted}
-                  className="w-full text-xs font-bold uppercase tracking-widest px-3 py-2 bg-success text-success-foreground rounded-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Archive & Lock Offer
-                </button>
-                {!submitted && (
-                  <div className="text-[10px] font-mono text-muted-foreground">
-                    Log a submission receipt to enable archiving.
-                  </div>
-                )}
-              </div>
-            )}
-          </Panel>
-
           <Panel title="Next Steps">
             <ol className="text-xs space-y-2 list-decimal list-inside text-foreground">
               <li>
@@ -542,7 +468,6 @@ function SubmissionPage() {
               </li>
               <li>Log every clarification request &amp; response above</li>
               <li>On award, file the contract # under Awarded event</li>
-              <li>Archive &amp; lock to freeze the offer record</li>
             </ol>
             <div className="border-t border-border mt-3 pt-3">
               <Link
