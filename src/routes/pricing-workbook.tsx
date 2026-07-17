@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { PageHeader, Panel } from "@/components/ui-primitives";
 import { generatePricingWorkbook } from "@/lib/pricing-workbook.functions";
 import { checkGsaTemplateVersion } from "@/lib/gsa-template-version.functions";
+import { buildInteractAckKey } from "@/lib/pricing-workbook.helpers";
 import { useAutomation, setPricingTemplate, savePricingRows } from "@/lib/automation-store";
 import { useIntake } from "@/lib/intake-store";
 import { useSelectedOfferId } from "@/lib/offer-workspace";
@@ -59,6 +60,14 @@ function PricingWorkbookPage() {
   }, [versionFn]);
 
   useEffect(() => {
+    if (!version || typeof window === "undefined") return;
+    const key = buildInteractAckKey("acknowledged");
+    if (sessionStorage.getItem(key) === "1") {
+      setInteractAck(true);
+    }
+  }, [automation.pricingTemplate, version]);
+
+  useEffect(() => {
     if (
       !automation.priceListExtractedAt ||
       automation.priceListExtractedAt === lastSyncedPriceListAt ||
@@ -79,6 +88,18 @@ function PricingWorkbookPage() {
   const switchTemplate = (t: "fcp-product" | "fcp-services-plus") => {
     setTemplateLocal(t);
     setPricingTemplate(t);
+  };
+
+  const acknowledgeInteract = (value: boolean) => {
+    setInteractAck(value);
+    if (typeof window !== "undefined") {
+      const key = buildInteractAckKey("acknowledged");
+      if (value) {
+        sessionStorage.setItem(key, "1");
+      } else {
+        sessionStorage.removeItem(key);
+      }
+    }
   };
 
   const update = (i: number, patch: Partial<Row>) => {
@@ -177,7 +198,7 @@ function PricingWorkbookPage() {
           >
             {version.message}
           </div>
-          {version.interactMessage ? (
+          {version.interactMessage && !interactAck ? (
             <div
               className={`text-xs px-3 py-2 rounded-sm border ${
                 version.interactAlerts && version.interactAlerts.length > 0
@@ -202,7 +223,7 @@ function PricingWorkbookPage() {
                 <input
                   type="checkbox"
                   checked={interactAck}
-                  onChange={(e) => setInteractAck(e.target.checked)}
+                  onChange={(e) => acknowledgeInteract(e.target.checked)}
                   className="size-3 accent-primary"
                 />
                 <span>

@@ -5,6 +5,7 @@ import {
   buildAutomationActions,
   getAutomationActionCardCommand,
   getAutomationActionCommand,
+  getAgentAuthorizationDraftText,
   sendClientUpdateRequest,
 } from "./automation-workspace";
 
@@ -108,6 +109,21 @@ describe("automation workspace actions", () => {
       disabled: false,
       runnable: true,
     });
+  });
+
+  it("builds a fuller agent authorization draft", () => {
+    const draft = getAgentAuthorizationDraftText({
+      legalName: "Squared Compass LLC",
+      authorizedAgent: "Jordan Smith",
+      contactEmail: "jordan@squaredcompass.com",
+    });
+
+    expect(draft).toContain("Agent Authorization Letter");
+    expect(draft).toContain("Squared Compass LLC");
+    expect(draft).toContain("Jordan Smith");
+    expect(draft).toContain("jordan@squaredcompass.com");
+    expect(draft).toContain("Offeror Authorization");
+    expect(draft).toContain("GSA Form GSA7000-24");
   });
 });
 

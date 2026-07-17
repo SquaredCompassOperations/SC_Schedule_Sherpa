@@ -44,7 +44,7 @@ export type BuildAutomationActionsInput = {
   disabledActionIds?: AutomationActionId[];
 };
 
-const GSA_AGENT_AUTHORIZATION_SOURCE = "GSA7000 (Rev. 03/2024)";
+const GSA_AGENT_AUTHORIZATION_SOURCE = "GSA7000-24 (Rev. 03/2024)";
 
 export function buildAutomationActions(input: BuildAutomationActionsInput): AutomationAction[] {
   const gsaMas = isGsaMasOfferType(input.offerType);
@@ -209,13 +209,27 @@ export function getAgentAuthorizationDraftText(input: {
   authorizedAgent?: string;
   contactEmail?: string;
 }) {
+  const today = new Date().toISOString().slice(0, 10);
   return [
     "Agent Authorization Letter",
     "",
+    `Date: ${today}`,
+    "",
+    "Offeror Authorization",
     `Offeror: ${input.legalName || "[Offeror legal name]"}`,
     `Authorized Agent: ${input.authorizedAgent || "[Authorized agent]"}`,
     `Contact Email: ${input.contactEmail || "[Contact email]"}`,
     "",
-    "Source: GSA Form GSA7000, current revision 03/2024.",
+    "The undersigned offeror authorizes the named agent to act on behalf of the company in connection with the preparation, submission, and administration of the GSA MAS offer package, including receipt of correspondence and coordination of supporting documents as permitted by the solicitation and applicable regulations.",
+    "",
+    "This authorization remains in effect until modified or revoked in writing by the offeror.",
+    "",
+    "Signature Block",
+    "Offeror Representative: ________________________________",
+    "Title: ________________________________________________",
+    "Authorized Agent: _____________________________________",
+    "Accepted By: _________________________________________",
+    "",
+    "Source: GSA Form GSA7000-24, current revision 03/2024.",
   ].join("\n");
 }
