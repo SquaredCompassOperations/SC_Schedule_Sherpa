@@ -853,15 +853,25 @@ function MarketRows({ rows }: { rows: MarketRow[] }) {
               </td>
               <td className="px-3 py-2">
                 {row.contractor ? (
-                  <a
-                    href={row.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-primary hover:underline"
-                    title={row.contractNumber || row.sourceUrl}
-                  >
-                    {row.contractor}
-                  </a>
+                  <div className="min-w-0">
+                    <a
+                      href={row.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex max-w-full items-baseline gap-1 font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+                      title={row.contractNumber || row.sourceUrl}
+                    >
+                      <span className="truncate">{row.contractor}</span>
+                      <span aria-hidden="true" className="text-[10px] text-primary/70">
+                        ↗
+                      </span>
+                    </a>
+                    {row.contractNumber ? (
+                      <div className="mt-0.5 truncate text-[10px] font-mono text-muted-foreground">
+                        {row.contractNumber}
+                      </div>
+                    ) : null}
+                  </div>
                 ) : (
                   "-"
                 )}
